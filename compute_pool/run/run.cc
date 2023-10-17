@@ -6,7 +6,7 @@
 // Entrance to run threads that spawn coroutines as coordinators to run distributed transactions
 int main(int argc, char* argv[]) {
   if (argc < 3) {
-    std::cerr << "./run <benchmark_name> <system_name> <thread_num>(optional) <coroutine_num>(optional). E.g., ./run tatp ford 16 8" << std::endl;
+    std::cerr << "./run <benchmark_name> <system_name> <thread_num>(optional) <coroutine_num>(optional) <cache_size_GB>(optional) . E.g., ./run tatp ford 16 8" << std::endl;
     return 0;
   }
 

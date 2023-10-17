@@ -19,12 +19,14 @@ struct RemoteNode {
   std::string ip;
   int port;
 };
-
+// 感觉是用来和内存层交互的？
 class MetaManager {
  public:
   MetaManager();
 
   node_id_t GetMemStoreMeta(std::string& remote_ip, int remote_port);
+
+  node_id_t GetAddrStoreMeta(std::string& remote_ip, int remote_port);
 
   void GetMRMeta(const RemoteNode& node);
 
@@ -52,6 +54,21 @@ class MetaManager {
   node_id_t GetPrimaryNodeID(const table_id_t table_id) const {
     auto search = primary_table_nodes.find(table_id);
     assert(search != primary_table_nodes.end());
+    return search->second;
+  }
+
+  /*** Page Addr Node ID Metadata ***/
+  ALWAYS_INLINE
+  node_id_t GetPageAddrNodeID(const page_id_t id) const {
+    RemoteNode node = page_addr_nodes[0]; 
+    return node.node_id;
+  }
+
+  /*** Memory Store Metadata ***/
+  ALWAYS_INLINE
+  const uint64_t GetPageAddrTableBucketNumWithNodeID(const node_id_t node_id) const {
+    auto search = page_addr_node_bucket_num.find(node_id);
+    assert(search != page_addr_node_bucket_num.end());
     return search->second;
   }
 
@@ -97,6 +114,9 @@ class MetaManager {
   std::unordered_map<node_id_t, MemoryAttr> remote_hash_mrs;
 
   std::unordered_map<node_id_t, MemoryAttr> remote_log_mrs;
+
+  std::vector<RemoteNode> page_addr_nodes;
+  std::unordered_map<node_id_t, uint64_t> page_addr_node_bucket_num;
 
   node_id_t local_machine_id;
 

@@ -32,6 +32,7 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
   if (argc == 5) {
     std::string s1 = "sed -i '5c \"thread_num_per_machine\": " + std::string(argv[3]) + ",' " + config_file;
     std::string s2 = "sed -i '6c \"coroutine_num\": " + std::string(argv[4]) + ",' " + config_file;
+    std::string s2 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
     system(s1.c_str());
     system(s2.c_str());
   }
@@ -59,6 +60,8 @@ void Handler::GenThreads(std::string bench_name) {
   node_id_t machine_id = (node_id_t)client_conf.get("machine_id").get_int64();
   t_id_t thread_num_per_machine = (t_id_t)client_conf.get("thread_num_per_machine").get_int64();
   const int coro_num = (int)client_conf.get("coroutine_num").get_int64();
+  //! notice: the local_cache_size
+  const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
 
   /* Start working */

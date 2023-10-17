@@ -34,23 +34,8 @@ void Server::AllocMem() {
 
 void Server::InitMem() {
   RDMA_LOG(INFO) << "Start initializing memory...";
-  // memset(hash_buffer, 0, hash_buf_size);
-  // memset(log_buffer, 0, log_buf_size);
-
-  memset(page_buffer, 0, hash_buf_size);
-  RDMA_LOG(INFO) << "Initialize memory success!";
-}
-
-void Server::InitPage() {
-  /************************************* Page Initialization ***************************************/
-  RDMA_LOG(INFO) << "Start initializing Page Cache memory...";
-  page_buffer = (char*)malloc(hash_buf_size);
-  assert(page_buffer);
-  page_slot_count = hash_buf_size / (PAGE_SIZE + PageMetaSize);
-  
-  page_array_buffer = page_buffer + page_slot_count * PageMetaSize;
-  page_array = (Page*)page_array_buffer;
-  RDMA_LOG(INFO) << "Alloc DRAM data region success!";
+  memset(hash_buffer, 0, hash_buf_size);
+  memset(log_buffer, 0, log_buf_size);
   RDMA_LOG(INFO) << "Initialize memory success!";
 }
 
@@ -311,8 +296,7 @@ int main(int argc, char* argv[]) {
   auto server = std::make_shared<Server>(machine_id, local_port, local_meta_port, hash_buf_size, log_buf_size, use_pm, pm_file, mem_size);
   server->AllocMem();
   server->InitMem();
-  server->InitPage();
-  // server->LoadData(machine_id, machine_num, workload);
+  server->LoadData(machine_id, machine_num, workload);
   server->SendMeta(machine_id, workload, compute_node_num);
   server->InitRDMA();
   bool run_next_round = server->Run();
@@ -322,7 +306,7 @@ int main(int argc, char* argv[]) {
     server->InitMem();
     server->CleanTable();
     server->CleanQP();
-    // server->LoadData(machine_id, machine_num, workload);
+    server->LoadData(machine_id, machine_num, workload);
     server->SendMeta(machine_id, workload, compute_node_num);
     run_next_round = server->Run();
   }

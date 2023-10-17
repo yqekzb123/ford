@@ -2,3 +2,4 @@
 # Copyright (c) 2022
 
 add_subdirectory(server)
+add_subdirectory(addr_manager)

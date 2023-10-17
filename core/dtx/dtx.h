@@ -117,6 +117,10 @@ class DTX {
   bool LocalValidate();
 
  private:
+  bool GetPageAddr(page_id_t id);
+
+  bool GetRemotePageAddr(page_id_t id);
+  
   // For coroutine issues RDMA requests before yield
   bool IssueReadRO(std::vector<DirectRead>& pending_direct_ro,
                    std::vector<HashRead>& pending_hash_ro);
