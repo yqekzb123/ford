@@ -78,19 +78,19 @@ void AddrManager::PrepareHashMeta(node_id_t machine_id, std::string& workload, c
   std::vector<HashStore*> all_priamry_tables;
   std::vector<HashStore*> all_backup_tables;
 
-  if (workload == "TATP") {
-    all_priamry_tables = tatp_server->GetPrimaryHashStore();
-    all_backup_tables = tatp_server->GetBackupHashStore();
-  } else if (workload == "SmallBank") {
-    all_priamry_tables = smallbank_server->GetPrimaryHashStore();
-    all_backup_tables = smallbank_server->GetBackupHashStore();
-  } else if (workload == "TPCC") {
-    all_priamry_tables = tpcc_server->GetPrimaryHashStore();
-    all_backup_tables = tpcc_server->GetBackupHashStore();
-  } else if (workload == "MICRO") {
-    all_priamry_tables = micro_server->GetPrimaryHashStore();
-    all_backup_tables = micro_server->GetBackupHashStore();
-  }
+  // if (workload == "TATP") {
+  //   all_priamry_tables = tatp_server->GetPriaryHashStore();
+  //   all_backup_tables = tatp_server->GetBackupHashStore();
+  // } else if (workload == "SmallBank") {
+  //   all_priamry_tables = smallbank_server->GetPrimaryHashStore();
+  //   all_backup_tables = smallbank_server->GetBackupHashStore();
+  // } else if (workload == "TPCC") {
+  //   all_priamry_tables = tpcc_server->GetPrimaryHashStore();
+  //   all_backup_tables = tpcc_server->GetBackupHashStore();
+  // } else if (workload == "MICRO") {
+  //   all_priamry_tables = micro_server->GetPrimaryHashStore();
+  //   all_backup_tables = micro_server->GetBackupHashStore();
+  // }
 
   for (auto& hash_table : all_priamry_tables) {
     auto* hash_meta = new HashMeta(hash_table->GetTableID(),
@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
   size_t index_size = (size_t)1024 * 1024 * 1024 * index_size_GB;
   size_t txn_list_size = (size_t)1024 * 1024 * 1024 * txn_list_size_GB;
 
-  auto addr_manager = std::make_shared<AddrManager>(machine_id, local_port, local_meta_port, index_size, txn_list_size, use_pm);
+  auto addr_manager = std::make_shared<AddrManager>(machine_id, local_port, local_meta_port, index_size, txn_list_size);
   // todo: 1. 初始化页面地址哈希索引
   // todo: 2. 初始化事务操作列表 X
   // todo: 3. 将哈希索引和事务操作列表的元信息发送给计算节点

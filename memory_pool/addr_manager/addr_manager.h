@@ -12,7 +12,7 @@
 #include "memstore/data_item.h"
 #include "memstore/page_store.h"
 #include "memstore/hash_store.h"
-#include "memstore/addr_store.h"
+#include "memstore/hash_index_store.h"
 #include "rlib/rdma_ctrl.hpp"
 #include "base/page.h"
 
@@ -52,7 +52,7 @@ class AddrManager {
 
   void InitMem();
 
-  void InitIndex();
+  void InitIndex(){};
 
   void InitAddr();
 
@@ -62,9 +62,9 @@ class AddrManager {
 
   void PrepareHashMeta(node_id_t machine_id, std::string& workload, char** hash_meta_buffer, size_t& total_meta_size);
 
-  void SendHashMeta(char* hash_meta_buffer, size_t& total_meta_size);
+  void SendHashMeta(char* hash_meta_buffer, size_t& total_meta_size){};
 
-  void CleanTable();
+  void CleanTable(){};
 
   void CleanQP();
 
@@ -90,4 +90,13 @@ class AddrManager {
   AddrStore* addr_store; // 也是上面的addr_index索引
   // The transaction operation list
   char* txn_list;
+
+  // For server-side workload
+  TATP* tatp_server = nullptr;
+
+  SmallBank* smallbank_server = nullptr;
+
+  TPCC* tpcc_server = nullptr;
+  
+  MICRO* micro_server = nullptr;
 };

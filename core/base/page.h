@@ -5,7 +5,9 @@
 
 // #include "common/config.h"
 // #include "common/rwlatch.h"
-#include "base/common.h"
+#include <string>
+#include <cstring>
+#include "common.h"
 
 #define INVALID_PAGE_ID -1
 /**
@@ -33,11 +35,6 @@ struct PageId {
 // PageId的自定义哈希算法, 用于构建unordered_map<PageId, frame_id_t, PageIdHash>
 struct PageIdHash {
     size_t operator()(const PageId &x) const { return (x.fd << 16) | x.page_no; }
-};
-
-template <>
-struct std::hash<PageId> {
-    size_t operator()(const PageId &obj) const { return std::hash<int64_t>()(obj.Get()); }
 };
 
 /**

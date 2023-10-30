@@ -32,9 +32,10 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
   if (argc == 5) {
     std::string s1 = "sed -i '5c \"thread_num_per_machine\": " + std::string(argv[3]) + ",' " + config_file;
     std::string s2 = "sed -i '6c \"coroutine_num\": " + std::string(argv[4]) + ",' " + config_file;
-    std::string s2 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
+    std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
     system(s1.c_str());
     system(s2.c_str());
+    system(s3.c_str());
   }
   // Customized test without modifying configs
   int txn_system_value = 0;
