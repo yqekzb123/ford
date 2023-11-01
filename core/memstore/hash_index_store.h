@@ -22,6 +22,17 @@ struct Rid {
     friend bool operator!=(const Rid &x, const Rid &y) { return !(x == y); }
 } Aligned8;
 
+struct IndexItem {
+  itemkey_t key;
+  Rid rid;
+  uint8_t valid; // if the slot is empty, valid: exits value in the slot
+  lock_t lock; // if the slot is locked
+
+  IndexItem() {}
+
+  IndexItem(itemkey_t k, Rid rid) :key(k), rid(rid), lock(0), valid(1) {}
+} Aligned8;
+
 struct IndexMeta {
   // To which table this index belongs
   table_id_t table_id;
@@ -55,19 +66,16 @@ struct IndexMeta {
 // 定义哈希桶next指针数组大小
 const int NEXT_NODE_COUNT = 4;
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(int) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(itemkey_t) + sizeof(Rid));
+const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
 
 // A IndexNode is a bucket
 struct IndexNode {
   // node id
   page_id_t page_id;
-  // store key num
-  int num_key; 
-  // keys
-  itemkey_t keys[MAX_RIDS_NUM_PER_NODE];
-  // A Rid is a slot
-  Rid rids[MAX_RIDS_NUM_PER_NODE];
-  short next_expand_node_id[NEXT_NODE_COUNT];
+
+  IndexItem index_items[MAX_RIDS_NUM_PER_NODE];
+
+  short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // IndexNode* next;
 } Aligned8;
 
@@ -172,9 +180,9 @@ Rid IndexStore::LocalGetIndexRid(itemkey_t key) {
   short next_expand_node_id;
   IndexNode* node = (IndexNode*)(hash * sizeof(IndexNode) + index_ptr);
   do {
-    for (int i=0; i<node->num_key; i++) {
-      if (node->keys[i] == key) {
-        return node->rids[i];
+    for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+      if (node->index_items[i].key == key && node->index_items[i].valid == true) {
+        return node->index_items->rid;
       }
     }
     // short begin with bucket_num
@@ -196,11 +204,13 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
 
   // Find
   while (true) {
-    if(node->num_key < MAX_RIDS_NUM_PER_NODE){
-      // insert
-      node->keys[node->num_key] = key;
-      node->rids[node->num_key] = rid;
-      node->num_key++;
+    for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
+      if(node->index_items[i].valid == false){
+        node->index_items[i].key = key;
+        node->index_items[i].rid = rid;
+        node->index_items[i].valid = true;
+        return true;
+      }
     }
 
     if (node->next_expand_node_id[0] <= 0) break;
@@ -213,11 +223,11 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
   auto* new_node = (IndexNode*)(param->mem_store_reserve + param->mem_store_reserve_offset);
   param->mem_store_reserve_offset += sizeof(IndexNode);
   memset(new_node, 0, sizeof(IndexNode));
-  new_node->keys[0] = key;
-  new_node->rids[0] = rid;
+  new_node->index_items[0].key = key;
+  new_node->index_items[0].rid = rid;
+  new_node->index_items[0].valid = true;
   new_node->next_expand_node_id[0] = -1;
   new_node->page_id = node_num;
-  new_node->num_key = 1;
   node->next_expand_node_id[0] = node_num - bucket_num;
   
   node_num++;
@@ -231,14 +241,10 @@ bool IndexStore::LocalDelete(itemkey_t key) {
   auto* node = (IndexNode*)(hash * sizeof(IndexNode) + index_ptr);
   short next_expand_node_id;
   do{
-    for (int i=0; i<node->num_key; i++) {
-      if (node->keys[i] == key) {
-        // find it
-        for(int j=i+1; j<node->num_key; j++){
-          node->keys[i] = node->keys[j];
-          node->rids[i] = node->rids[j];
-          node->num_key--;
-        }
+    for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+      if(node->index_items[i].key == key){ 
+        // find it 
+        node->index_items[i].valid = 0;
         return true;
       }
     }
