@@ -8,6 +8,7 @@
 
 #include "base/common.h"
 #include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
 #include "rlib/rdma_ctrl.hpp"
 
 using namespace rdmaio;
@@ -98,6 +99,22 @@ class MetaManager {
     return mrsearch->second;
   }
 
+  /*** Hash Index Node id ***/
+  ALWAYS_INLINE
+  node_id_t GetHashIndexNode(const table_id_t table_id) const {
+    auto search = hash_index_nodes.find(table_id);
+    assert(search != hash_index_nodes.end());
+    return search->second;
+  }
+
+  /*** Hash Index Meta ***/
+  ALWAYS_INLINE
+  const IndexMeta& GetHashIndexMeta(const table_id_t table_id) const {
+    auto search = hash_index_meta.find(table_id);
+    assert(search != hash_index_meta.end());
+    return search->second;
+  }
+
  private:
   std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
 
@@ -117,6 +134,9 @@ class MetaManager {
 
   std::vector<RemoteNode> page_addr_nodes;
   std::unordered_map<node_id_t, uint64_t> page_addr_node_bucket_num;
+
+  std::unordered_map<table_id_t, IndexMeta> hash_index_meta;
+  std::unordered_map<table_id_t, node_id_t> hash_index_nodes;
 
   node_id_t local_machine_id;
 

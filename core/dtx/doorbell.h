@@ -34,6 +34,53 @@ class DoorbellBatch {
   struct ibv_send_wr* bad_sr;
 };
 
+// 这里实现了共享锁doorbell封装，doorbell由64位int组成，高8位表示独占锁
+// 低56位表示共享锁计数
+// 对共享锁上共享锁可以使用doorbell优化，在上锁过程中使用FAA之后READ
+// 而对共享锁的释放只需要一次FAA(-1)
+class SharedLock_SharedMutex_Batch : public DoorbellBatch {
+ public:
+  SharedLock_SharedMutex_Batch() : DoorbellBatch() {}
+
+  // SetLockReq and SetReadReq are a doorbelled group
+  // First Fetch and ADD
+  void SetFAAReq(char* local_addr, uint64_t remote_off);
+
+  void SetReadReq(char* local_addr, uint64_t remote_off, size_t size);
+
+  // Send doorbelled requests to the queue pair
+  bool SendReqs(CoroutineScheduler* coro_sched, RCQP* qp, coro_id_t coro_id);
+};
+
+class ExclusiveLock_SharedMutex_Batch : public DoorbellBatch {
+ public:
+  ExclusiveLock_SharedMutex_Batch() : DoorbellBatch() {}
+
+  // SetLockReq and SetReadReq are a doorbelled group
+  // First lock, then read
+  void SetLockReq(char* local_addr, uint64_t remote_off);
+
+  void SetReadReq(char* local_addr, uint64_t remote_off, size_t size);
+
+  // Send doorbelled requests to the queue pair
+  bool SendReqs(CoroutineScheduler* coro_sched, RCQP* qp, coro_id_t coro_id);
+};
+
+class ExclusiveUnlock_SharedMutex_Batch : public DoorbellBatch {
+ public:
+  ExclusiveUnlock_SharedMutex_Batch() : DoorbellBatch() {}
+
+  // SetLockReq and SetReadReq are a doorbelled group
+  // First lock, then read
+  void SetUnLockReq(char* local_addr, uint64_t remote_off);
+
+  void SetWriteReq(char* local_addr, uint64_t remote_off, size_t size);
+
+  // Send doorbelled requests to the queue pair
+  bool SendReqs(CoroutineScheduler* coro_sched, RCQP* qp, coro_id_t coro_id);
+};
+
+
 class LockReadBatch : public DoorbellBatch {
  public:
   LockReadBatch() : DoorbellBatch() {}

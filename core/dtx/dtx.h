@@ -27,6 +27,7 @@
 #include "dtx/doorbell.h"
 #include "dtx/structs.h"
 #include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
 #include "util/debug.h"
 #include "util/hash.h"
 #include "util/json_config.h"
@@ -271,6 +272,14 @@ class DTX {
   bool CompareCheckCommitPrimary(std::vector<Unlock>& pending_unlock);
 
   bool CompareTruncateAsync(coro_yield_t& yield);
+  
+ private:
+
+  Rid GetHashIndex(table_id_t table_id, itemkey_t item_key);
+
+  bool InsertHashIndex(table_id_t table_id, itemkey_t item_key, Rid rid);
+
+  bool DeleteHashIndex(table_id_t table_id, itemkey_t item_key);
 
  public:
   tx_id_t tx_id;  // Transaction ID
@@ -293,9 +302,9 @@ class DTX {
 
   MetaManager* global_meta_man;  // Global metadata manager
 
- private:
   CoroutineScheduler* coro_sched;  // Thread local coroutine scheduler
-
+  
+ private:
   QPManager* thread_qp_man;  // Thread local qp connection manager. Each transaction thread has one
 
   RDMABufferAllocator* thread_rdma_buffer_alloc;  // Thread local RDMA buffer allocator

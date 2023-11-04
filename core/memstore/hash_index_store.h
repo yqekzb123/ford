@@ -26,11 +26,11 @@ struct IndexItem {
   itemkey_t key;
   Rid rid;
   uint8_t valid; // if the slot is empty, valid: exits value in the slot
-  lock_t lock; // if the slot is locked
+  // lock_t lock; // if the slot is locked
 
   IndexItem() {}
 
-  IndexItem(itemkey_t k, Rid rid) :key(k), rid(rid), lock(0), valid(1) {}
+  IndexItem(itemkey_t k, Rid rid) :key(k), rid(rid), valid(1) {}
 } Aligned8;
 
 struct IndexMeta {
@@ -66,10 +66,13 @@ struct IndexMeta {
 // 定义哈希桶next指针数组大小
 const int NEXT_NODE_COUNT = 4;
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
+const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
 
 // A IndexNode is a bucket
+// 这里注意：sizeof(IndexNode)是4080而非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
+// 若后续持久化，应该持久化4K整页
 struct IndexNode {
+  lock_t lock; 
   // node id
   page_id_t page_id;
 

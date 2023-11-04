@@ -18,6 +18,7 @@ set(DTX_SRC
         dtx/dtx_compare.cc
         dtx/dtx_compare_issue.cc
         dtx/dtx_compare_check.cc
+        dtx/dtx_hash_index.cc
         )
 
 set(SCHEDULER_SRC
