@@ -9,6 +9,17 @@
 #include <cstring>
 #include "common.h"
 
+struct Rid {
+    page_id_t page_no;
+    int slot_no;
+
+    friend bool operator==(const Rid &x, const Rid &y) {
+        return x.page_no == y.page_no && x.slot_no == y.slot_no;
+    }
+
+    friend bool operator!=(const Rid &x, const Rid &y) { return !(x == y); }
+} Aligned8;
+
 #define INVALID_PAGE_ID -1
 /**
  * @description: 存储层每个Page的id的声明

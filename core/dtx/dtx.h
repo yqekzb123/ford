@@ -28,6 +28,7 @@
 #include "dtx/structs.h"
 #include "memstore/hash_store.h"
 #include "memstore/hash_index_store.h"
+#include "memstore/lock_table_store.h"
 #include "util/debug.h"
 #include "util/hash.h"
 #include "util/json_config.h"
@@ -273,13 +274,40 @@ class DTX {
 
   bool CompareTruncateAsync(coro_yield_t& yield);
   
- private:
-
+ public:
+  // for hash index
   Rid GetHashIndex(table_id_t table_id, itemkey_t item_key);
 
   bool InsertHashIndex(table_id_t table_id, itemkey_t item_key, Rid rid);
 
   bool DeleteHashIndex(table_id_t table_id, itemkey_t item_key);
+
+  // for lock table
+  bool LockSharedOnTable(table_id_t table_id);
+  
+  bool LockExclusiveOnTable(table_id_t table_id);
+
+  bool LockSharedOnRecord(table_id_t table_id, itemkey_t key);
+
+  bool LockExclusiveOnRecord(table_id_t table_id, itemkey_t key);
+
+  bool LockSharedOnRange(table_id_t table_id, itemkey_t key);
+
+  bool LockExclusiveOnRange(table_id_t table_id, itemkey_t key);
+
+  bool UnlockSharedLockDataID(LockDataId lock_data_id);
+
+  bool UnlockExclusiveLockDataID(LockDataId lock_data_id);
+  
+ private:
+  // for private function for LockManager
+  bool LockShared(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+
+  bool LockExclusive(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+
+  bool UnlockShared(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+
+  bool UnlockExclusive(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
 
  public:
   tx_id_t tx_id;  // Transaction ID

@@ -12,6 +12,7 @@
 #include "memstore/data_item.h"
 #include "memstore/page_store.h"
 #include "memstore/hash_store.h"
+#include "memstore/lock_table_store.h"
 #include "rlib/rdma_ctrl.hpp"
 #include "base/page.h"
 

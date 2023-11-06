@@ -71,6 +71,9 @@ static constexpr int BUFFER_POOL_SIZE = 65536;                                //
 // static constexpr int LOG_BUFFER_SIZE = (1024 * PAGE_SIZE);                    // size of a log buffer in byte
 // static constexpr int BUCKET_SIZE = 50;                                        // size of extendible hash bucket
 
+// 定义哈希桶next指针数组大小
+const int NEXT_NODE_COUNT = 1;
+
 static constexpr uint64_t EXCLUSIVE_LOCKED = 0xFF00000000000000;
 static constexpr uint64_t EXCLUSIVE_UNLOCK_TO_BE_ADDED = 0xFFFFFFFFFFFFFFFF - EXCLUSIVE_LOCKED + 1;
 static constexpr uint64_t UNLOCKED = 0;

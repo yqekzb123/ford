@@ -11,24 +11,13 @@
 #include "memstore/mem_store.h"
 #include "util/hash.h"
 
-struct Rid {
-    page_id_t page_no;
-    int slot_no;
-
-    friend bool operator==(const Rid &x, const Rid &y) {
-        return x.page_no == y.page_no && x.slot_no == y.slot_no;
-    }
-
-    friend bool operator!=(const Rid &x, const Rid &y) { return !(x == y); }
-} Aligned8;
-
 struct IndexItem {
   itemkey_t key;
   Rid rid;
   uint8_t valid; // if the slot is empty, valid: exits value in the slot
   // lock_t lock; // if the slot is locked
 
-  IndexItem() {}
+  IndexItem():valid(0) {}
 
   IndexItem(itemkey_t k, Rid rid) :key(k), rid(rid), valid(1) {}
 } Aligned8;
@@ -63,10 +52,9 @@ struct IndexMeta {
   IndexMeta() {}
 } Aligned8;
 
-// 定义哈希桶next指针数组大小
-const int NEXT_NODE_COUNT = 4;
+
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
+const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
 
 // A IndexNode is a bucket
 // 这里注意：sizeof(IndexNode)是4080而非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
@@ -90,7 +78,7 @@ class IndexStore {
     assert(bucket_num > 0);
     index_size = (bucket_num) * sizeof(IndexNode);
     region_start_ptr = param->mem_region_start;
-    assert((uint64_t)param->mem_store_start + param->mem_store_alloc_offset + index_size <= (uint64_t)param->mem_store_reserve);
+    assert((uint64_t)param->mem_store_start + param->mem_store_alloc_offset + index_size + sizeof(uint64_t) <= (uint64_t)param->mem_store_reserve);
 
     // fill_page_count是指针，指向额外分配页面的数量，安排已分配页面数量的位置，在地址索引空间的头部
     // 额外指开始分配了bucket_num数量的bucket_key, 如果bucket已满，则需要在保留空间中新建桶
