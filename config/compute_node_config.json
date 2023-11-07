@@ -7,13 +7,11 @@
     "local_port": 12345,
 "txn_system": 2,
     "comment": "0 is farm, 1 is drtmh, 2 is ford",
-    "cache_size_GB": 4
+    // "cache_size_GB": 4
   },
   "remote_pm_nodes": {
     "remote_ips": [
       "127.0.0.1"
-      // "10.0.0.3",
-      // "10.0.0.5"
     ],
     "remote_ports": [
       12346

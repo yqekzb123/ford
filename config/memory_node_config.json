@@ -1,6 +1,6 @@
 {
   "local_memory_node": {
-    "machine_num": 2,
+    "machine_num": 1,
     "machine_id": 0,
     "local_port": 12346,
     "local_meta_port": 12347,
