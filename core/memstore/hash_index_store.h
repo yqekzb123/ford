@@ -173,7 +173,7 @@ Rid IndexStore::LocalGetIndexRid(itemkey_t key) {
   do {
     for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
       if (node->index_items[i].key == key && node->index_items[i].valid == true) {
-        return node->index_items->rid;
+        return node->index_items[i].rid;
       }
     }
     // short begin with bucket_num
@@ -188,7 +188,7 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
 
   Rid find_exits = LocalGetIndexRid(key);
   // exits same key
-  if(find_exits.page_no == INVALID_PAGE_ID) return false;
+  if(find_exits.page_no != INVALID_PAGE_ID) return false;
 
   uint64_t hash = GetHash(key);
   auto* node = (IndexNode*)(hash * sizeof(IndexNode) + index_ptr);

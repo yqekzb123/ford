@@ -299,6 +299,9 @@ class DTX {
 
   bool UnlockExclusiveLockDataID(LockDataId lock_data_id);
   
+  // for page table
+  offset_t GetPageAddr(PageId id);
+
  private:
   // for private function for LockManager
   bool LockShared(LockDataId lock_data_id, offset_t node_off, RCQP* qp);

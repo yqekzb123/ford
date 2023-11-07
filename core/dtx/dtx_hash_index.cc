@@ -27,7 +27,7 @@ Rid DTX::GetHashIndex(table_id_t table_id, itemkey_t item_key) {
         for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
             if (index_node->index_items[i].key == item_key && index_node->index_items[i].valid == true) {
                 // find
-                rid_res = index_node->index_items->rid;
+                rid_res = index_node->index_items[i].rid;
                 // Unlock
                 ShardUnLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
                 return rid_res;

@@ -10,7 +10,7 @@
 #include <string>
 
 #include "memstore/data_item.h"
-#include "memstore/page_store.h"
+#include "memstore/page_table.h"
 #include "memstore/hash_store.h"
 #include "memstore/lock_table_store.h"
 #include "rlib/rdma_ctrl.hpp"

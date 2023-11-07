@@ -10,6 +10,7 @@
 #include "memstore/hash_store.h"
 #include "memstore/hash_index_store.h"
 #include "memstore/lock_table_store.h"
+#include "memstore/page_table.h"
 #include "rlib/rdma_ctrl.hpp"
 
 using namespace rdmaio;
@@ -132,6 +133,20 @@ class MetaManager {
     return search->second;
   }
 
+  /*** Lock Table Meta ***/
+  ALWAYS_INLINE
+  const std::vector<node_id_t>& GetAllMemNodes() const {
+    return all_memstore_nodes;
+  }
+
+  /*** Page Table Meta ***/
+  ALWAYS_INLINE
+  const PageTableMeta& GetPageTableMeta(const node_id_t node_id) const {
+    auto search = page_table_meta.find(node_id);
+    assert(search != page_table_meta.end());
+    return search->second;
+  }
+
  private:
   std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
 
@@ -157,6 +172,9 @@ class MetaManager {
 
   std::unordered_map<table_id_t, LockTableMeta> lock_table_meta;
   std::unordered_map<table_id_t, node_id_t> lock_table_nodes;
+
+  std::vector<node_id_t> all_memstore_nodes;
+  std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
 
   node_id_t local_machine_id;
 
