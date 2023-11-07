@@ -15,7 +15,7 @@ Rid DTX::GetHashIndex(table_id_t table_id, itemkey_t item_key) {
 
     offset_t node_off = hash_meta.base_off + hash * sizeof(IndexNode);
 
-    Rid rid_res{-1,-1};
+    Rid rid_res{INVALID_PAGE_ID,-1};
     // shared_lock hash node bucket
     char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
     
@@ -42,13 +42,14 @@ Rid DTX::GetHashIndex(table_id_t table_id, itemkey_t item_key) {
             return rid_res;
         } 
 
-        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * BUCKET_SIZE;
+        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(IndexNode);
         // lock next
         char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
         // release now
         ShardUnLockHashNode(thread_rdma_buffer_alloc, old_node_off, this, qp);
     }
-
+    
+    return rid_res;
 }
 
 bool DTX::InsertHashIndex(table_id_t table_id, itemkey_t item_key, Rid rid) {
@@ -91,7 +92,7 @@ bool DTX::InsertHashIndex(table_id_t table_id, itemkey_t item_key, Rid rid) {
             return false;
         } 
 
-        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * BUCKET_SIZE;
+        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(IndexNode);
         // lock next
         char* local_hash_node = ExclusiveLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
         // release now
@@ -136,7 +137,7 @@ bool DTX::DeleteHashIndex(table_id_t table_id, itemkey_t item_key) {
             return true;
         } 
 
-        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * BUCKET_SIZE;
+        node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(IndexNode);
         // lock next
         char* local_hash_node = ExclusiveLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
         // release now

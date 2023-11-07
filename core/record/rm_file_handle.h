@@ -8,7 +8,7 @@
 #include "txn/txn.h"
 #include "txn/batch_txn.h"
 #include "util/bitmap.h"
-#include "storage/page.h"
+#include "base/page.h"
 #include "storage/disk_manager.h"
 #include "buffer/bufferpool_manager.h"
 
@@ -66,7 +66,7 @@ class RmFileHandle {
     /* 判断指定位置上是否已经存在一条记录，通过Bitmap来判断 */
     bool is_record(const Rid &rid) const {
         RmPageHandle page_handle = fetch_page_handle(rid.page_no_);
-        return Bitmap::is_set(page_handle.bitmap, rid.slot_offset_ );  // page的slot_no位置上是否有record
+        return Bitmap::is_set(page_handle.bitmap, rid.slot_no_ );  // page的slot_no位置上是否有record
     }
 
     std::unique_ptr<RmRecord> get_record(const Rid &rid, BatchTxn* txn) const;

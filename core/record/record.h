@@ -19,12 +19,6 @@ public:
     int num_records_;
 };
 
-class Rid {
-public:
-    page_id_t page_no_;
-    int slot_offset_;
-};
-
 class RmRecord {
 public:
     itemkey_t key_;

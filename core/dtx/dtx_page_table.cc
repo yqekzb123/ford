@@ -56,7 +56,7 @@ offset_t DTX::GetPageAddr(PageId id) {
                     return res;
                 } 
 
-                node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * BUCKET_SIZE;
+                node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(PageTableNode);
                 // lock next
                 char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
                 // release now

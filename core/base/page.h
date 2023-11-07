@@ -10,17 +10,17 @@
 #include "common.h"
 
 struct Rid {
-    page_id_t page_no;
-    int slot_no;
+    page_id_t page_no_;
+    int slot_no_;
 
     friend bool operator==(const Rid &x, const Rid &y) {
-        return x.page_no == y.page_no && x.slot_no == y.slot_no;
+        return x.page_no_ == y.page_no_ && x.slot_no_ == y.slot_no_;
     }
 
     friend bool operator!=(const Rid &x, const Rid &y) { return !(x == y); }
 } Aligned8;
 
-#define INVALID_PAGE_ID -1
+
 /**
  * @description: 存储层每个Page的id的声明
  */
@@ -67,36 +67,8 @@ class Page {
 
     bool is_dirty() const { return is_dirty_; }
 
-    /**
-     * @description: 获取page的写锁
-     */
-    // inline void WLatch() { rwlatch_.WLock(); }
-
-    /**
-     * @description: 释放page的写锁 
-     */
-    // inline void WUnlatch() { rwlatch_.WUnlock(); }
-
-    /**
-     * @description: 获取page的读锁
-     */
-    // inline void RLatch() { rwlatch_.RLock(); }
-
-    /**
-     * @description: 释放page的读锁
-     */
-    // inline void RUnlatch() { rwlatch_.RUnlock(); }
-
-    static constexpr size_t OFFSET_PAGE_START = 0;
-    static constexpr size_t OFFSET_LSN = 0;
-    static constexpr size_t OFFSET_PAGE_HDR = 4;
-
-    inline lsn_t get_page_lsn() { return *reinterpret_cast<lsn_t *>(get_data() + OFFSET_LSN) ; }
-
-    inline void set_page_lsn(lsn_t page_lsn) { memcpy(get_data() + OFFSET_LSN, &page_lsn, sizeof(lsn_t)); }
-
    private:
-    void reset_memory() { memset(data_, OFFSET_PAGE_START, PAGE_SIZE); }  // 将data_的PAGE_SIZE个字节填充为0
+    void reset_memory() { memset(data_, 0, PAGE_SIZE); }  // 将data_的PAGE_SIZE个字节填充为0
 
     /** page的唯一标识符 */
     PageId id_;
@@ -112,7 +84,6 @@ class Page {
     /** The pin count of this page. */
     int pin_count_ = 0;
 
-    /** Page latch. */
+    // /** Page latch. */
     // ReaderWriterLatch rwlatch_;
-
 };

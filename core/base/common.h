@@ -20,12 +20,14 @@ using offset_t = int64_t;     // Offset type. Usually used in remote offset for 
 using version_t = uint64_t;   // Version type, used in version checking
 using lock_t = uint64_t;      // Lock type, used in remote locking
 using lsn_t = uint64_t;       // log sequence number, used for storage_node log storage
-using page_id_t = uint32_t;   // page id type
+using page_id_t = int32_t;    // page id type
 using frame_id_t = uint32_t;  // frame id type
 using batch_id_t = uint64_t;  // batch id type
+using slot_offset_t = size_t; // slot offset type
+using timestamp_t = int32_t;  // timestamp type, used for transaction concurrency
 
 #define PAGE_SIZE 4096
-#define BUFFER_POOL_SIZE 65536
+#define BUFFER_POOL_SIZE 65536 // 256MB
 
 #define LOG_FILE_NAME "LOG_FILE"                                
 static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                    // size of a log buffer in byte
@@ -59,22 +61,13 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #define likely(x) __builtin_expect(!!(x), 1)
 
-
-using frame_id_t = int32_t;  // frame id type, 帧页ID, 页在BufferPool中的存储单元称为帧,一帧对应一页
-using page_id_t = int32_t;   // page id type , 页ID
-using txn_id_t = int32_t;    // transaction id type
-using lsn_t = int32_t;       // log sequence number type
-using slot_offset_t = size_t;  // slot offset type
-using oid_t = uint16_t;
-using timestamp_t = int32_t;  // timestamp type, used for transaction concurrency
-
 // invalid value for common identifiers
 #define INVALID_LSN -1
 #define INVALID_TXN_ID -1
 #define INVALID_NODE_ID -1
 #define INVALID_BATCH_ID 0
 #define INVALID_FRAME_ID -1
-#define INVALID_PAGE_ID -1U
+#define INVALID_PAGE_ID -1
 
 #define PAGE_NO_RM_FILE_HDR 0
 #define OFFSET_PAGE_HDR 0
@@ -91,15 +84,8 @@ using timestamp_t = int32_t;  // timestamp type, used for transaction concurrenc
 #define RM_FILE_HDR_PAGE 0
 #define RM_NO_PAGE -1
 
-static constexpr int INVALID_FRAME_ID = -1;                                   // invalid frame id
-static constexpr int INVALID_PAGE_ID = -1;                                    // invalid page id
-static constexpr int INVALID_TXN_ID = -1;                                     // invalid transaction id
 static constexpr int INVALID_TIMESTAMP = -1;                                  // invalid transaction timestamp
-static constexpr int INVALID_LSN = -1;                                        // invalid log sequence number
 static constexpr int HEADER_PAGE_ID = 0;                                      // the header page id
-static constexpr int PAGE_SIZE = 4096;                                        // size of a data page in byte  4KB
-static constexpr int BUFFER_POOL_SIZE = 65536;                                // size of buffer pool 256MB
-// static constexpr int BUFFER_POOL_SIZE = 262144;                                // size of buffer pool 1GB
 // static constexpr int LOG_BUFFER_SIZE = (1024 * PAGE_SIZE);                    // size of a log buffer in byte
 // static constexpr int BUCKET_SIZE = 50;                                        // size of extendible hash bucket
 

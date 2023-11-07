@@ -20,10 +20,10 @@ std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, BatchTxn* txn
         // context->lock_mgr_->lock_shared_on_record(context->txn_, rid, fd_);
 
     RmPageHandle page_handle = fetch_page_handle(rid.page_no_);
-    if (!Bitmap::is_set(page_handle.bitmap, page_handle.get_slot_no(rid.slot_offset_))) {
+    if (!Bitmap::is_set(page_handle.bitmap, page_handle.get_slot_no(rid.slot_no_))) {
         // throw RecordNotFoundError(rid.page_no_, rid.slot_no_);
     }
-    char *slot = page_handle.get_slot(rid.slot_offset_);  // record对应的地址
+    char *slot = page_handle.get_slot(rid.slot_no_);  // record对应的地址
     // copy record into slot 把位于slot的record拷贝一份到当前的record
     itemkey_t key = *reinterpret_cast<const itemkey_t*>(slot);
 
@@ -56,7 +56,7 @@ Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
     // // get slot number 找page_handle.bitmap中第一个为0的位
     int slot_no = Bitmap::first_bit(false, page_handle.bitmap, file_hdr_.num_records_per_page_);
     assert(slot_no < file_hdr_.num_records_per_page_);
-    Rid rid{.page_no_ = page_handle.page->get_page_id().page_no, .slot_offset_ = page_handle.get_slot_offset(slot_no)};
+    Rid rid{.page_no_ = page_handle.page->get_page_id().page_no, .slot_no_ = page_handle.get_slot_offset(slot_no)};
 
     // if(context != nullptr)
     //     context->lock_mgr_->lock_exclusive_on_record(context->txn_, rid, fd_);
@@ -71,7 +71,7 @@ Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
         file_hdr_.first_free_page_no_ = page_handle.page_hdr->next_free_page_no_;
     }
     // copy record data into slot
-    char *slot = page_handle.get_slot(rid.slot_offset_);
+    char *slot = page_handle.get_slot(rid.slot_no_);
     memcpy(slot, &key, sizeof(itemkey_t));
     memcpy(slot + sizeof(itemkey_t), buf, file_hdr_.record_size_);
 
@@ -112,7 +112,7 @@ void RmFileHandle::delete_record(const Rid& rid, BatchTxn* txn) {
     RmRecord delete_record(rec->key_, rec->value_size_, rec->value_);
 
     RmPageHandle page_handle = fetch_page_handle(rid.page_no_);  // 调用辅助函数获取指定page handle
-    int slot_no = page_handle.get_slot_no(rid.slot_offset_);
+    int slot_no = page_handle.get_slot_no(rid.slot_no_);
     if (!Bitmap::is_set(page_handle.bitmap, slot_no)) {
         // throw RecordNotFoundError(rid.page_no, rid.slot_no);
     }
@@ -157,10 +157,10 @@ void RmFileHandle::update_record(const Rid& rid, char* buf, BatchTxn* txn) {
     RmRecord new_record(rec->key_, rec->value_size_, buf);
 
     RmPageHandle page_handle = fetch_page_handle(rid.page_no_);
-    if (!Bitmap::is_set(page_handle.bitmap, page_handle.get_slot_no(rid.slot_offset_))) {
+    if (!Bitmap::is_set(page_handle.bitmap, page_handle.get_slot_no(rid.slot_no_))) {
         // throw RecordNotFoundError(rid.page_no, rid.slot_no);
     }
-    char *slot = page_handle.get_slot(rid.slot_offset_);
+    char *slot = page_handle.get_slot(rid.slot_no_);
     memcpy(slot + sizeof(itemkey_t), buf, file_hdr_.record_size_);
 
     buffer_pool_manager_->unpin_page(page_handle.page->get_page_id(), true);

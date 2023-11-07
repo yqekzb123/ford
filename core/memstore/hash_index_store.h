@@ -188,7 +188,7 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
 
   Rid find_exits = LocalGetIndexRid(key);
   // exits same key
-  if(find_exits.page_no != INVALID_PAGE_ID) return false;
+  if(find_exits.page_no_ != INVALID_PAGE_ID) return false;
 
   uint64_t hash = GetHash(key);
   auto* node = (IndexNode*)(hash * sizeof(IndexNode) + index_ptr);

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "base/common.h"
+#include "base/page.h"
 #include "record/record.h"
 
 const int OFFSET_BATCH_ID = 0;
@@ -263,7 +264,7 @@ public:
         printf("insert record\n");
         LogRecord::format_print();
         printf("insert_value: %s\n", insert_value_.value_);
-        printf("insert rid: %d, %d\n", rid_.page_no_, rid_.slot_offset_);
+        printf("insert rid: %d, %d\n", rid_.page_no_, rid_.slot_no_);
         printf("table name: %s\n", table_name_);
     }
 
@@ -371,7 +372,7 @@ public:
     void format_print() override {
         LogRecord::format_print();
         // printf("delete_value: %s\n", delete_value_.value_);
-        // printf("delete rid: %d, %d, %d\n", rid_.page_no_, rid_.slot_offset_, rid_.record_size_);
+        // printf("delete rid: %d, %d, %d\n", rid_.page_no_, rid_.slot_no_, rid_.record_size_);
         printf("table name: %s\n", table_name_);
     }
 
@@ -455,7 +456,7 @@ public:
         LogRecord::format_print();
         // printf("old_value: %s\n", old_value_.value_);
         printf("new_value: %s\n", new_value_.value_);
-        printf("update rid: %d, %d\n", rid_.page_no_, rid_.slot_offset_);
+        printf("update rid: %d, %d\n", rid_.page_no_, rid_.slot_no_);
         printf("table name: %s\n", table_name_);
     }
 
