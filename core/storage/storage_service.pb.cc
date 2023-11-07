@@ -143,12 +143,12 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_storage_5fservice_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\025storage_service.proto\022\017storage_service"
-  "\"\036\n\017LogWriteRequest\022\013\n\003log\030\001 \001(\t\"\022\n\020LogW"
+  "\"\036\n\017LogWriteRequest\022\013\n\003log\030\001 \001(\014\"\022\n\020LogW"
   "riteResponse\"\222\001\n\016GetPageRequest\0227\n\007page_"
   "id\030\001 \001(\0132&.storage_service.GetPageReques"
   "t.PageID\022\030\n\020require_batch_id\030\002 \001(\004\032-\n\006Pa"
   "geID\022\022\n\ntable_name\030\001 \001(\t\022\017\n\007page_no\030\002 \001("
-  "\021\"\037\n\017GetPageResponse\022\014\n\004data\030\001 \001(\t2\257\001\n\016S"
+  "\021\"\037\n\017GetPageResponse\022\014\n\004data\030\001 \001(\0142\257\001\n\016S"
   "torageService\022O\n\010LogWrite\022 .storage_serv"
   "ice.LogWriteRequest\032!.storage_service.Lo"
   "gWriteResponse\022L\n\007GetPage\022\037.storage_serv"
@@ -239,13 +239,12 @@ const char* LogWriteRequest::_InternalParse(const char* ptr, ::_pbi::ParseContex
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // string log = 1;
+      // bytes log = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_log();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-          CHK_(::_pbi::VerifyUTF8(str, "storage_service.LogWriteRequest.log"));
         } else
           goto handle_unusual;
         continue;
@@ -278,13 +277,9 @@ uint8_t* LogWriteRequest::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string log = 1;
+  // bytes log = 1;
   if (!this->_internal_log().empty()) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_log().data(), static_cast<int>(this->_internal_log().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "storage_service.LogWriteRequest.log");
-    target = stream->WriteStringMaybeAliased(
+    target = stream->WriteBytesMaybeAliased(
         1, this->_internal_log(), target);
   }
 
@@ -304,10 +299,10 @@ size_t LogWriteRequest::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string log = 1;
+  // bytes log = 1;
   if (!this->_internal_log().empty()) {
     total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_log());
   }
 
@@ -913,13 +908,12 @@ const char* GetPageResponse::_InternalParse(const char* ptr, ::_pbi::ParseContex
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // string data = 1;
+      // bytes data = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_data();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-          CHK_(::_pbi::VerifyUTF8(str, "storage_service.GetPageResponse.data"));
         } else
           goto handle_unusual;
         continue;
@@ -952,13 +946,9 @@ uint8_t* GetPageResponse::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string data = 1;
+  // bytes data = 1;
   if (!this->_internal_data().empty()) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_data().data(), static_cast<int>(this->_internal_data().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "storage_service.GetPageResponse.data");
-    target = stream->WriteStringMaybeAliased(
+    target = stream->WriteBytesMaybeAliased(
         1, this->_internal_data(), target);
   }
 
@@ -978,10 +968,10 @@ size_t GetPageResponse::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string data = 1;
+  // bytes data = 1;
   if (!this->_internal_data().empty()) {
     total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_data());
   }
 

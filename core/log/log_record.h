@@ -10,7 +10,7 @@ const int OFFSET_BATCH_ID = 0;
 // the offset of log_type_ in log header
 const int OFFSET_LOG_TYPE = sizeof(batch_id_t);
 // the offset of lsn_ in log header
-const int OFFSET_LSN = OFFSET_BATCH_ID + sizeof(int);
+const int OFFSET_LSN = OFFSET_LOG_TYPE + sizeof(int);
 // the offset of log_tot_len_ in log header
 const int OFFSET_LOG_TOT_LEN = OFFSET_LSN + sizeof(lsn_t);
 // the offset of log_tid_ in log header
@@ -32,7 +32,8 @@ enum LogType: int {
     BEGIN,
     COMMIT,
     ABORT,
-    NEWPAGE
+    NEWPAGE,
+    BATCHEND
 };
 
 /* used for debug, convert LogType into string */
@@ -42,7 +43,9 @@ static std::string LogTypeStr[] = {
     "DELETE",
     "BEGIN",
     "COMMIT",
-    "ABORT"
+    "ABORT",
+    "NEWPAGE",
+    "BATCHEND"
 };
 
 class LogRecord {
@@ -402,7 +405,8 @@ public:
         log_node_id_ = node_id;
         // old_value_ = old_value;
         new_value_ = new_value;
-        log_tot_len_ += sizeof(int);
+        log_tot_len_ += sizeof(itemkey_t);
+        log_tot_len_ += sizeof(size_t);
         log_tot_len_ += new_value_.value_size_;
         rid_ = rid;
         log_tot_len_ += sizeof(Rid);
@@ -424,7 +428,7 @@ public:
         // offset += sizeof(int);
         // memcpy(dest + offset, old_value_.value_, old_value_.value_size_);
         // offset += old_value_.value_size_;
-        new_value_.Serialize(dest, offset);
+        new_value_.Serialize(dest + offset, offset);
         memcpy(dest + offset, &rid_, sizeof(Rid));
         offset += sizeof(Rid);
         memcpy(dest + offset, &table_name_size_, sizeof(size_t));
@@ -532,4 +536,32 @@ public:
     int num_pages_;             // modified value of file_hdr.num_pages
     int first_free_page_no_;    // modified value of file_hdr.first_free_page_no
     int next_free_page_no_;
+};
+
+class BatchEndLogRecord: public LogRecord {
+public:
+    BatchEndLogRecord() {
+        log_batch_id_ = INVALID_BATCH_ID;
+        log_type_ = LogType::BATCHEND;
+        lsn_ = INVALID_LSN;
+        log_tot_len_ = LOG_HEADER_SIZE;
+        log_tid_ = INVALID_TXN_ID;
+        log_node_id_ = INVALID_NODE_ID;
+        prev_lsn_  = INVALID_LSN;
+    }
+    BatchEndLogRecord(batch_id_t batch_id, node_id_t node_id, tx_id_t txn_id) : BatchEndLogRecord() {
+        log_batch_id_ = batch_id;
+        log_node_id_ = node_id;
+        log_tid_ = txn_id;
+    }
+
+    void serialize(char* dest) const override {
+        LogRecord::serialize(dest);
+    }
+    void deserialize(const char* src) override {
+        LogRecord::deserialize(src);
+    }
+    void format_print() override {
+        LogRecord::format_print();
+    }
 };

@@ -4,7 +4,7 @@ option cc_generic_services = true;
 package storage_service;
 
 message LogWriteRequest {
-    string log = 1;
+    bytes log = 1;
 };
 
 message LogWriteResponse{}
@@ -19,7 +19,7 @@ message GetPageRequest {
 };
 
 message GetPageResponse {
-    string data = 1;
+    bytes data = 1;
 };
 
 service StorageService {

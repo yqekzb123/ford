@@ -63,7 +63,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 #define INVALID_LSN -1
 #define INVALID_TXN_ID -1
 #define INVALID_NODE_ID -1
-#define INVALID_BATCH_ID -1
+#define INVALID_BATCH_ID 0
 #define INVALID_FRAME_ID -1
 #define INVALID_PAGE_ID -1U
 

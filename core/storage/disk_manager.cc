@@ -12,20 +12,20 @@ DiskManager::DiskManager() {
     memset(fd2pageno_, 0, MAX_FD * (sizeof(std::atomic<page_id_t>) / sizeof(char))); 
 
     // 日志文件不存在, 创建日志文件, 并初始化log的batch id
-    if(! is_file(LOG_FILE_NAME)){
-        create_file(LOG_FILE_NAME);
-        int log_file_fd_ = open_file(LOG_FILE_NAME);
+    // if(! is_file(LOG_FILE_NAME)){
+    //     create_file(LOG_FILE_NAME);
+    //     int log_file_fd_ = open_file(LOG_FILE_NAME);
 
-        batch_id_t tmp = -1;
-        ssize_t bytes_write = write(log_file_fd_, &tmp, sizeof(batch_id_t));
-        assert(bytes_write == sizeof(batch_id_t));
+    //     batch_id_t tmp = 0;
+    //     ssize_t bytes_write = write(log_file_fd_, &tmp, sizeof(batch_id_t));
+    //     assert(bytes_write == sizeof(batch_id_t));
 
-        uint64_t persist_offset = sizeof(batch_id_t) + sizeof(uint64_t) - 1;
-        bytes_write = write(log_file_fd_, &persist_offset, sizeof(uint64_t));
-        assert(bytes_write == sizeof(uint64_t));
+    //     uint64_t persist_offset = sizeof(batch_id_t) + sizeof(uint64_t) - 1;
+    //     bytes_write = write(log_file_fd_, &persist_offset, sizeof(uint64_t));
+    //     assert(bytes_write == sizeof(uint64_t));
 
-        close_file(log_file_fd_);
-    }
+    //     close_file(log_file_fd_);
+    // }
 
 }
 
@@ -44,6 +44,9 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
 
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_write = write(fd, offset, num_bytes);  // 这里的offset可以是uint_8*类型，也可以是char*类型
+    
+    RDMA_LOG(INFO) << "Write page: fd: " << fd << ", page_no: " << page_no << ", write size: " << bytes_write;
+
     if (bytes_write != num_bytes) {
         // throw InternalError("DiskManager::write_page Error");
         RDMA_LOG(FATAL) << "DiskManager::write_page Error: failed to write complete page data.";
@@ -67,10 +70,14 @@ void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_byt
     // SEEK_SET 定位到文件头
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_read = read(fd, offset, num_bytes);
+
+    RDMA_LOG(INFO) << "Read page: fd: " << fd << ", page_no: " << page_no << ", read size: " << bytes_read;
+
     // 没有成功从buffer偏移处读取指定数字节
     if (bytes_read != num_bytes) {
         // throw InternalError("DiskManager::read_page Error");
-        RDMA_LOG(FATAL) << "DiskManager::read_page Error: failed to read complete page data.";
+        RDMA_LOG(FATAL) << "DiskManager::read_page Error: failed to read the complete page data of page " << page_no;
+        RDMA_LOG(FATAL) << "read bytes is " << bytes_read;
         throw InternalError("DiskManager::read_page Error");
     }
 }
@@ -188,21 +195,21 @@ int DiskManager::open_file(const std::string &path) {
     // 调用open()函数，使用O_RDWR模式
     // 注意不能重复打开相同文件，并且需要更新文件打开列表
 
-    if (!is_file(path)) {
-        throw FileNotFoundError(path);
-    }
-    if (path2fd_.count(path)) {
-        // File is already open
-        throw FileNotClosedError(path);
-    }
+    // if (!is_file(path)) {
+    //     throw FileNotFoundError(path);
+    // }
+    // if (path2fd_.count(path)) {
+    //     // File is already open
+    //     throw FileNotClosedError(path);
+    // }
     // Open file and return the file descriptor
     int fd = open(path.c_str(), O_RDWR);
     if (fd < 0) {
         throw UnixError();
     }
     // Memorize the opened unix file descriptor
-    path2fd_[path] = fd;
-    fd2path_[fd] = path;
+    // path2fd_[path] = fd;
+    // fd2path_[fd] = path;
     return fd;
 }
 
@@ -215,12 +222,12 @@ void DiskManager::close_file(int fd) {
     // 调用close()函数
     // 注意不能关闭未打开的文件，并且需要更新文件打开列表
     
-    if (!fd2path_.count(fd)) {
-        throw FileNotOpenError(fd);
-    }
-    std::string filename = fd2path_[fd];
-    path2fd_.erase(filename);
-    fd2path_.erase(fd);
+    // if (!fd2path_.count(fd)) {
+    //     throw FileNotOpenError(fd);
+    // }
+    // std::string filename = fd2path_[fd];
+    // path2fd_.erase(filename);
+    // fd2path_.erase(fd);
     if (close(fd) != 0) {
         throw UnixError();
     }

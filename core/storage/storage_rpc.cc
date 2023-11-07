@@ -15,7 +15,7 @@ namespace storage_service{
                        ::google::protobuf::Closure* done){
             
         brpc::ClosureGuard done_guard(done);
-        
+        RDMA_LOG(INFO) << "handle write log request, log is " << request->log();
         log_manager_->write_batch_log_to_disk(request->log());
         
         return;
@@ -28,17 +28,32 @@ namespace storage_service{
 
         brpc::ClosureGuard done_guard(done);
 
-        RDMA_LOG(INFO) << "handle GetPage request";
-
-        std::string fd = request->page_id().table_name();
+        std::string table_name = request->page_id().table_name();
         page_id_t page_no = request->page_id().page_no();
+        batch_id_t request_batch_id = request->require_batch_id();
+        LogReplay* log_replay = log_manager_->log_replay_;
 
-        char data[4096];
+        RDMA_LOG(INFO) << "handle GetPage request";
+        RDMA_LOG(INFO) << "request_batch_id: " << request_batch_id << ", persist_batch_id: " << log_replay->get_persist_batch_id();
+
+        char data[PAGE_SIZE + 1];
 
         // TODO
-        disk_manager_->read_page(1, page_no, data, 4096);
+        while(log_replay->get_persist_batch_id() < request_batch_id) {
+            // wait
+            usleep(10);
+        }
 
-        response->set_data(std::string(data, 4096));
+        RDMA_LOG(INFO) << "the batch_id requirement is satisfied";
+
+        int fd = disk_manager_->open_file(table_name);
+        disk_manager_->read_page(fd, page_no, data, PAGE_SIZE);
+
+        response->set_data(std::string(data, PAGE_SIZE));
+
+        disk_manager_->close_file(fd);
+
+        RDMA_LOG(INFO) << "success to GetPage";
 
         return;
     };

@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "util/json_config.h"
+#include "util/bitmap.h"
 
 int main(int argc, char* argv[]) {
     // Configure of this server
@@ -35,6 +36,15 @@ int main(int argc, char* argv[]) {
 
     // used for test
     disk_manager->create_file("table");
+    int fd = disk_manager->open_file("table");
+    RmFileHdr file_hdr{};
+    file_hdr.record_size_ = 8;
+    file_hdr.num_pages_ = 1;
+    file_hdr.first_free_page_no_ = RM_NO_PAGE;
+    file_hdr.num_records_per_page_ = (BITMAP_WIDTH * (PAGE_SIZE - 1 - (int)sizeof(RmFileHdr)) + 1) / (1 + (file_hdr.record_size_ + sizeof(itemkey_t)) * BITMAP_WIDTH);
+    file_hdr.bitmap_size_ = (file_hdr.num_records_per_page_ + BITMAP_WIDTH - 1) / BITMAP_WIDTH;
+    disk_manager->write_page(fd, RM_FILE_HDR_PAGE, (char*)&file_hdr, sizeof(file_hdr));
+    disk_manager->close_file(fd);
 
     auto server = std::make_shared<Server>(local_port, use_rdma, disk_manager.get(), log_manager.get());
 

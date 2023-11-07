@@ -20,28 +20,43 @@ DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
  * 比较相同手动比较一下吧，就是比较一下talbe文件和talbe_mem文件是否有区别
 */
 
-brpc::ChannelOptions options;
-brpc::Channel channel;
-
 bool need_request_page = false;
 page_id_t request_page_no = INVALID_PAGE_ID;
 batch_id_t request_batch_id = INVALID_BATCH_ID;
 
 void* request_pages(void* arg) {
+    brpc::ChannelOptions options;
+    brpc::Channel channel;
+    
+    options.use_rdma = true;
+    options.protocol = FLAGS_protocol;
+    options.connection_type = FLAGS_connection_type;
+    options.timeout_ms = FLAGS_timeout_ms;
+    options.max_retry = FLAGS_max_retry;
+    if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
+        RDMA_LOG(FATAL) << "Fail to initialize channel";
+    }
     storage_service::StorageService_Stub stub(&channel);
 
-    while(need_request_page == true) {
+    while(true) {
+        if(need_request_page == false) {
+            usleep(10000); //10ms
+            continue;
+        }
         RDMA_LOG(INFO) << "begin request page";
         storage_service::GetPageRequest request;
         storage_service::GetPageResponse response;
         brpc::Controller cntl;
+        // std::string table_name = "table";
 
-        storage_service::GetPageRequest_PageID page_id;
+        // storage_service::GetPageRequest_PageID page_id;
         
-        page_id.set_page_no(request_page_no);
-        page_id.set_table_name("table");
+        // page_id.set_page_no(request_page_no);
+        // page_id.set_table_name("table");
+        request.mutable_page_id()->set_table_name("table");
+        request.mutable_page_id()->set_page_no(request_page_no);
 
-        request.set_allocated_page_id(&page_id);
+        // request.set_allocated_page_id(&page_id);
         request.set_require_batch_id(request_batch_id);
 
         stub.GetPage(&cntl, &request, &response, NULL);
@@ -55,7 +70,19 @@ void* request_pages(void* arg) {
 }
 
 void* generate_redo_logs(void* arg) {
+    brpc::ChannelOptions options;
+    brpc::Channel channel;
+    
+    options.use_rdma = true;
+    options.protocol = FLAGS_protocol;
+    options.connection_type = FLAGS_connection_type;
+    options.timeout_ms = FLAGS_timeout_ms;
+    options.max_retry = FLAGS_max_retry;
+    if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
+        RDMA_LOG(FATAL) << "Fail to initialize channel";
+    }
     storage_service::StorageService_Stub stub(&channel);
+
     DiskManager* disk_manager = new DiskManager();
     BufferPoolManager* buffer_mgr = new BufferPoolManager(BUFFER_POOL_SIZE, disk_manager);
     RmManager* rm_manager = new RmManager(disk_manager, buffer_mgr);
@@ -77,6 +104,8 @@ void* generate_redo_logs(void* arg) {
     memcpy(value1, name1.c_str(), name1.length());
     memcpy(value1 + name1.length(), &score1, sizeof(float));
     Rid rid1 = table_file->insert_record(key1, value1, txn1);
+    // new page log
+    // insert log
 
     itemkey_t key2 = 2;
     char* value2 = new char[8];
@@ -85,6 +114,11 @@ void* generate_redo_logs(void* arg) {
     memcpy(value2, name2.c_str(), name2.length());
     memcpy(value2 + name2.length(), &score2, sizeof(float));
     Rid rid2 = table_file->insert_record(key2, value2, txn1);
+    // insert log
+
+    BatchEndLogRecord* batch1_end_log = new BatchEndLogRecord(1, 1, 1);
+    txn1->logs.push_back(batch1_end_log);
+    // end log
 
     request.set_log(txn1->get_log_string());
     stub.LogWrite(&cntl, &request, &response, NULL);
@@ -95,6 +129,7 @@ void* generate_redo_logs(void* arg) {
     cntl.Reset();
 
     request_page_no = rid1.page_no_;
+    request_batch_id = 1;
     need_request_page = true;
     buffer_mgr->flush_all_pages(table_file->fd_);
     // 写完了txn1的log，并把txn1的修改写入了磁盘，写入了table_mem文件，log_replay的数据写入table文件（log里面的table_name默认为table）
@@ -107,6 +142,7 @@ void* generate_redo_logs(void* arg) {
     memcpy(value3, name3.c_str(), name3.length());
     memcpy(value3 + name3.length(), &score3, sizeof(float));
     Rid rid3 = table_file->insert_record(key3, value3, txn2);
+    // insert log
 
     char* new_value2 = new char[8];
     std::string new_name2 = "dddd";
@@ -114,8 +150,12 @@ void* generate_redo_logs(void* arg) {
     memcpy(new_value2, new_name2.c_str(), new_name2.length());
     memcpy(new_value2 + new_name2.length(), &new_score2, sizeof(float));
     table_file->update_record(rid2, new_value2, txn2);
+    // update log
 
     table_file->delete_record(rid1, txn2);
+
+    BatchEndLogRecord* batch2_end_log = new BatchEndLogRecord(2, 1, 2);
+    txn2->logs.push_back(batch2_end_log);
     
     request.set_log(txn2->get_log_string());
     stub.LogWrite(&cntl, &request, &response, NULL);
@@ -126,6 +166,7 @@ void* generate_redo_logs(void* arg) {
     cntl.Reset();
 
     request_page_no = rid3.page_no_;
+    request_batch_id = 2;
     need_request_page = true;
     RDMA_LOG(INFO) << "try to flush_all_pages";
     buffer_mgr->flush_all_pages(table_file->fd_);
@@ -140,6 +181,9 @@ void* generate_redo_logs(void* arg) {
     memcpy(value4 + name4.length(), &score4, sizeof(float));
     Rid rid4 = table_file->insert_record(key4, value4, txn3);
 
+    BatchEndLogRecord* batch3_end_log = new BatchEndLogRecord(3, 1, 3);
+    txn3->logs.push_back(batch3_end_log);
+
     request.set_log(txn3->get_log_string());
     stub.LogWrite(&cntl, &request, &response, NULL);
 
@@ -149,21 +193,13 @@ void* generate_redo_logs(void* arg) {
     cntl.Reset();
 
     request_page_no = rid4.page_no_;
+    request_batch_id = 3;
     need_request_page = true;
     buffer_mgr->flush_all_pages(table_file->fd_);
     RDMA_LOG(INFO) << "Finish flush_all_pages after executing txn3";
 }
 
 int main(int argc, char* argv[]) {
-    options.use_rdma = true;
-    options.protocol = FLAGS_protocol;
-    options.connection_type = FLAGS_connection_type;
-    options.timeout_ms = FLAGS_timeout_ms;
-    options.max_retry = FLAGS_max_retry;
-    if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
-        RDMA_LOG(FATAL) << "Fail to initialize channel";
-    }
-
     pthread_t log_thread;
     pthread_t page_thread;
 

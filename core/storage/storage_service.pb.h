@@ -195,7 +195,7 @@ class LogWriteRequest final :
   enum : int {
     kLogFieldNumber = 1,
   };
-  // string log = 1;
+  // bytes log = 1;
   void clear_log();
   const std::string& log() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -783,7 +783,7 @@ class GetPageResponse final :
   enum : int {
     kDataFieldNumber = 1,
   };
-  // string data = 1;
+  // bytes data = 1;
   void clear_data();
   const std::string& data() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -886,7 +886,7 @@ class StorageService_Stub : public StorageService {
 #endif  // __GNUC__
 // LogWriteRequest
 
-// string log = 1;
+// bytes log = 1;
 inline void LogWriteRequest::clear_log() {
   log_.ClearToEmpty();
 }
@@ -898,7 +898,7 @@ template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void LogWriteRequest::set_log(ArgT0&& arg0, ArgT... args) {
  
- log_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+ log_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:storage_service.LogWriteRequest.log)
 }
 inline std::string* LogWriteRequest::mutable_log() {
@@ -1132,7 +1132,7 @@ inline void GetPageRequest::set_require_batch_id(uint64_t value) {
 
 // GetPageResponse
 
-// string data = 1;
+// bytes data = 1;
 inline void GetPageResponse::clear_data() {
   data_.ClearToEmpty();
 }
@@ -1144,7 +1144,7 @@ template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void GetPageResponse::set_data(ArgT0&& arg0, ArgT... args) {
  
- data_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+ data_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:storage_service.GetPageResponse.data)
 }
 inline std::string* GetPageResponse::mutable_data() {
