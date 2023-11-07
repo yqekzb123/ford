@@ -44,12 +44,12 @@ void Server::InitMem() {
 void Server::InitPage() {
   /************************************* Page Initialization ***************************************/
   RDMA_LOG(INFO) << "Start initializing Page Cache memory...";
-  page_buffer = (char*)malloc(hash_buf_size);
-  assert(page_buffer);
-  page_slot_count = hash_buf_size / (PAGE_SIZE + PageMetaSize);
+  // page_buffer = (char*)malloc(hash_buf_size);
+  // assert(page_buffer);
+  // page_slot_count = hash_buf_size / (PAGE_SIZE + PageMetaSize);
   
-  page_array_buffer = page_buffer + page_slot_count * PageMetaSize;
-  page_array = (Page*)page_array_buffer;
+  // page_array_buffer = page_buffer + page_slot_count * PageMetaSize;
+  // page_array = (Page*)page_array_buffer;
   RDMA_LOG(INFO) << "Alloc DRAM data region success!";
   RDMA_LOG(INFO) << "Initialize memory success!";
 }

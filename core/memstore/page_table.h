@@ -10,10 +10,11 @@
 #include <string>
 #include <cassert>
 
-#include "base/common.h"
-#include "util/debug.h"
-#include "base/page.h"
 #include "memstore/mem_store.h"
+#include "base/common.h"
+#include "base/page.h"
+#include "util/hash.h"
+#include "util/debug.h"
 
 // 实现页表 -- std::unordered_map<PageId, frame_id_t, PageIdHash> page_table_;
 // 页表的作用是：通过页号PageId找到对应的帧号frame_id_t
