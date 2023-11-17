@@ -117,3 +117,19 @@ struct CommitWrite {
   node_id_t node_id;
   uint64_t lock_off;
 };
+
+struct NodeOffset {
+    node_id_t nodeId;
+    offset_t offset;
+};
+
+namespace std {
+    template <>
+    struct hash<NodeOffset> {
+        std::size_t operator()(const NodeOffset& s) const noexcept {
+            std::size_t h1 = std::hash<node_id_t>{}(s.nodeId);
+            std::size_t h2 = std::hash<offset_t>{}(s.offset);
+            return h1 ^ (h2 << 1);
+        }
+    };
+}

@@ -19,14 +19,24 @@
 // 实现页表 -- std::unordered_map<PageId, frame_id_t, PageIdHash> page_table_;
 // 页表的作用是：通过页号PageId找到对应的帧号frame_id_t
 
+struct PageAddress
+{
+  node_id_t node_id;
+  frame_id_t frame_id;
+};
+
 struct PageTableItem {
   PageId page_id;
-  frame_id_t frame_id;
-  uint8_t valid; // if the slot is empty, valid: exits value in the slot
+  PageAddress page_address;
+  uint64_t rwcount = 0; // if the page is being modified
+  bool page_valid = false; // if the page is valid, if not, the page is being read from disk and flush to the memstore
+  // pay attention: valid is just for the slot, not for the page itself
+  bool valid; // if the slot is empty, valid: exits value in the slot
 
   PageTableItem():valid(0) {}
 
-  PageTableItem(PageId page_id, frame_id_t frame_id) :page_id(page_id), frame_id(frame_id), valid(1) {}
+  PageTableItem(PageId page_id, PageAddress page_address) :page_id(page_id), page_address(page_address), rwcount(0),
+    page_valid(false), valid(1) {}
 } Aligned8;
 
 struct PageTableMeta {
@@ -125,9 +135,9 @@ class PageTableStore {
     return MurmurHash64A(page_id.Get(), 0xdeadbeef) % bucket_num;
   }
 
-  frame_id_t LocalGetPageFrame(PageId page_id);
+  PageAddress LocalGetPageFrame(PageId page_id);
 
-  bool LocalInsertPageTableItem(PageId page_id, frame_id_t frame_id, MemStoreReserveParam* param);
+  bool LocalInsertPageTableItem(PageId page_id, PageAddress page_address, MemStoreReserveParam* param);
 
   bool LocalDeletePageTableItem(PageId page_id);
 
@@ -159,7 +169,7 @@ class PageTableStore {
 
 
 ALWAYS_INLINE
-frame_id_t PageTableStore::LocalGetPageFrame(PageId page_id) {
+PageAddress PageTableStore::LocalGetPageFrame(PageId page_id) {
   uint64_t hash = GetHash(page_id);
   short next_expand_node_id;
   PageTableNode* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
@@ -167,22 +177,22 @@ frame_id_t PageTableStore::LocalGetPageFrame(PageId page_id) {
     for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
       if (node->page_table_items[i].page_id == page_id && node->page_table_items[i].valid == true) {
         // 返回帧号
-        return node->page_table_items[i].frame_id;
+        return node->page_table_items[i].page_address;
       }
     }
     // short begin with bucket_num
     next_expand_node_id = node->next_expand_node_id[0];
     node = (PageTableNode*)((bucket_num + next_expand_node_id) * sizeof(PageTableNode) + page_table_ptr);
   } while( next_expand_node_id >= 0);
-  return -1;  // failed to found one
+  return {-1, INVALID_FRAME_ID};  // failed to found one
 }
 
 ALWAYS_INLINE
-bool PageTableStore::LocalInsertPageTableItem(PageId page_id, frame_id_t frame_id, MemStoreReserveParam* param) {
+bool PageTableStore::LocalInsertPageTableItem(PageId page_id, PageAddress page_address, MemStoreReserveParam* param) {
 
-  frame_id_t find_exits = LocalGetPageFrame(page_id);
+  PageAddress find_exits = LocalGetPageFrame(page_id);
   // exits same key
-  if(find_exits >= 0) return false;
+  if(find_exits.frame_id == INVALID_FRAME_ID) return false;
 
   uint64_t hash = GetHash(page_id);
   auto* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
@@ -192,7 +202,7 @@ bool PageTableStore::LocalInsertPageTableItem(PageId page_id, frame_id_t frame_i
     for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++){
       if(node->page_table_items[i].valid == false){
         node->page_table_items[i].page_id = page_id;
-        node->page_table_items[i].frame_id = frame_id;
+        node->page_table_items[i].page_address = page_address;
         node->page_table_items[i].valid = true;
         return true;
       }
@@ -209,7 +219,7 @@ bool PageTableStore::LocalInsertPageTableItem(PageId page_id, frame_id_t frame_i
   param->mem_store_reserve_offset += sizeof(PageTableNode);
   memset(new_node, 0, sizeof(PageTableNode));
   new_node->page_table_items[0].page_id = page_id;
-  new_node->page_table_items[0].frame_id = frame_id;
+  new_node->page_table_items[0].page_address = page_address;
   new_node->page_table_items[0].valid = true;
   new_node->next_expand_node_id[0] = -1;
   new_node->page_id = node_num;

@@ -133,10 +133,17 @@ class MetaManager {
     return search->second;
   }
 
-  /*** Lock Table Meta ***/
   ALWAYS_INLINE
-  const std::vector<node_id_t>& GetAllMemNodes() const {
-    return all_memstore_nodes;
+  const offset_t GetLockTableExpandBase(const table_id_t table_id) const {
+    auto search = lock_node_expanded_base_off.find(table_id);
+    assert(search != lock_node_expanded_base_off.end());
+    return search->second;
+  }
+
+  /*** Page Table Meta ***/
+  ALWAYS_INLINE
+  const std::vector<node_id_t>& GetPageTableNode() const {
+    return page_table_nodes;
   }
 
   /*** Page Table Meta ***/
@@ -172,8 +179,9 @@ class MetaManager {
 
   std::unordered_map<table_id_t, LockTableMeta> lock_table_meta;
   std::unordered_map<table_id_t, node_id_t> lock_table_nodes;
+  std::unordered_map<node_id_t, offset_t> lock_node_expanded_base_off;
 
-  std::vector<node_id_t> all_memstore_nodes;
+  std::vector<node_id_t> page_table_nodes;
   std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
 
   node_id_t local_machine_id;

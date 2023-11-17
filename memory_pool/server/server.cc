@@ -311,7 +311,6 @@ int main(int argc, char* argv[]) {
   auto server = std::make_shared<Server>(machine_id, local_port, local_meta_port, hash_buf_size, log_buf_size, use_pm, pm_file, mem_size);
   server->AllocMem();
   server->InitMem();
-  server->InitPage();
   // server->LoadData(machine_id, machine_num, workload);
   server->SendMeta(machine_id, workload, compute_node_num);
   server->InitRDMA();

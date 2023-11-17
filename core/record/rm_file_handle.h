@@ -10,7 +10,7 @@
 #include "util/bitmap.h"
 #include "base/page.h"
 #include "storage/disk_manager.h"
-#include "buffer/bufferpool_manager.h"
+#include "memstore/bufferpool_manager.h"
 
 class RmManager;
 

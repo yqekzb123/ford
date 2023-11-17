@@ -283,34 +283,65 @@ class DTX {
   bool DeleteHashIndex(table_id_t table_id, itemkey_t item_key);
 
   // for lock table
-  bool LockSharedOnTable(table_id_t table_id);
+  bool LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_id);
   
-  bool LockExclusiveOnTable(table_id_t table_id);
+  bool LockExclusiveOnTable(coro_yield_t& yield, std::vector<table_id_t> table_id);
 
-  bool LockSharedOnRecord(table_id_t table_id, itemkey_t key);
+  bool LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool LockExclusiveOnRecord(table_id_t table_id, itemkey_t key);
+  bool LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool LockSharedOnRange(table_id_t table_id, itemkey_t key);
+  bool LockSharedOnRange(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool LockExclusiveOnRange(table_id_t table_id, itemkey_t key);
+  bool LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool UnlockSharedLockDataID(LockDataId lock_data_id);
+  bool UnlockSharedLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
 
-  bool UnlockExclusiveLockDataID(LockDataId lock_data_id);
+  bool UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
   
   // for page table
-  offset_t GetPageAddr(PageId id);
+  PageAddress GetPageAddr(PageId id);
+  PageAddress GetPageAddrOrAddIntoPageTable(PageId id, bool* need_fetch_from_disk, bool* now_valid, bool is_write);
+
+  // for buffer pool fetch page
+  enum class FetchPageType {
+    kReadPage,
+    kInsertRecord,
+    kDeleteRecord,
+    kUpdateRecord
+  };
+  char* FetchPage(PageId id, FetchPageType type);
 
  private:
-  // for private function for LockManager
-  bool LockShared(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+  // 用来记录每次要批获取hash node latch的offset
+  std::unordered_set<NodeOffset> pending_hash_node_latch_offs;
+  // 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个共享锁
+  bool InsertSharedLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+         LockDataId lockdataid, NodeOffset last_node_off, 
+         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
+  // 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个排他锁
+  bool InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+        LockDataId lockdataid, NodeOffset last_node_off, 
+         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
+  
+  // for private function for LockManager, 实际执行批量加锁的函数
+  std::vector<LockDataId> LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
-  bool LockExclusive(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+  std::vector<LockDataId> LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
-  bool UnlockShared(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+  bool UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
-  bool UnlockExclusive(LockDataId lock_data_id, offset_t node_off, RCQP* qp);
+  bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
+
+  // for rwlatch in hash node
+  char* ShardLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp);
+  void ShardUnLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp);
+
+  // Exclusive lock hash node 是一个关键路径，因此需要切换到其他协程，也需要记录下来哪些桶已经上锁成功以及RDMA操作返回值在本机的地址
+  std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+            std::unordered_map<NodeOffset, char*>& cas_bufs);
+  void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off);
+  void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data);
 
  public:
   tx_id_t tx_id;  // Transaction ID
