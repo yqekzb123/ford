@@ -3,52 +3,49 @@
 
 #include "dtx/dtx.h"
 
-// char* DTX::ShardLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp){
+std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+            std::unordered_map<NodeOffset, char*>& faa_bufs){
 
-//     char* local_hash_node = thread_rdma_buffer_alloc->Alloc(sizeof(IndexNode));
+    for(auto node_off: pending_hash_node_latch_offs) {
+        std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
 
-//     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-
-//     while (true) {
-//         std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
-    
-//         doorbell->SetFAAReq(faa_buf, node_off);
-//         doorbell->SetReadReq(local_hash_node, node_off, sizeof(IndexNode));  // Read a hash index bucket
+        // TODO: 统一IndexNode和其他Node的size大小
+        doorbell->SetFAAReq(faa_bufs[node_off], node_off.offset);
+        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, sizeof(LockNode));  // Read a hash index bucket
         
-//         if (!doorbell->SendReqs(dtx->coro_sched, qp, dtx->coro_id)) {
-//             std::cerr << "GetHashIndex get shared mutex sendreqs faild" << std::endl;
-//             assert(false);
-//         }
-        
-//         coro_sched->Yield(yield, coro_id);
+        if (!doorbell->SendReqs(coro_sched, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), coro_id)) {
+            std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
+            assert(false);
+        }
+    }
+    // 切换到其他协程，等待其他协程释放锁
+    coro_sched->Yield(yield, coro_id);
 
-//         if((*(lock_t*)faa_buf & MASKED_SHARED_LOCKS) >> 56 == 0x00){
-//             // get lock successfully
-//             break;
-//         }
-    
-//         // 探测性FAA失败，FAA(-1)
-//         if (!dtx->coro_sched->RDMAFAA(dtx->coro_id, qp, faa_buf, node_off, SHARED_UNLOCK_TO_BE_ADDED)){
-//             assert(false);
-//         };
+    std::vector<NodeOffset> success_get_latch_off;
 
-//         coro_sched->Yield(yield, coro_id);
-//         // // sleep 30 us
-//         // std::this_thread::sleep_for(std::chrono::microseconds(30));
-//     }
+    for(auto node_off: pending_hash_node_latch_offs){
+        if((*(lock_t*)faa_bufs[node_off] & MASKED_SHARED_LOCKS) >> 56 == 0x00){
+            // get lock successfully
+            pending_hash_node_latch_offs.erase(node_off);
+            success_get_latch_off.push_back(node_off);
+        }
+        else{
+            // 探测性FAA失败，FAA(-1)
+            if (!coro_sched->RDMAFAA(coro_id, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), faa_bufs[node_off], node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
+                assert(false);
+            };
+        }
+    }
+    return success_get_latch_off;
+}
 
-//     return local_hash_node;
-// }
-
-// void DTX::ShardUnLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp){
-//     // Unlock Shared Lock
-//     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-//     if (!dtx->coro_sched->RDMAFAA(dtx->coro_id, qp, faa_buf, node_off, SHARED_UNLOCK_TO_BE_ADDED)){
-//         assert(false);
-//     };
-//     // // 切换到其他协程
-//     // coro_sched->Yield(yield, coro_id);
-// }
+void DTX::ShardUnLockHashNode(NodeOffset node_off){
+    // Unlock Shared Lock
+    char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+    if (!coro_sched->RDMAFAA(coro_id, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), faa_buf, node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
+        assert(false);
+    };
+}
 
 // 函数根据DTX中的类pending_hash_node_latch_offs, 对这些桶的上锁，本函数在一次RTT完成
 // 返回值为成功获取桶latch的offset

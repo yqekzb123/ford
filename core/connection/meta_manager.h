@@ -117,6 +117,13 @@ class MetaManager {
     return search->second;
   }
 
+  ALWAYS_INLINE
+  const offset_t GetHashIndexExpandBase(const table_id_t table_id) const {
+    auto search = hash_index_node_expanded_base_off.find(table_id);
+    assert(search != hash_index_node_expanded_base_off.end());
+    return search->second;
+  }
+
   /*** Lock Table Node id ***/
   ALWAYS_INLINE
   node_id_t GetLockTableNode(const table_id_t table_id) const {
@@ -176,6 +183,7 @@ class MetaManager {
 
   std::unordered_map<table_id_t, IndexMeta> hash_index_meta;
   std::unordered_map<table_id_t, node_id_t> hash_index_nodes;
+  std::unordered_map<table_id_t, offset_t> hash_index_node_expanded_base_off;
 
   std::unordered_map<table_id_t, LockTableMeta> lock_table_meta;
   std::unordered_map<table_id_t, node_id_t> lock_table_nodes;

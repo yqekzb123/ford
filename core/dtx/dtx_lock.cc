@@ -131,9 +131,9 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            bool if_find = false;
             for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
                 // find lock item
+                bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // not exclusive lock
@@ -147,11 +147,11 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                         }
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);
-                        if_find = true;
+                        is_find = true;
                     }
                 }
                 // not find
-                if(!if_find) it++;
+                if(!is_find) it++;
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
@@ -171,7 +171,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 auto expand_node_id = lock_node->next_expand_node_id[0];
                 offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(next_off < 0){
+                if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
                     for(auto lock_data_id : lock_request_list[node_off]){
                         if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, hold_latch_to_previouse_node_off)){
@@ -205,6 +205,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
             ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
             hold_node_off_latch.erase(node_off);
         }
+        unlock_node_off_with_write.clear();
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);
@@ -254,9 +255,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            bool if_find = false;
             for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
                 // find lock item
+                bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // not exclusive lock
@@ -270,11 +271,11 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                         }
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);
-                        if_find = true;
+                        is_find = true;
                     }
                 }
                 // not find
-                if(!if_find) it++;
+                if(!is_find) it++;
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
@@ -294,7 +295,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 auto expand_node_id = lock_node->next_expand_node_id[0];
                 offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(next_off < 0){
+                if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
                     for(auto lock_data_id : lock_request_list[node_off]){
                         if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, hold_latch_to_previouse_node_off)){
@@ -328,6 +329,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
             ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
             hold_node_off_latch.erase(node_off);
         }
+        unlock_node_off_with_write.clear();
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);
@@ -374,9 +376,9 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            bool if_find = false;
             for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
                 // find lock item
+                bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // lock EXCLUSIVE lock
@@ -386,11 +388,11 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
 
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);
-                        if_find = true;
+                        is_find = true;
                     }
                 }
                 // not find
-                if(!if_find) it++;
+                if(!is_find) it++;
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
@@ -410,7 +412,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
                 auto expand_node_id = lock_node->next_expand_node_id[0];
                 offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(next_off < 0){
+                if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get but couldn't find it
                     for(auto lock_data_id : lock_request_list[node_off]){
                         RDMA_LOG(ERROR) <<  "LockTableStore::UnlockShared: lock item not exist" ;
@@ -441,6 +443,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
             ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
             hold_node_off_latch.erase(node_off);
         }
+        unlock_node_off_with_write.clear();
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);
@@ -487,9 +490,9 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            bool if_find = false;
             for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
                 // find lock item
+                bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // lock EXCLUSIVE lock
@@ -499,11 +502,11 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
 
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);
-                        if_find = true;
+                        is_find = true;
                     }
                 }
                 // not find
-                if(!if_find) it++;
+                if(!is_find) it++;
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
@@ -523,7 +526,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
                 auto expand_node_id = lock_node->next_expand_node_id[0];
                 offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(next_off < 0){
+                if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get but couldn't find it
                     for(auto lock_data_id : lock_request_list[node_off]){
                         RDMA_LOG(ERROR) <<  "LockTableStore::UnlockElciusive: lock item not exist" ;
@@ -554,6 +557,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
             ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
             hold_node_off_latch.erase(node_off);
         }
+        unlock_node_off_with_write.clear();
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);

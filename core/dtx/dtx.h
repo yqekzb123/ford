@@ -276,11 +276,11 @@ class DTX {
   
  public:
   // for hash index
-  Rid GetHashIndex(table_id_t table_id, itemkey_t item_key);
+  std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
 
-  bool InsertHashIndex(table_id_t table_id, itemkey_t item_key, Rid rid);
+  bool InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key, std::vector<Rid> rids);
 
-  bool DeleteHashIndex(table_id_t table_id, itemkey_t item_key);
+  bool DeleteHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
 
   // for lock table
   bool LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_id);
@@ -334,9 +334,9 @@ class DTX {
   bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
   // for rwlatch in hash node
-  char* ShardLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp);
-  void ShardUnLockHashNode(coro_yield_t& yield, RDMABufferAllocator* thread_rdma_buffer_alloc, std::vector<offset_t> node_off, DTX* dtx, RCQP* qp);
-
+  std::vector<NodeOffset> ShardLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+            std::unordered_map<NodeOffset, char*>& faa_bufs);
+  void ShardUnLockHashNode(NodeOffset node_off);
   // Exclusive lock hash node 是一个关键路径，因此需要切换到其他协程，也需要记录下来哪些桶已经上锁成功以及RDMA操作返回值在本机的地址
   std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& cas_bufs);
