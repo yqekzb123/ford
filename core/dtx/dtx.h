@@ -300,8 +300,8 @@ class DTX {
   bool UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
   
   // for page table
-  PageAddress GetPageAddr(PageId id);
-  PageAddress GetPageAddrOrAddIntoPageTable(PageId id, bool* need_fetch_from_disk, bool* now_valid, bool is_write);
+  std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(std::vector<PageId> ids, std::vector<bool*> need_fetch_from_disk, 
+      std::vector<bool*> now_valid, std::vector<bool> is_write);
 
   // for buffer pool fetch page
   enum class FetchPageType {
@@ -310,7 +310,7 @@ class DTX {
     kDeleteRecord,
     kUpdateRecord
   };
-  char* FetchPage(PageId id, FetchPageType type);
+  std::vector<char*> FetchPage(std::vector<PageId> id, std::vector<FetchPageType> type);
 
  private:
   // 用来记录每次要批获取hash node latch的offset
