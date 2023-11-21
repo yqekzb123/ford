@@ -47,6 +47,10 @@ class DTX {
 
   bool TxCommit(coro_yield_t& yield);
 
+  bool TxLocalExe(coro_yield_t& yield, bool fail_abort = true);
+
+  bool TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);
+
   /*****************************************************/
 
  public:
@@ -76,6 +80,18 @@ class DTX {
     return addr_cache->TotalAddrSize();
   }
 
+  bool ExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
+  bool ExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作
+  bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
+  bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
+  // batch操作完后，各个事务重新计算值，重新提交
+  bool ReExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
+  bool ReExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作
+
+  bool ExeBatchRW(coro_yield_t& yield);  // 批次在远程读取数据
+  bool BatchValidate(coro_yield_t& yield);  //读回数据后，本地验证和重新计算数据
+  // todo：需要一个事务或者操作数组。。
+  
  private:
   // Internal transaction functions
   bool ExeRO(coro_yield_t& yield);  // Execute read-only transaction
@@ -118,7 +134,7 @@ class DTX {
 
   bool LocalValidate();
 
- private:
+ public:
   bool GetPageAddr(page_id_t id);
 
   bool GetRemotePageAddr(page_id_t id);
@@ -366,7 +382,7 @@ class DTX {
 
   CoroutineScheduler* coro_sched;  // Thread local coroutine scheduler
   
- private:
+ public:
   QPManager* thread_qp_man;  // Thread local qp connection manager. Each transaction thread has one
 
   RDMABufferAllocator* thread_rdma_buffer_alloc;  // Thread local RDMA buffer allocator

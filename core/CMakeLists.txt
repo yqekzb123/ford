@@ -37,6 +37,10 @@ set(BUFFER_SRC
 set(RECORD_SRC
         record/rm_file_handle.cpp
         record/rm_manager.cc)
+
+set(BATCH_SRC
+        batch/batch_issue.cc
+        batch/local_batch.cc)
         
 set(LOG_SRC
         log/logreplay.cc

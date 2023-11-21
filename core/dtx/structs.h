@@ -10,7 +10,8 @@ enum DTX_SYS : int {
   FaRM = 0,
   DrTMH = 1,
   FORD = 2,
-  LOCAL = 3 // FORD with localized metadata including locks and versions
+  LOCAL = 3, // FORD with localized metadata including locks and versions
+  OUR = 4
 };
 
 enum TXStatus : int {
@@ -37,6 +38,9 @@ struct DataSetItem {
   bool is_logged;
   node_id_t read_which_node;  // From which node this data item is read. This is a node id, e.g., 0, 1, 2...
   int64_t bkt_idx; // The bkt idx of local lock table
+ 
+  // 新内容
+  DTX* read_version_dtx; // 对于只读操作来说，需要读取哪个事务写的版本
 };
 
 struct OldVersionForInsert {
