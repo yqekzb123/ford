@@ -68,6 +68,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 #define INVALID_BATCH_ID 0
 #define INVALID_FRAME_ID -1
 #define INVALID_PAGE_ID -1
+#define INVALID_TABLE_ID -1
 
 #define PAGE_NO_RM_FILE_HDR 0
 #define OFFSET_PAGE_HDR 0
@@ -90,7 +91,7 @@ static constexpr int HEADER_PAGE_ID = 0;                                      //
 // static constexpr int BUCKET_SIZE = 50;                                        // size of extendible hash bucket
 
 // 定义哈希桶next指针数组大小
-const int NEXT_NODE_COUNT = 1;
+const int NEXT_NODE_COUNT = 5;
 
 static constexpr uint64_t EXCLUSIVE_LOCKED = 0xFF00000000000000;
 static constexpr uint64_t EXCLUSIVE_UNLOCK_TO_BE_ADDED = 0xFFFFFFFFFFFFFFFF - EXCLUSIVE_LOCKED + 1;

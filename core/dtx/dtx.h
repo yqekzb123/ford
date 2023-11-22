@@ -13,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <unordered_set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -118,11 +119,7 @@ class DTX {
 
   bool LocalValidate();
 
- private:
-  bool GetPageAddr(page_id_t id);
-
-  bool GetRemotePageAddr(page_id_t id);
-  
+ private:  
   // For coroutine issues RDMA requests before yield
   bool IssueReadRO(std::vector<DirectRead>& pending_direct_ro,
                    std::vector<HashRead>& pending_hash_ro);
@@ -298,10 +295,6 @@ class DTX {
   bool UnlockSharedLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
 
   bool UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
-  
-  // for page table
-  std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(std::vector<PageId> ids, std::vector<bool*> need_fetch_from_disk, 
-      std::vector<bool*> now_valid, std::vector<bool> is_write);
 
   // for buffer pool fetch page
   enum class FetchPageType {
@@ -310,20 +303,18 @@ class DTX {
     kDeleteRecord,
     kUpdateRecord
   };
-  std::vector<char*> FetchPage(std::vector<PageId> id, std::vector<FetchPageType> type);
+  
+  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id);
+  std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id);
 
  private:
   // 用来记录每次要批获取hash node latch的offset
   std::unordered_set<NodeOffset> pending_hash_node_latch_offs;
-  // 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个共享锁
-  bool InsertSharedLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-         LockDataId lockdataid, NodeOffset last_node_off, 
-         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
-  // 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个排他锁
-  bool InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-        LockDataId lockdataid, NodeOffset last_node_off, 
-         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
   
+  // for page table
+  std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, 
+      std::unordered_map<PageId,bool>& need_fetch_from_disk, std::unordered_map<PageId,bool>& now_valid, std::vector<bool> is_write);
+
   // for private function for LockManager, 实际执行批量加锁的函数
   std::vector<LockDataId> LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 

@@ -121,6 +121,10 @@ struct CommitWrite {
 struct NodeOffset {
     node_id_t nodeId;
     offset_t offset;
+    // 重载==函数
+    bool operator==(const NodeOffset& other) const {
+        return nodeId == other.nodeId && offset == other.offset;
+    }
 };
 
 namespace std {

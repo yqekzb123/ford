@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <unordered_map>
+#include <string>
 
 #include "base/common.h"
 #include "memstore/hash_store.h"
@@ -12,6 +13,7 @@
 #include "memstore/lock_table_store.h"
 #include "memstore/page_table.h"
 #include "rlib/rdma_ctrl.hpp"
+#include "record/rm_file_handle.h"
 
 using namespace rdmaio;
 
@@ -119,7 +121,9 @@ class MetaManager {
 
   ALWAYS_INLINE
   const offset_t GetHashIndexExpandBase(const table_id_t table_id) const {
-    auto search = hash_index_node_expanded_base_off.find(table_id);
+    auto nodeid_find = hash_index_nodes.find(table_id);
+    assert(nodeid_find != hash_index_nodes.end());
+    auto search = hash_index_node_expanded_base_off.find(nodeid_find->second);
     assert(search != hash_index_node_expanded_base_off.end());
     return search->second;
   }
@@ -142,7 +146,9 @@ class MetaManager {
 
   ALWAYS_INLINE
   const offset_t GetLockTableExpandBase(const table_id_t table_id) const {
-    auto search = lock_node_expanded_base_off.find(table_id);
+    auto nodeid_find = lock_table_nodes.find(table_id);
+    assert(nodeid_find != lock_table_nodes.end());
+    auto search = lock_node_expanded_base_off.find(nodeid_find->second);
     assert(search != lock_node_expanded_base_off.end());
     return search->second;
   }
@@ -159,6 +165,17 @@ class MetaManager {
     auto search = page_table_meta.find(node_id);
     assert(search != page_table_meta.end());
     return search->second;
+  }
+  /*** Page Table Meta ***/
+  const offset_t GetPageTableExpandBase(const node_id_t node_id) const {
+    auto search = lock_node_expanded_base_off.find(node_id);
+    assert(search != lock_node_expanded_base_off.end());
+    return search->second;
+  }
+
+  /*** Table Meta ***/
+  const std::string GetTableName(const table_id_t table_id) const {
+    return table_name_map.at(table_id);
   }
 
  private:
@@ -191,6 +208,10 @@ class MetaManager {
 
   std::vector<node_id_t> page_table_nodes;
   std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
+  std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
+
+  std::unordered_map<table_id_t, std::string> table_name_map;
+  std::unordered_map<std::string, std::unique_ptr<RmFileHandle>> fhs_;
 
   node_id_t local_machine_id;
 
