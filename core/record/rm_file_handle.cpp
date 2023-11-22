@@ -207,7 +207,12 @@ RmPageHandle RmFileHandle::create_new_page_handle(BatchTxn* txn) {
     // 3.更新file_hdr_
 
     // Page *page = buffer_pool_manager_->create_page(fd_, file_hdr_.num_pages);  // bpm->create_page
-    PageId new_page_id = {.fd = fd_, .page_no = INVALID_PAGE_ID};
+    // PageId new_page_id = {.table_id = fd_, .page_no = INVALID_PAGE_ID};
+    
+    // TODO 存疑
+    PageId new_page_id;
+    new_page_id.table_id = fd_;
+    new_page_id.page_no = INVALID_PAGE_ID;
     Page *page = buffer_pool_manager_->new_page(&new_page_id);  // 此处NewPage会调用disk_manager的AllocatePage()
     // printf("RmFileHandle::create_page_handle fd=%d page_no=%d\n", fd_, new_page_id.page_no);
     assert(new_page_id.page_no != INVALID_PAGE_ID && new_page_id.page_no != RM_FILE_HDR_PAGE);

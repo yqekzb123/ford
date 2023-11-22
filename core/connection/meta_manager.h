@@ -19,6 +19,15 @@ using namespace rdmaio;
 
 // const size_t LOG_BUFFER_SIZE = 1024 * 1024 * 512;
 
+// 这个结构体作用是在计算层维护Table的元信息, 用于计算层和内存层交互
+// 这个结构体不同于RmFileHandle，RmFileHandle是一个页，存放了一些固定的信息和动态的元信息比如next_free_page
+// 这里维护一个固定的元信息，以减少频繁去FileHandle中读取的开销
+struct TableMeta {
+  int record_size_;
+  int num_records_per_page_;
+  int bitmap_size_;
+};
+
 struct RemoteNode {
   node_id_t node_id;
   std::string ip;
@@ -177,7 +186,16 @@ class MetaManager {
   const std::string GetTableName(const table_id_t table_id) const {
     return table_name_map.at(table_id);
   }
+  const TableMeta& GetTableMeta(const table_id_t table_id) const {
+    return table_meta_map.at(table_id);
+  }
 
+  const offset_t GetDataOff(const node_id_t node_id) const {
+    auto search = data_off.find(node_id);
+    assert(search != data_off.end());
+    return search->second;
+  }
+  
  private:
   std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
 
@@ -211,7 +229,9 @@ class MetaManager {
   std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
 
   std::unordered_map<table_id_t, std::string> table_name_map;
-  std::unordered_map<std::string, std::unique_ptr<RmFileHandle>> fhs_;
+  std::unordered_map<table_id_t, TableMeta> table_meta_map;
+
+  std::unordered_map<node_id_t, offset_t> data_off;
 
   node_id_t local_machine_id;
 

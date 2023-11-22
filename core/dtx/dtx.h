@@ -303,9 +303,18 @@ class DTX {
     kDeleteRecord,
     kUpdateRecord
   };
+  struct UnpinPageArgs{
+    // 写回数据的地址
+    PageAddress page_addr;
+    FetchPageType type;
+    char* page;
+    int offset;
+    int size;
+  };
+  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
+  bool UnpinPage(coro_yield_t &yield, std::unordered_map<PageId, UnpinPageArgs> ids);
   
-  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id);
-  std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id);
+  std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
 
  private:
   // 用来记录每次要批获取hash node latch的offset
@@ -314,6 +323,7 @@ class DTX {
   // for page table
   std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, 
       std::unordered_map<PageId,bool>& need_fetch_from_disk, std::unordered_map<PageId,bool>& now_valid, std::vector<bool> is_write);
+  void UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std::vector<bool> is_write);
 
   // for private function for LockManager, 实际执行批量加锁的函数
   std::vector<LockDataId> LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
@@ -333,6 +343,8 @@ class DTX {
             std::unordered_map<NodeOffset, char*>& cas_bufs);
   void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off);
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data);
+
+  DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
 
  public:
   tx_id_t tx_id;  // Transaction ID

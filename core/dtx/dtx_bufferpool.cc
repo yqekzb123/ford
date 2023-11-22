@@ -27,13 +27,14 @@ DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
 // 只有当页面的pin count为0时，才可以将该页面从页表中删除
 // 存在一个后台线程，定期扫描页表，将pin count为0并且超时的页面从页表中删除
 
-std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id){
+// 返回的page_addr_vec中的PageAddress是作为返回值使用，因此传入空vector即可
+std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec){
     std::vector<PageId> page_ids;
     std::unordered_map<PageId, bool> need_fetch_from_disk;
     std::unordered_map<PageId, bool> now_valid;
     std::vector<bool> is_write;
     // to store res
-    std::vector<char*> pages;
+    std::unordered_map<PageId, char*> pages;
     for(auto id : ids){
         page_ids.push_back(id.first);
         if(id.second == FetchPageType::kReadPage || id.second == FetchPageType::kUpdateRecord){
@@ -49,7 +50,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
             assert(false);
         }
     }
-    std::vector<PageAddress> page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
+    page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
     
     for(int i=0; i<need_fetch_from_disk.size(); i++) {
         if (need_fetch_from_disk[page_ids[i]]) {
@@ -79,24 +80,76 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
             stub.GetPage(&cntl, &request, &response, NULL);
 
             const char *constPage = response.data().c_str();
-            // 记得释放内存
-            char *page = new char[response.data().length() + 1];
+            char *page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
             std::strcpy(page, constPage);
-            pages.push_back(page);
+            pages.emplace(page_ids[i], page);
         }
         else if(now_valid[page_ids[i]] == true){
             // 从共享内存池中读取数据页
+            auto remote_node_id = page_addr_vec[i].node_id;
+            auto frame_id = page_addr_vec[i].frame_id;
             
+            auto remote_offset = global_meta_man->GetDataOff(remote_node_id);
+            RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
+            
+            char* page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
+            if(!coro_sched->RDMARead(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
+                assert(false);
+            }
+            pages.emplace(page_ids[i], page);
         }
     }
+    coro_sched->Yield(yield, coro_id);
+    return pages;
 }
 
-DataItemPtr GetDataItemFromPage(char* page, Rid rid){
-    RmPageHandle(&file_hdr_, page);
+bool DTX::UnpinPage(coro_yield_t &yield, std::unordered_map<PageId, UnpinPageArgs> ids){
+
+    std::vector<PageId> page_ids;
+    std::vector<bool> is_write;
+    for(auto id : ids){
+        page_ids.push_back(id.first);
+        if(id.second.type == FetchPageType::kReadPage || id.second.type == FetchPageType::kUpdateRecord){
+            // 这两种类型的操作，无页面粒度的写入冲突，因此不需要检查wlatch的状态
+            // 如果不在页表，则顺便将该页面加入页表，并将valid状态置为false，wlatch状态置为false, rcount+1
+            is_write.push_back(true);
+        }
+        else if(id.second.type == FetchPageType::kInsertRecord || id.second.type == FetchPageType::kDeleteRecord ){
+            // 如果不在页表，则顺便将该页面加入页表，并将valid状态置为false，wlatch状态置为true, wcount+1
+            is_write.push_back(false);
+        }
+        else{
+            assert(false);
+        }
+    }
+
+    for(auto id:ids){
+        char* page = id.second.page;
+        auto remote_node_id = id.second.page_addr.node_id;
+
+        auto remote_base_offset = global_meta_man->GetDataOff(remote_node_id);
+        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);  
+        
+        // write back, TODO: 写入page的两个slot应该对接口做出一定的修改
+        if(!coro_sched->RDMAWrite(coro_id, qp, page+id.second.offset, id.second.offset + remote_base_offset + id.second.page_addr.frame_id * PAGE_SIZE, id.second.size)){ 
+            assert(false); 
+        }
+    }
+
+    UnpinPageTable(yield, page_ids, is_write);
+    return true;
+}
+    
+DataItemPtr DTX::GetDataItemFromPage(table_id_t table_id, char* data, Rid rid){
+    char *bitmap = data + sizeof(RmPageHdr) + OFFSET_PAGE_HDR;
+    char *slots = bitmap + global_meta_man->GetTableMeta(table_id).bitmap_size_;
+    char* tuple = slots + rid.slot_no_ * sizeof(DataItem);
+    DataItemPtr itemPtr(tuple);
+    return itemPtr;
 }
 
 // 从数据页中读取数据项
-std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id){
+std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec){
     // 1. 根据rids获取对应的page_id
     // 这里先用unordered_map转化，已处理Rid中的重复page_id
     assert(table_id.size() == rids.size());
@@ -106,10 +159,11 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
         PageId page_id;
         page_id.table_id = table_id[i];
         page_id.page_no = rids[i].page_no_;
+        assert(types[i] == FetchPageType::kReadPage || types[i] == FetchPageType::kUpdateRecord);
         ids[page_id] = types[i];
     }
     // 2. 根据page_id获取对应的page
-    std::unordered_map<PageId, char*> get_pages = FetchPage(yield, ids, request_batch_id);
+    std::unordered_map<PageId, char*> get_pages = FetchPage(yield, ids, request_batch_id, page_addr_vec);
     // 3. 根据page_id和rids获取对应的data_item
     std::vector<DataItemPtr> data_items;
     for(int i=0; i<rids.size(); i++){
@@ -117,6 +171,7 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
         page_id.table_id = table_id[i];
         page_id.page_no = rids[i].page_no_;
         char* page = get_pages[page_id];
-        data_items.push_back(GetDataItemFromPage(page, rids[i]));
+        data_items.push_back(GetDataItemFromPage(table_id[i], page, rids[i]));
     }
+    return data_items;
 }
