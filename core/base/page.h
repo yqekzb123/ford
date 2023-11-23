@@ -25,27 +25,39 @@ struct Rid {
  * @description: 存储层每个Page的id的声明
  */
 struct PageId {
-    int fd;  //  Page所在的磁盘文件开启后的文件描述符, 来定位打开的文件在内存中的位置
+    // int fd;  //  Page所在的磁盘文件开启后的文件描述符, 来定位打开的文件在内存中的位置
+    table_id_t table_id = INVALID_TABLE_ID;
     page_id_t page_no = INVALID_PAGE_ID;
 
-    friend bool operator==(const PageId &x, const PageId &y) { return x.fd == y.fd && x.page_no == y.page_no; }
+    PageId() = default;
+    PageId(int table_id, page_id_t page_no) : table_id(table_id), page_no(page_no) {}
+
+    friend bool operator==(const PageId &x, const PageId &y) { return x.table_id == y.table_id && x.page_no == y.page_no; }
     bool operator<(const PageId& x) const {
-        if(fd < x.fd) return true;
+        if(table_id < x.table_id) return true;
         return page_no < x.page_no;
     }
 
     std::string toString() {
-        return "{fd: " + std::to_string(fd) + " page_no: " + std::to_string(page_no) + "}"; 
+        return "{table_id: " + std::to_string(table_id) + " page_no: " + std::to_string(page_no) + "}"; 
     }
 
     inline int64_t Get() const {
-        return (static_cast<int64_t>(fd << 16) | page_no);
+        return (static_cast<int64_t>(table_id << 16) | page_no);
     }
 };
 
+// 模板特化, 用于构建unordered_map<PageId, frame_id_t, PageIdHash>
+namespace std {
+template <>
+struct hash<PageId> {
+    size_t operator()(const PageId &x) const { return (x.table_id << 16) | x.page_no; }
+};
+}  // namespace std
+
 // PageId的自定义哈希算法, 用于构建unordered_map<PageId, frame_id_t, PageIdHash>
 struct PageIdHash {
-    size_t operator()(const PageId &x) const { return (x.fd << 16) | x.page_no; }
+    size_t operator()(const PageId &x) const { return (x.table_id << 16) | x.page_no; }
 };
 
 /**

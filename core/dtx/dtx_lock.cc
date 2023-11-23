@@ -6,82 +6,68 @@
 // 可以选择将一个未上锁的数据项移除，并将新的数据项插入
 // 这样可以避免哈希桶扩容，减少内存开销
 
+// 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个共享锁
 // 这个函数是要在lock_data_id上的桶链上选择一个空闲的位置上锁,
 // 不在此函数内释放锁, 因为可能有多个lock_data_id在同一个桶链需要上锁
-bool DTX::InsertSharedLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-        LockDataId lockdataid, NodeOffset last_node_off, 
+bool InsertSharedLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+        LockDataId lockdataid, NodeOffset last_node_off, offset_t expand_base_off,
          std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off){
     
-    offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lockdataid.table_id_);
-    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[last_node_off]);
-
     NodeOffset node_off = last_node_off;
     while(hold_latch_to_previouse_node_off.count(node_off) != 0){
         node_off = hold_latch_to_previouse_node_off.at(node_off);
     }
-
+    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
     while (true) {
         // find lock item
-        bool find = false;
         for(int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = 1;
                 lock_node->lock_items[i].valid = true;
-                find = true;
-                break;
+                return true;
             }
         }
-        if(find) return true;
-        // not find
-        else{
-            auto expand_node_id = lock_node->next_expand_node_id[0];
-            if(expand_node_id < 0){
-                //TODO: no space for lock
-                RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
-                return false;
-            }
-            lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
+        auto expand_node_id = lock_node->next_expand_node_id[0];
+        if(expand_node_id < 0){
+            //TODO: no space for lock
+            RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
+            return false;
         }
+        // 计算下一个桶的偏移地址
+        node_off.offset = expand_base_off + expand_node_id * sizeof(LockNode);
+        lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
     }
     return true;
 }
 
-bool DTX::InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+// 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个排他锁
+bool InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
         LockDataId lockdataid, NodeOffset last_node_off, 
          std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off){
-    
-    offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lockdataid.table_id_);
-    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[last_node_off]);
 
     NodeOffset node_off = last_node_off;
     while(hold_latch_to_previouse_node_off.count(node_off) != 0){
         node_off = hold_latch_to_previouse_node_off.at(node_off);
     }
-
+    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[last_node_off]);
     while (true) {
         // find lock item
-        bool find = false;
         for(int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
                 lock_node->lock_items[i].valid = true;
-                find = true;
-                break;
+                return true;
             }
         }
-        if(find) return true;
-        // not find
-        else{
-            auto expand_node_id = lock_node->next_expand_node_id[0];
-            if(expand_node_id < 0){
-                //TODO: no space for lock
-                RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
-                return false;
-            }
-            lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
+        auto expand_node_id = lock_node->next_expand_node_id[0];
+        if(expand_node_id < 0){
+            //TODO: no space for lock
+            RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
+            return false;
         }
+        lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
     }
     return true;
 }
@@ -174,7 +160,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
                     for(auto lock_data_id : lock_request_list[node_off]){
-                        if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, hold_latch_to_previouse_node_off)){
+                        if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, expand_base_off, hold_latch_to_previouse_node_off)){
                             // insert fail
                             ret_lock_fail_data_id.emplace_back(lock_data_id);
                         }
@@ -298,7 +284,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
                     for(auto lock_data_id : lock_request_list[node_off]){
-                        if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, hold_latch_to_previouse_node_off)){
+                        if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, expand_base_off, hold_latch_to_previouse_node_off)){
                             // insert fail
                             ret_lock_fail_data_id.emplace_back(lock_data_id);
                         }

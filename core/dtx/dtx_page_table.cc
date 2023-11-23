@@ -13,116 +13,384 @@
 // 因此，计算节点要访问所有内存节点的页表去找到对应的帧号frame_id_t
 // 为了提高性能，使用多线程并行访问所有内存节点的页表
 
-PageAddress DTX::GetPageAddrOrAddIntoPageTable(PageId id, bool* need_fetch_from_disk, bool* now_valid, bool is_write) {
-    std::vector<RCQP*> qps;
+PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+        PageId page_id, bool is_write, NodeOffset last_node_off, 
+         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off){
+    
+    NodeOffset node_off = last_node_off;
+    std::unordered_map<NodeOffset, NodeOffset> hold_latch_to_next_node_off;
+    while(hold_latch_to_previouse_node_off.count(node_off) != 0){
+        hold_latch_to_next_node_off[hold_latch_to_previouse_node_off.at(node_off)] = node_off;
+        node_off = hold_latch_to_previouse_node_off.at(node_off);
+    }
+
+    // find empty slot to insert
+    PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[last_node_off]);
+    while (true) {
+        // find lock item
+        for(int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
+            if (page_table_node->page_table_items[i].valid == false) {
+                page_table_node->page_table_items[i].valid = true;
+                page_table_node->page_table_items[i].page_id = page_id;
+                // TODO: 从BufferPoolManager中获取frame_id
+                page_table_node->page_table_items[i].page_address = {-1, INVALID_FRAME_ID};
+                // 当前页面正在从磁盘读取
+                page_table_node->page_table_items[i].page_valid = false;
+                if(is_write){
+                    page_table_node->page_table_items[i].rwcount = EXCLUSIVE_LOCKED;
+                }
+                else{
+                    page_table_node->page_table_items[i].rwcount = 1;
+                }
+                return page_table_node->page_table_items[i].page_address;
+            }
+        }
+        auto expand_node_id = page_table_node->next_expand_node_id[0];
+        if(expand_node_id < 0 && node_off == last_node_off){
+            //TODO: no space for lock
+            RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
+            return {-1, INVALID_FRAME_ID};
+        }
+        // 计算下一个桶的偏移地址
+        // if(expand_node_id < 0){
+        //     NodeOffset iter_off = last_node_off;
+        //     while(1){
+        //         if(hold_latch_to_previouse_node_off.at(iter_off) == node_off) break;
+        //         iter_off = hold_latch_to_previouse_node_off.at(iter_off);
+        //     }
+        //     node_off = iter_off;
+        // }
+        // else{
+        //     node_off.offset = expand_base_off + expand_node_id * sizeof(PageTableNode);
+        // }
+        node_off = hold_latch_to_next_node_off.at(node_off);
+        page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[node_off]);
+    }
+    return {-1, INVALID_FRAME_ID};
+}
+
+std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, 
+        std::unordered_map<PageId,bool>& need_fetch_from_disk, std::unordered_map<PageId,bool>& now_valid, std::vector<bool> is_write){
+    
+    need_fetch_from_disk.clear();
+    now_valid.clear();
+
     auto nodes = global_meta_man->GetPageTableNode();
-
-    // 创建多线程并行访问所有内存节点的页表
-    // std::vector<std::future<PageAddress>> futures;
+    assert(nodes.size() > 0);
+    // 计算每个itemkey的hash值和对应的NodeOffset, 
+    // 页表和哈希索引或锁表的实现略有不用，因为哈希索引和锁表通过采用分库分表的方式
+    // 可以假设一个节点可以存放所有的哈希索引或锁表
+    // 而页表管理的页数远远大于哈希索引或锁表的数据项数，因此页表需要分布在多个节点上
+    // 在这里，我们需要遍历所有页表可能存在的所有节点来检查页表项是否存在，如果不存在，则需要添加
     
-    // for(int i=0; i<nodes.size(); i++){
-    //     futures.push_back(std::async(std::launch::async, [this, id, &nodes, i]{
-    //         // 获取页表元数据
-    //         auto hash_meta = this->global_meta_man->GetPageTableMeta(nodes[i]);
-    //         auto hash = MurmurHash64A(id.Get(), 0xdeadbeef) % hash_meta.bucket_num;
-    //         RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(nodes[i]);
-    //         // 计算哈希桶的偏移量
-    //         offset_t node_off = hash_meta.base_off + hash * sizeof(PageTableNode);
-
-    //         char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-            
-    //         PageAddress res = {-1, INVALID_FRAME_ID};
-
-    //         while (true) {
-    //             // read now
-    //             PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_node);
-                
-    //             // find page table item
-    //             for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
-    //                 if (page_table_node->page_table_items[i].page_id == id && page_table_node->page_table_items[i].valid == true) {
-                        
-    //                     // find
-    //                     res = page_table_node->page_table_items[i].page_address;
-    //                     // Unlock
-    //                     ShardUnLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-    //                     return res;
-    //                 }
-    //             }
-                
-    //             offset_t old_node_off = node_off;
-    //             // not find
-    //             short expand_node_id = page_table_node->next_expand_node_id[0];
-    //             // page table item not exist;
-    //             if(expand_node_id < 0){
-    //                 return res;
-    //             } 
-
-    //             node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(PageTableNode);
-    //             // lock next
-    //             char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-    //             // release now
-    //             ShardUnLockHashNode(thread_rdma_buffer_alloc, old_node_off, this, qp);
-    //         }
-
-    //         return res;
-    //     }));
-    // }
-
-    // // 等待所有线程完成
-    // for(int i=0; i<futures.size(); i++){
-    //     PageAddress res = futures[i].get();
-    //     if(res.frame_id != INVALID_FRAME_ID){
-    //         return res;
-    //     }
-    // }
-    
-
-    // 这里暂时还没想好怎么实现, 先用单线程实现,
-    // 不用多线程实现的原因：多线程并发对hash bucket上锁，可能会导致死锁
-    for(int i=0; i<nodes.size(); i++){
-        // 获取页表元数据
-        auto hash_meta = this->global_meta_man->GetPageTableMeta(nodes[i]);
-        auto hash = MurmurHash64A(id.Get(), 0xdeadbeef) % hash_meta.bucket_num;
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(nodes[i]);
-        // 计算哈希桶的偏移量
+    // 首先，我们需要计算每个page_ids的hash值，然后算出对应的NodeOffset，初始化的NodeOffset的node_id为第一个节点
+    // 如果桶链都没有找到，则需要进入下一个节点遍历
+    std::vector<NodeOffset> node_offs;
+    for(int i=0; i<page_ids.size(); i++){
+        auto hash_meta = global_meta_man->GetPageTableMeta(nodes[0]); // 获取第一个节点的页表元数据
+        auto hash = MurmurHash64A(page_ids[i].Get(), 0xdeadbeef) % hash_meta.bucket_num;
         offset_t node_off = hash_meta.base_off + hash * sizeof(PageTableNode);
+        node_offs.push_back(NodeOffset{nodes[0], node_off});
+    }
 
-        char* local_hash_node = ExclusiveLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-        
-        PageAddress res = {-1, INVALID_FRAME_ID};
-        // 记录空位置
-        int empty_pos = -1;
+    assert(pending_hash_node_latch_offs.size() == 0);
+    std::unordered_map<NodeOffset, char*> local_hash_nodes;
+    std::unordered_map<NodeOffset, char*> cas_bufs;
+    std::unordered_map<NodeOffset, std::list<std::pair<PageId, bool>>> get_pagetable_request_list; // bool 存放的是is_write
+    
+    // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
+    for(int i=0; i<node_offs.size(); i++){
+        auto node_off = node_offs[i];
+        if(local_hash_nodes.find(node_off) == local_hash_nodes.end()){
+            local_hash_nodes[node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+        }
+        if(cas_bufs.find(node_off) == cas_bufs.end()){
+            cas_bufs[node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+        }
+        get_pagetable_request_list[node_off].push_back(std::make_pair(page_ids[i], is_write[i]));
+        pending_hash_node_latch_offs.emplace(node_off);
+    }
+    
+    std::unordered_set<NodeOffset> unlock_node_off_with_write;
+    std::unordered_set<NodeOffset> hold_node_off_latch;
+    std::unordered_map<NodeOffset, NodeOffset> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
+    std::unordered_map<PageId, PageAddress> res;
 
-        while (true) {
+    while (pending_hash_node_latch_offs.size()!=0) {
+        // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
+        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        // init hold_node_off_latch
+        for(auto node_off : succ_node_off ){
+            hold_node_off_latch.emplace(node_off);
+        }
+
+        for(auto node_off : succ_node_off ){
             // read now
-            PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_node);
-            
-            // find page table item
-            for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
-                if (page_table_node->page_table_items[i].page_id == id && page_table_node->page_table_items[i].valid == true) {
-                    // find
-                    res = page_table_node->page_table_items[i].page_address;
-                    // Unlock
-                    ShardUnLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-                    return res;
+            PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[node_off]);
+            // 遍历这个node_off上的所有请求即所有的page table item 
+            // 如果找到, 就从列表中移除
+            for(auto it = get_pagetable_request_list[node_off].begin(); it != get_pagetable_request_list[node_off].end(); ){
+                // find empty slot to insert
+                bool is_find = false;
+                for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+                    if (page_table_node->page_table_items[i].page_id == it->first && page_table_node->page_table_items[i].valid == true) {
+                        // find, 记录page_address
+                        res[it->first] = page_table_node->page_table_items[i].page_address;
+                        need_fetch_from_disk[it->first] = false;
+                        // this page is not valid, because other thread is fetch this page from disk and haven't write back
+                        if(page_table_node->page_table_items[i].valid == false){
+                            now_valid[it->first] = false;
+                        }
+                        // page is valid now
+                        else if(it->second == true){
+                            //is write & page is valid & wcount == 0
+                            if(page_table_node->page_table_items[i].rwcount & MASKED_SHARED_LOCKS != EXCLUSIVE_LOCKED){
+                                now_valid[it->first] = true;
+                                page_table_node->page_table_items[i].rwcount |= EXCLUSIVE_LOCKED;
+                            }
+                            else{
+                                now_valid[it->first] = false;
+                            }
+                        }
+                        else{
+                            //is read, read directly
+                            now_valid[it->first] = true;
+                            page_table_node->page_table_items[i].rwcount++;
+                        }
+                        // erase会返回下一个元素的迭代器
+                        get_pagetable_request_list[node_off].erase(it);
+                        is_find = true;
+                    }
+                }
+                // not find
+                if(!is_find) it++;
+            }
+
+            // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
+            if(get_pagetable_request_list[node_off].size() == 0){
+                // release latch and write back
+                auto release_node_off = node_off;
+                while(true){
+                    unlock_node_off_with_write.emplace(release_node_off);
+                    if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
+                    release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
                 }
             }
-            
-            offset_t old_node_off = node_off;
-            // not find
-            short expand_node_id = page_table_node->next_expand_node_id[0];
-            // page table item not exist;
-            if(expand_node_id < 0){
-                return res;
-            } 
-
-            node_off = hash_meta.base_off + (hash_meta.bucket_num + expand_node_id) * sizeof(PageTableNode);
-            // lock next
-            char* local_hash_node = ShardLockHashNode(thread_rdma_buffer_alloc, node_off, this, qp);
-            // release now
-            ShardUnLockHashNode(thread_rdma_buffer_alloc, old_node_off, this, qp);
+            else{
+                // 存在未处理的请求, 保留latch
+                // if PageTable node not exist, find next bucket
+                auto expand_node_id = page_table_node->next_expand_node_id[0];
+                bool continue_search = false;
+                NodeOffset next_node_off;
+                if(expand_node_id < 0){
+                    // 这个节点搜索完成，搜索下一个节点
+                    auto it = std::find(nodes.begin(), nodes.end(), node_off.nodeId);
+                    if(it + 1 != nodes.end()){
+                        node_id_t new_node_id = *(it+1);
+                        auto hash_meta = global_meta_man->GetPageTableMeta(new_node_id); // 获取下一个节点的页表元数据
+                        // 这里必须假定新节点的桶数和旧节点的桶数相同，即原节点的桶中所有元素也在新节点的一个桶中
+                        auto hash = MurmurHash64A(get_pagetable_request_list[node_off].front().first.Get(), 0xdeadbeef) % hash_meta.bucket_num;
+                        offset_t next_off = hash_meta.base_off + hash * sizeof(PageTableNode);
+                        next_node_off = {new_node_id, next_off};
+                        continue_search = true;
+                    }
+                    else{
+                        continue_search = false;
+                        // 所有节点都搜索完了，但没找到，应该插入以保证缓存一致性(多线程)
+                        // 释放所有latch
+                        for(auto pagetable_request : get_pagetable_request_list[node_off]){
+                            PageAddress insert_page_addr = InsertPageTableIntoHashNodeList(local_hash_nodes, pagetable_request.first, 
+                                pagetable_request.second, node_off, hold_latch_to_previouse_node_off);
+                            if(insert_page_addr.frame_id == INVALID_FRAME_ID || insert_page_addr.node_id < 0){
+                                RDMA_LOG(ERROR) << "InsertPageTableIntoHashNodeList failed";
+                            }
+                            else{
+                                res[pagetable_request.first] = insert_page_addr;
+                                need_fetch_from_disk[pagetable_request.first] = true;
+                                now_valid[pagetable_request.first] = false;
+                            }
+                        }
+                        // release latch and write back
+                        auto release_node_off = node_off;
+                        while(true){
+                            unlock_node_off_with_write.emplace(release_node_off);
+                            if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
+                            release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
+                        }
+                    }
+                }
+                else{
+                    offset_t expand_base_off = global_meta_man->GetPageTableExpandBase(node_off.nodeId);
+                    offset_t next_off = expand_base_off + expand_node_id * sizeof(PageTableNode);
+                    next_node_off = {node_off.nodeId, next_off};
+                    continue_search = true;
+                }
+                if (continue_search) {
+                    pending_hash_node_latch_offs.emplace(next_node_off);
+                    get_pagetable_request_list.emplace(next_node_off, get_pagetable_request_list.at(node_off));
+                    hold_latch_to_previouse_node_off.emplace(next_node_off, node_off);
+                    assert(local_hash_nodes.count(next_node_off) == 0);
+                    assert(cas_bufs.count(next_node_off) == 0);
+                    local_hash_nodes[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+                    cas_bufs[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+                }
+            }
         }
+        // release all latch and write back
+        for (auto node_off : unlock_node_off_with_write){
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            hold_node_off_latch.erase(node_off);
+        }
+        unlock_node_off_with_write.clear();
     }
-    // 所有线程都没有找到，返回-1
-    return {-1, INVALID_FRAME_ID};
+    // 这里所有的latch都已经释放了
+    assert(hold_node_off_latch.size() == 0);
+    // 转化成vector
+    std::vector<PageAddress> res_vec;
+    for(auto it : res){
+        res_vec.push_back(it.second);
+    }
+    return res_vec;
+}
+
+
+void DTX::UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std::vector<bool> is_write){
+
+    auto nodes = global_meta_man->GetPageTableNode();
+    assert(nodes.size() > 0);
+    std::vector<NodeOffset> node_offs;
+    for(int i=0; i<page_ids.size(); i++){
+        auto hash_meta = global_meta_man->GetPageTableMeta(nodes[0]); // 获取第一个节点的页表元数据
+        auto hash = MurmurHash64A(page_ids[i].Get(), 0xdeadbeef) % hash_meta.bucket_num;
+        offset_t node_off = hash_meta.base_off + hash * sizeof(PageTableNode);
+        node_offs.push_back(NodeOffset{nodes[0], node_off});
+    }
+
+    assert(pending_hash_node_latch_offs.size() == 0);
+    std::unordered_map<NodeOffset, char*> local_hash_nodes;
+    std::unordered_map<NodeOffset, char*> cas_bufs;
+    std::unordered_map<NodeOffset, std::list<std::pair<PageId, bool>>> get_pagetable_request_list; // bool 存放的是is_write
+    
+    // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
+    for(int i=0; i<node_offs.size(); i++){
+        auto node_off = node_offs[i];
+        if(local_hash_nodes.find(node_off) == local_hash_nodes.end()){
+            local_hash_nodes[node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+        }
+        if(cas_bufs.find(node_off) == cas_bufs.end()){
+            cas_bufs[node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+        }
+        get_pagetable_request_list[node_off].push_back(std::make_pair(page_ids[i], is_write[i]));
+        pending_hash_node_latch_offs.emplace(node_off);
+    }
+    
+    std::unordered_set<NodeOffset> unlock_node_off_with_write;
+    std::unordered_set<NodeOffset> hold_node_off_latch;
+    std::unordered_map<NodeOffset, NodeOffset> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
+    std::unordered_map<PageId, PageAddress> res;
+
+    while (pending_hash_node_latch_offs.size()!=0) {
+        // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
+        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        // init hold_node_off_latch
+        for(auto node_off : succ_node_off ){
+            hold_node_off_latch.emplace(node_off);
+        }
+
+        for(auto node_off : succ_node_off ){
+            // read now
+            PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[node_off]);
+            // 遍历这个node_off上的所有请求即所有的page table item 
+            // 如果找到, 就从列表中移除
+            for(auto it = get_pagetable_request_list[node_off].begin(); it != get_pagetable_request_list[node_off].end(); ){
+                // find empty slot to insert
+                bool is_find = false;
+                for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+                    if (page_table_node->page_table_items[i].page_id == it->first && page_table_node->page_table_items[i].valid == true) {
+                        // unpin it
+                        page_table_node->page_table_items[i].page_valid = true;
+                        if(it->second == true){
+                            //is write
+                            page_table_node->page_table_items[i].rwcount += EXCLUSIVE_UNLOCK_TO_BE_ADDED;
+                        }
+                        else{
+                            //is read
+                            page_table_node->page_table_items[i].rwcount--;
+                        }
+                        // erase会返回下一个元素的迭代器
+                        get_pagetable_request_list[node_off].erase(it);
+                        is_find = true;
+                    }
+                }
+                // not find
+                if(!is_find) it++;
+            }
+
+            // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
+            if(get_pagetable_request_list[node_off].size() == 0){
+                // release latch and write back
+                auto release_node_off = node_off;
+                while(true){
+                    unlock_node_off_with_write.emplace(release_node_off);
+                    if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
+                    release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
+                }
+            }
+            else{
+                // 存在未处理的请求, 保留latch
+                // if PageTable node not exist, find next bucket
+                auto expand_node_id = page_table_node->next_expand_node_id[0];
+                bool continue_search = false;
+                NodeOffset next_node_off;
+                if(expand_node_id < 0){
+                    // 这个节点搜索完成，搜索下一个节点
+                    auto it = std::find(nodes.begin(), nodes.end(), node_off.nodeId);
+                    if(it + 1 != nodes.end()){
+                        node_id_t new_node_id = *(it+1);
+                        auto hash_meta = global_meta_man->GetPageTableMeta(new_node_id); // 获取下一个节点的页表元数据
+                        // 这里必须假定新节点的桶数和旧节点的桶数相同，即原节点的桶中所有元素也在新节点的一个桶中
+                        auto hash = MurmurHash64A(get_pagetable_request_list[node_off].front().first.Get(), 0xdeadbeef) % hash_meta.bucket_num;
+                        offset_t next_off = hash_meta.base_off + hash * sizeof(PageTableNode);
+                        next_node_off = {new_node_id, next_off};
+                        continue_search = true;
+                    }
+                    else{
+                        continue_search = false;
+                        // 所有节点都搜索完了，但没找到，报错
+                        RDMA_LOG(ERROR) << "UnpinPageTable: page table item not found";
+                        // release latch and write back
+                        auto release_node_off = node_off;
+                        while(true){
+                            unlock_node_off_with_write.emplace(release_node_off);
+                            if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
+                            release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
+                        }
+                    }
+                }
+                else{
+                    offset_t expand_base_off = global_meta_man->GetPageTableExpandBase(node_off.nodeId);
+                    offset_t next_off = expand_base_off + expand_node_id * sizeof(PageTableNode);
+                    next_node_off = {node_off.nodeId, next_off};
+                    continue_search = true;
+                }
+                if (continue_search) {
+                    pending_hash_node_latch_offs.emplace(next_node_off);
+                    get_pagetable_request_list.emplace(next_node_off, get_pagetable_request_list.at(node_off));
+                    hold_latch_to_previouse_node_off.emplace(next_node_off, node_off);
+                    assert(local_hash_nodes.count(next_node_off) == 0);
+                    assert(cas_bufs.count(next_node_off) == 0);
+                    local_hash_nodes[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+                    cas_bufs[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+                }
+            }
+        }
+        // release all latch and write back
+        for (auto node_off : unlock_node_off_with_write){
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            hold_node_off_latch.erase(node_off);
+        }
+        unlock_node_off_with_write.clear();
+    }
+    // 这里所有的latch都已经释放了
+    assert(hold_node_off_latch.size() == 0);
 }

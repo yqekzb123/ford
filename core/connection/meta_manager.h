@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <unordered_map>
+#include <string>
 
 #include "base/common.h"
 #include "memstore/hash_store.h"
@@ -12,10 +13,20 @@
 #include "memstore/lock_table_store.h"
 #include "memstore/page_table.h"
 #include "rlib/rdma_ctrl.hpp"
+#include "record/rm_file_handle.h"
 
 using namespace rdmaio;
 
 // const size_t LOG_BUFFER_SIZE = 1024 * 1024 * 512;
+
+// 这个结构体作用是在计算层维护Table的元信息, 用于计算层和内存层交互
+// 这个结构体不同于RmFileHandle，RmFileHandle是一个页，存放了一些固定的信息和动态的元信息比如next_free_page
+// 这里维护一个固定的元信息，以减少频繁去FileHandle中读取的开销
+struct TableMeta {
+  int record_size_;
+  int num_records_per_page_;
+  int bitmap_size_;
+};
 
 struct RemoteNode {
   node_id_t node_id;
@@ -119,7 +130,9 @@ class MetaManager {
 
   ALWAYS_INLINE
   const offset_t GetHashIndexExpandBase(const table_id_t table_id) const {
-    auto search = hash_index_node_expanded_base_off.find(table_id);
+    auto nodeid_find = hash_index_nodes.find(table_id);
+    assert(nodeid_find != hash_index_nodes.end());
+    auto search = hash_index_node_expanded_base_off.find(nodeid_find->second);
     assert(search != hash_index_node_expanded_base_off.end());
     return search->second;
   }
@@ -142,7 +155,9 @@ class MetaManager {
 
   ALWAYS_INLINE
   const offset_t GetLockTableExpandBase(const table_id_t table_id) const {
-    auto search = lock_node_expanded_base_off.find(table_id);
+    auto nodeid_find = lock_table_nodes.find(table_id);
+    assert(nodeid_find != lock_table_nodes.end());
+    auto search = lock_node_expanded_base_off.find(nodeid_find->second);
     assert(search != lock_node_expanded_base_off.end());
     return search->second;
   }
@@ -160,7 +175,27 @@ class MetaManager {
     assert(search != page_table_meta.end());
     return search->second;
   }
+  /*** Page Table Meta ***/
+  const offset_t GetPageTableExpandBase(const node_id_t node_id) const {
+    auto search = lock_node_expanded_base_off.find(node_id);
+    assert(search != lock_node_expanded_base_off.end());
+    return search->second;
+  }
 
+  /*** Table Meta ***/
+  const std::string GetTableName(const table_id_t table_id) const {
+    return table_name_map.at(table_id);
+  }
+  const TableMeta& GetTableMeta(const table_id_t table_id) const {
+    return table_meta_map.at(table_id);
+  }
+
+  const offset_t GetDataOff(const node_id_t node_id) const {
+    auto search = data_off.find(node_id);
+    assert(search != data_off.end());
+    return search->second;
+  }
+  
  private:
   std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
 
@@ -191,6 +226,12 @@ class MetaManager {
 
   std::vector<node_id_t> page_table_nodes;
   std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
+  std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
+
+  std::unordered_map<table_id_t, std::string> table_name_map;
+  std::unordered_map<table_id_t, TableMeta> table_meta_map;
+
+  std::unordered_map<node_id_t, offset_t> data_off;
 
   node_id_t local_machine_id;
 

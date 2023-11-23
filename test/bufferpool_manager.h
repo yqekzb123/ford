@@ -14,15 +14,6 @@
 #include "replacer/clock_replacer.h"
 #include "replacer/lru_replacer.h"
 #include "replacer/replacer.h"
-// 这里！！！！！！！！！！！！！！！！！！！！！！
-// 逻辑开始混沌了，，，，
-// 注意区分是哪个bufferpool，思路，把现在这个bufferpool放到test里
-// 之后重新写一个bufferpool，内存层的
-// 磁盘里是没有bufferpool的 也不需要record 这些都是为了测试用的
-
-// 然后在新的bufferpool里面，完成缓冲区驱逐策略的逻辑
-// 一个bufferpool里面，只需要有page的data，也不需要pageID这些东西，因为这个是在页表维护的
-// 对
 
 class BufferPoolManager {
    private:
