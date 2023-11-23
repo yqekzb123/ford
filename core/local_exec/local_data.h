@@ -10,33 +10,48 @@
 //   VERSION_EVICTED = 2
 // };
 
-struct Version{
+struct LVersion{
     // VersionType type; 
     DTX *txn; // 标记是哪个事务写的
-    Version* next;
-    DataItem* value; // 实际的值，可以是空
+    LVersion* next;
+    DataItemPtr value; // 实际的值，可以是空
     bool has_value;
+
+    LVersion() {
+        next = nullptr;
+        value = nullptr;
+        has_value = false;
+    }
 
     void SetVersionDTX(DTX *t) {
         txn = t;
     }
 
     void SetDataItem(DataItem* data) {
-        value = data;
+        value.reset(data);
         has_value = true;
     }
+
+    void CopyDataItemToNext(){
+        assert(next != nullptr);
+        assert(value != nullptr);
+        std::shared_ptr<DataItem> p(new DataItem());
+        next->value = p;
+        memcpy(p.get(), value.get(), sizeof(DataItem));
+    }
 };
+using LVersionPtr = std::shared_ptr<LVersion>;
 
 class LocalData{
 public:
     table_id_t table_id;
     itemkey_t key;
-    Version *versions;
-    Version *tail_version;
+    LVersion *versions;
+    LVersion *tail_version;
 
     lock_t lock; // 读写锁
     LocalData() {
-        versions = (Version*)malloc(sizeof(Version));
+        versions = (LVersion*)malloc(sizeof(LVersion));
         tail_version = versions;
         versions->has_value = false;
         versions->txn = nullptr;
@@ -65,7 +80,7 @@ public:
     }
 
     bool CreateNewVersion(DTX *txn) {
-        Version *newv = (Version*)malloc(sizeof(Version));
+        LVersion *newv = (LVersion*)malloc(sizeof(LVersion));
         newv->next = nullptr;
         newv->has_value = false;
         newv->SetVersionDTX(txn);
@@ -78,8 +93,8 @@ public:
         }     
     }
 
-    Version * GetDTXVersion(DTX *txn) {
-        Version* ptr = versions;
+    LVersion * GetDTXVersion(DTX *txn) {
+        LVersion* ptr = versions;
         while(true) {
             if (ptr->txn == txn) return ptr;
             if (ptr->next == nullptr) return nullptr;
@@ -87,7 +102,21 @@ public:
         }
     }
 
-    Version * GetTailVersion() {
+    LVersion * GetDTXVersionWithDataItem(DTX *txn) {
+        LVersion* ptr = versions->next;
+        LVersion* last = versions;
+        while(true) {
+            if (ptr->txn == txn) {
+                last->CopyDataItemToNext();
+                return ptr;
+            }
+            if (ptr->next == nullptr) return nullptr;
+            last = ptr;
+            ptr = ptr->next;
+        }
+    }
+
+    LVersion * GetTailVersion() {
         return tail_version;
     }
 

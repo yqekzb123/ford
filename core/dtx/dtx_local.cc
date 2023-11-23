@@ -78,7 +78,9 @@ bool DTX::ReExeLocalRO(coro_yield_t& yield) {
     // !遍历版本，获取到需要的值
     auto* fetched_item = localdata->GetDTXVersion(item.read_version_dtx);
     auto* it = item.item_ptr.get();
-    *it = *fetched_item->value;
+    auto* ver = item.version_ptr.get();
+    it = fetched_item->value.get();
+    ver = fetched_item;
     // 这里先假设了读取到的是对的
   }
   
@@ -92,7 +94,9 @@ bool DTX::ReExeLocalRW(coro_yield_t& yield) {
     // !遍历版本，获取到需要的值
     auto* fetched_item = localdata->GetDTXVersion(item.read_version_dtx);
     auto* it = item.item_ptr.get();
-    *it = *fetched_item->value;
+    auto* ver = item.version_ptr.get();
+    it = fetched_item->value.get();
+    ver = fetched_item;
     // 这里先假设了读取到的是对的
   }
 
@@ -100,9 +104,11 @@ bool DTX::ReExeLocalRW(coro_yield_t& yield) {
     if (read_write_set[i].is_fetched) continue;
     auto localdata = local_data_store.GetData(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
     // !获取自己写入的版本
-    auto* fetched_item = localdata->GetDTXVersion(this);
+    auto* fetched_item = localdata->GetDTXVersionWithDataItem(this);
     auto* it = read_write_set[i].item_ptr.get();
-    *it = *fetched_item->value;
+    auto* ver = read_write_set[i].version_ptr.get();
+    it = fetched_item->value.get();
+    ver = fetched_item;
   }
   return true;
   // !接下来得进行tpcc等负载计算了

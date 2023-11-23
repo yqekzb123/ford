@@ -6,12 +6,16 @@
 #include <memory>
 
 #include "dtx/dtx.h"
+#include "local_exec/local_data.h"
 #include "bench_dtx.h"
 #include "smallbank_batch/smallbank_db.h"
 
 /******************** The business logic (Transaction) start ********************/
 
 struct Amalgamate {
+    // LVersionPtr sav_obj_0;
+    // LVersionPtr chk_obj_0;
+    // LVersionPtr chk_obj_1;
     DataItemPtr sav_obj_0;
     DataItemPtr chk_obj_0;
     DataItemPtr chk_obj_1;

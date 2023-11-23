@@ -43,6 +43,10 @@ class DTX {
 
   void AddToReadWriteSet(DataItemPtr item);
 
+  void AddToReadOnlySet(DataItemPtr item, LVersion version);
+
+  void AddToReadWriteSet(DataItemPtr item, LVersion version);
+
   bool TxExe(coro_yield_t& yield, bool fail_abort = true);
 
   bool TxCommit(coro_yield_t& yield);
@@ -444,6 +448,18 @@ void DTX::AddToReadOnlySet(DataItemPtr item) {
 ALWAYS_INLINE
 void DTX::AddToReadWriteSet(DataItemPtr item) {
   DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  read_write_set.emplace_back(data_set_item);
+}
+
+ALWAYS_INLINE
+void DTX::AddToReadOnlySet(DataItemPtr item, LVersion version) {
+  DataSetItem data_set_item{.item_ptr = std::move(item), .version_ptr = std::move(version), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  read_only_set.emplace_back(data_set_item);
+}
+
+ALWAYS_INLINE
+void DTX::AddToReadWriteSet(DataItemPtr item, LVersion version) {
+  DataSetItem data_set_item{.item_ptr = std::move(item), .version_ptr = std::move(version), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
   read_write_set.emplace_back(data_set_item);
 }
 
