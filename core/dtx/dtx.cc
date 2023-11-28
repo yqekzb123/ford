@@ -12,7 +12,9 @@ DTX::DTX(MetaManager* meta_man,
          CoroutineScheduler* sched,
          RDMABufferAllocator* rdma_buffer_allocator,
          LogOffsetAllocator* remote_log_offset_allocator,
-         AddrCache* addr_buf) {
+         AddrCache* addr_buf,
+         std::list<PageAddress>* free_page_list, 
+         std::mutex* free_page_list_mutex) {
   // Transaction setup
   tx_id = 0;
   t_id = tid;

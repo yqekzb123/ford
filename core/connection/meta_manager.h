@@ -45,23 +45,23 @@ class MetaManager {
   void GetMRMeta(const RemoteNode& node);
 
   /*** Memory Store Metadata ***/
-  ALWAYS_INLINE
-  const HashMeta& GetPrimaryHashMetaWithTableID(const table_id_t table_id) const {
-    auto search = primary_hash_metas.find(table_id);
-    assert(search != primary_hash_metas.end());
-    return search->second;
-  }
+  // ALWAYS_INLINE
+  // const HashMeta& GetPrimaryHashMetaWithTableID(const table_id_t table_id) const {
+  //   auto search = primary_hash_metas.find(table_id);
+  //   assert(search != primary_hash_metas.end());
+  //   return search->second;
+  // }
 
-  ALWAYS_INLINE
-  const std::vector<HashMeta>* GetBackupHashMetasWithTableID(const table_id_t table_id) const {
-    // if (backup_hash_metas.empty()) {
-    //   return nullptr;
-    // }
-    // auto search = backup_hash_metas.find(table_id);
-    // assert(search != backup_hash_metas.end());
-    // return &(search->second);
-    return &(backup_hash_metas[table_id]);
-  }
+  // ALWAYS_INLINE
+  // const std::vector<HashMeta>* GetBackupHashMetasWithTableID(const table_id_t table_id) const {
+  //   // if (backup_hash_metas.empty()) {
+  //   //   return nullptr;
+  //   // }
+  //   // auto search = backup_hash_metas.find(table_id);
+  //   // assert(search != backup_hash_metas.end());
+  //   // return &(search->second);
+  //   return &(backup_hash_metas[table_id]);
+  // }
 
   /*** Node ID Metadata ***/
   ALWAYS_INLINE
@@ -181,6 +181,26 @@ class MetaManager {
     assert(search != lock_node_expanded_base_off.end());
     return search->second;
   }
+  const offset_t GetFreeRingBase(const node_id_t node_id) const {
+    auto search = free_ring_base_off.find(node_id);
+    assert(search != free_ring_base_off.end());
+    return search->second;
+  }
+  const offset_t GetFreeRingHead(const node_id_t node_id) const {
+    auto search = free_ring_head_off.find(node_id);
+    assert(search != free_ring_head_off.end());
+    return search->second;
+  }
+  const offset_t GetFreeRingTail(const node_id_t node_id) const {
+    auto search = free_ring_tail_off.find(node_id);
+    assert(search != free_ring_tail_off.end());
+    return search->second;
+  }
+  const offset_t GetFreeRingCnt(const node_id_t node_id) const {
+    auto search = free_ring_cnt_off.find(node_id);
+    assert(search != free_ring_cnt_off.end());
+    return search->second;
+  }
 
   /*** Table Meta ***/
   const std::string GetTableName(const table_id_t table_id) const {
@@ -197,11 +217,11 @@ class MetaManager {
   }
   
  private:
-  std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
+  // std::unordered_map<table_id_t, HashMeta> primary_hash_metas;
 
   // std::unordered_map<table_id_t, std::vector<HashMeta>> backup_hash_metas;
 
-  std::vector<HashMeta> backup_hash_metas[MAX_DB_TABLE_NUM];
+  // std::vector<HashMeta> backup_hash_metas[MAX_DB_TABLE_NUM];
 
   std::unordered_map<table_id_t, node_id_t> primary_table_nodes;
 
@@ -227,6 +247,11 @@ class MetaManager {
   std::vector<node_id_t> page_table_nodes;
   std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
   std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
+
+  std::unordered_map<node_id_t, offset_t> free_ring_base_off;
+  std::unordered_map<node_id_t, offset_t> free_ring_head_off;
+  std::unordered_map<node_id_t, offset_t> free_ring_tail_off;
+  std::unordered_map<node_id_t, offset_t> free_ring_cnt_off;
 
   std::unordered_map<table_id_t, std::string> table_name_map;
   std::unordered_map<table_id_t, TableMeta> table_meta_map;

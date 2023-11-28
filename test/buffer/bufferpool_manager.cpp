@@ -37,7 +37,7 @@ void BufferPoolManager::update_page(Page *page, PageId new_page_id, frame_id_t n
 
     // 1 如果是脏页，一定要写回磁盘，并且把dirty置为false
     if (page->is_dirty()) {
-        disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+        disk_manager_->write_page(page->get_page_id().table_id, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
         page->is_dirty_ = false;
     }
 
@@ -88,7 +88,7 @@ Page* BufferPoolManager::fetch_page(PageId page_id) {
     Page *page = &pages_[frame_id];
     update_page(page, page_id, frame_id);  // data置为空，dirty页写入磁盘，然后dirty状态置false
     // disk_manager_->ReadPage(page_id, page->data_);
-    disk_manager_->read_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+    disk_manager_->read_page(page->get_page_id().table_id, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
     replacer_->pin(frame_id);  // pin it
     page->pin_count_ = 1;
     return page;
@@ -162,7 +162,7 @@ bool BufferPoolManager::flush_page(PageId page_id) {
     frame_id_t frame_id = iter->second;  // iter是pair类型，其second是page_id对应的frame_id
     Page *page = &pages_[frame_id];      // 由frame_id得到page
     // force_page(page); // 这里不能写成force_page中只刷新脏页，这里就算不是脏的也进行刷新
-    disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+    disk_manager_->write_page(page->get_page_id().table_id, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
     page->is_dirty_ = false;
     return true;
 }
@@ -187,7 +187,7 @@ Page* BufferPoolManager::new_page(PageId* page_id) {
     }
     // 2 得到victim frame_id（从free_list或replacer中得到）
     (*page_id).page_no =
-        disk_manager_->allocate_page((*page_id).fd);  // 在fd对应的文件分配一个新的page_id（修改了外部参数*page_id）
+        disk_manager_->allocate_page((*page_id).table_id);  // 在fd对应的文件分配一个新的page_id（修改了外部参数*page_id）
     Page *page = &pages_[frame_id];                  // 由frame_id得到page
     update_page(page, *page_id, frame_id);
     replacer_->pin(frame_id);
@@ -221,7 +221,10 @@ bool BufferPoolManager::delete_page(PageId page_id) {
     }
     // Now, pin_count is 0, so you can delete it
     // disk_manager_->deallocate_page(page_id);  // This does not actually need to do anything for now
-    PageId new_page_id{.fd = page->get_page_id().fd, .page_no = INVALID_PAGE_ID};
+    // PageId new_page_id{.fd = page->get_page_id().fd, .page_no = INVALID_PAGE_ID};
+    PageId new_page_id;
+    new_page_id.table_id = page->get_page_id().table_id;
+    new_page_id.page_no = INVALID_PAGE_ID;
     update_page(page, new_page_id, frame_id);  // 注意此处不要把INVALID_PAGE_ID加到页表
     free_list_.push_back(frame_id);           // 加到尾部
     return true;
@@ -236,8 +239,8 @@ void BufferPoolManager::flush_all_pages(int fd) {
 
     for (size_t i = 0; i < pool_size_; i++) {
         Page *page = &pages_[i];
-        if (page->get_page_id().fd == fd && page->get_page_id().page_no != INVALID_PAGE_ID) {
-            disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+        if (page->get_page_id().table_id == fd && page->get_page_id().page_no != INVALID_PAGE_ID) {
+            disk_manager_->write_page(page->get_page_id().table_id, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
             page->is_dirty_ = false;
         }
     }

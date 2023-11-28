@@ -29,14 +29,6 @@ set(STORAGE_SRC
         storage/storage_rpc.cc
         storage/disk_manager.cc
         )
-
-set(BUFFER_SRC
-        buffer/bufferpool_manager.cpp
-        buffer/replacer/lru_replacer.cpp)
-
-set(RECORD_SRC
-        record/rm_file_handle.cpp
-        record/rm_manager.cc)
         
 set(LOG_SRC
         log/logreplay.cc

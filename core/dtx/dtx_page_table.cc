@@ -1,5 +1,6 @@
 #include "dtx/dtx.h"
 #include "dtx/rwlock.h"
+#include <chrono>
 #include <future>
 
 // dtx_page_table.cc 用于实现计算节点访问内存节点页表的方法
@@ -12,6 +13,107 @@
 // 注意，每个内存节点都有一个页表，页表管理自己内存节点的所有页
 // 因此，计算节点要访问所有内存节点的页表去找到对应的帧号frame_id_t
 // 为了提高性能，使用多线程并行访问所有内存节点的页表
+
+PageAddress DTX::GetFreePageSlot(){
+    auto nodes = global_meta_man->GetPageTableNode();
+    PageAddress res;
+    while (true) {    
+        for(int i=0; i<nodes.size(); i++){
+            RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(nodes[i]);
+            char* faa_cnt_buf = thread_rdma_buffer_alloc->Alloc(sizeof(int64_t));
+            char* faa_tail_buf = thread_rdma_buffer_alloc->Alloc(sizeof(uint64_t));
+            
+            auto ring_buffer_base_off = global_meta_man->GetFreeRingBase(nodes[i]);
+            auto ring_buffer_tail_off = global_meta_man->GetFreeRingTail(nodes[i]);
+            auto ring_buffer_cnt_off = global_meta_man->GetFreeRingCnt(nodes[i]);
+
+            free_page_list_mutex->lock();
+            if(free_page_list->size() > 0){
+                res = free_page_list->front();
+                free_page_list->pop_front();
+                free_page_list_mutex->unlock();
+                return res;
+            }
+            else{
+                rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, -100, IBV_SEND_SIGNALED);
+                if (rc != SUCC) {
+                    RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                }
+                rc = qp->post_faa(faa_tail_buf, ring_buffer_item_num_off, 100, IBV_SEND_SIGNALED);
+                if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                }
+                ibv_wc wc{};
+                rc = qp->poll_till_completion(wc, no_timeout);
+                if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                }
+
+                if(*(int64_t*)faa_cnt_buf < 100){
+                    // buffer has enough not free page
+                    auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_head_off, 100, IBV_SEND_SIGNALED);
+                    if (rc != SUCC) {
+                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                    }
+                    rc = qp->post_faa(faa_tail_buf, ring_buffer_item_num_off, -100, IBV_SEND_SIGNALED);
+                    if (rc != SUCC) {
+                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                    }
+                    ibv_wc wc{};
+                    rc = qp->poll_till_completion(wc, no_timeout);
+                    if (rc != SUCC) {
+                        RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                    }
+                    free_page_list_mutex->unlock();
+                    continue;
+                }
+                else{
+                    // buffer has enough page
+                    char* read_free_page = thread_rdma_buffer_alloc->Alloc(sizeof(RingBufferItem) * 100);
+                    if(*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE + 100 > MAX_FREE_LIST_BUFFER_SIZE){
+                        offset_t read_off_1 = ring_buffer_base_off + (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE) * sizeof(RingBufferItem);
+                        offset_t read_off_2 = ring_buffer_base_off + 0 * sizeof(RingBufferItem);
+                        size_t read_size_1 = sizeof(RingBufferItem) * (MAX_FREE_LIST_BUFFER_SIZE - (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE));
+                        size_t read_size_2 = sizeof(RingBufferItem) * (100 - (MAX_FREE_LIST_BUFFER_SIZE - (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE)));
+                        auto rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page, read_size_1, read_off_1, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                        }
+                        rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page + read_size_1, read_size_2, read_off_2, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                        }
+                        ibv_wc wc{};
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                        }
+                    }
+                    else{
+                        offset_t read_off = ring_buffer_base_off + (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE) * sizeof(RingBufferItem);
+                        size_t read_size = sizeof(RingBufferItem) * 100;
+                        auto rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page, read_size, read_off, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                        }
+                        ibv_wc wc{};
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                        }
+                    }
+                    for(int i=0; i<100; i++){
+                        RingBufferItem* item =  reinterpret_cast<RingBufferItem*>(read_free_page + i * sizeof(RingBufferItem));
+                        assert(item->valid == true);
+                        free_page_list->push_back({item->page_id, item->frame_id});
+                    }
+                    free_page_list_mutex->unlock();
+                }
+            }
+        }
+    }
+    return {-1, INVALID_FRAME_ID};
+}
 
 PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
         PageId page_id, bool is_write, NodeOffset last_node_off, 
@@ -33,7 +135,7 @@ PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*
                 page_table_node->page_table_items[i].valid = true;
                 page_table_node->page_table_items[i].page_id = page_id;
                 // TODO: 从BufferPoolManager中获取frame_id
-                page_table_node->page_table_items[i].page_address = {-1, INVALID_FRAME_ID};
+                page_table_node->page_table_items[i].page_address = GetFreePageSlot();
                 // 当前页面正在从磁盘读取
                 page_table_node->page_table_items[i].page_valid = false;
                 if(is_write){
@@ -312,10 +414,12 @@ void DTX::UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std:
                         if(it->second == true){
                             //is write
                             page_table_node->page_table_items[i].rwcount += EXCLUSIVE_UNLOCK_TO_BE_ADDED;
+                            page_table_node->page_table_items[i].last_access_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                         }
                         else{
                             //is read
                             page_table_node->page_table_items[i].rwcount--;
+                            page_table_node->page_table_items[i].last_access_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                         }
                         // erase会返回下一个元素的迭代器
                         get_pagetable_request_list[node_off].erase(it);

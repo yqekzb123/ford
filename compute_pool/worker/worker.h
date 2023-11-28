@@ -25,6 +25,8 @@ struct thread_params {
   RDMARegionAllocator* global_rdma_region;
   int coro_num;
   std::string bench_name;
+  std::list<PageAddress>* free_list;
+  std::mutex* free_page_list_mutex;
 };
 
 void run_thread(thread_params* params,

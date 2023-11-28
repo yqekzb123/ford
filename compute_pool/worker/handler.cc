@@ -73,6 +73,11 @@ void Handler::GenThreads(std::string bench_name) {
   auto* global_meta_man = new MetaManager();
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
+
+  // hcy add node local free list
+  auto* global_node_free_list = new std::list<PageAddress>();
+  auto* global_node_free_list_mutex = new std::mutex();
+
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
   auto* global_rdma_region = new RDMARegionAllocator(global_meta_man, thread_num_per_machine);
 
@@ -109,6 +114,8 @@ void Handler::GenThreads(std::string bench_name) {
     param_arr[i].global_rdma_region = global_rdma_region;
     param_arr[i].thread_num_per_machine = thread_num_per_machine;
     param_arr[i].total_thread_num = thread_num_per_machine * machine_num;
+    param_arr[i].free_list = global_node_free_list;
+    param_arr[i].free_page_list_mutex = global_node_free_list_mutex;
     thread_arr[i] = std::thread(run_thread,
                                 &param_arr[i],
                                 tatp_client,

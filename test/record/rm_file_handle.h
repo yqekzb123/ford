@@ -8,9 +8,9 @@
 #include "txn/txn.h"
 #include "txn/batch_txn.h"
 #include "util/bitmap.h"
-#include "base/page.h"
+#include "test/page.h"
 #include "storage/disk_manager.h"
-#include "memstore/bufferpool_manager.h"
+#include "test/buffer/bufferpool_manager.h"
 
 class RmManager;
 

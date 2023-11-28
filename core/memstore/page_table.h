@@ -9,8 +9,12 @@
 #include <sstream>
 #include <string>
 #include <cassert>
+#include <thread>
+#include <mutex>
+#include <list>
 
 #include "memstore/mem_store.h"
+#include "rlib/rdma_ctrl.hpp"
 #include "base/common.h"
 #include "base/page.h"
 #include "util/hash.h"
@@ -30,6 +34,7 @@ struct PageTableItem {
   PageAddress page_address;
   uint64_t rwcount = 0; // if the page is being modified
   bool page_valid = false; // if the page is valid, if not, the page is being read from disk and flush to the memstore
+  timestamp_t last_access_time = 0; 
   // pay attention: valid is just for the slot, not for the page itself
   bool valid; // if the slot is empty, valid: exits value in the slot
 
@@ -54,6 +59,11 @@ struct PageTableMeta {
   // Size of index node
   size_t node_size;
 
+  // Nodes managed by the page table
+  std::vector<node_id_t> manager_data_nodes;
+  std::vector<offset_t> data_node_base_offs;
+  std::vector<size_t> data_node_frame_nums;
+
   PageTableMeta(uint64_t page_table_ptr,
            uint64_t bucket_num,
            size_t node_size,
@@ -64,6 +74,19 @@ struct PageTableMeta {
   PageTableMeta() {}
 } Aligned8;
 
+struct RingBufferItem{
+  node_id_t node_id;
+  frame_id_t frame_id;
+  bool valid;
+} Aligned8;
+struct RingFreeFrameBuffer{
+  // 空闲页面的环形缓冲区
+  RingBufferItem free_list_buffer_[MAX_FREE_LIST_BUFFER_SIZE];
+  uint64_t head_ = 0;
+  uint64_t tail_ = 0;
+  int64_t buffer_item_num_ = 0;
+};
+  
 
 // 计算每个哈希桶节点可以存放多少个rids
 const int MAX_PAGETABLE_ITEM_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(PageTableItem) );
@@ -84,8 +107,8 @@ struct PageTableNode {
 
 class PageTableStore {
  public:
-  PageTableStore(uint64_t bucket_num, MemStoreAllocParam* param)
-      :base_off(0), bucket_num(bucket_num), page_table_ptr(nullptr), node_num(0) {
+  PageTableStore(uint64_t bucket_num, MemStoreAllocParam* param, RCQP *local_qp)
+      :base_off(0), bucket_num(bucket_num), page_table_ptr(nullptr), node_num(0), qp(local_qp) {
 
     assert(bucket_num > 0);
     index_size = (bucket_num) * sizeof(PageTableNode);
@@ -140,7 +163,8 @@ class PageTableStore {
   bool LocalInsertPageTableItem(PageId page_id, PageAddress page_address, MemStoreReserveParam* param);
 
   bool LocalDeletePageTableItem(PageId page_id);
-
+  
+  void VictimPageThread();
  private:
   // The offset in the RDMA region
   // Attention: the base_off is offset of fisrt index bucket
@@ -162,11 +186,128 @@ class PageTableStore {
   // Start of the index region address, for installing remote offset for index item
   char* region_start_ptr;
 
-  // 地址索引中，已经被分配的页面数量
+  // 地址中，已经被分配的页面数量
   uint64_t* fill_page_count;
 
+  // 空闲页面链表
+  std::unordered_map<node_id_t, std::list<frame_id_t>> free_list_;
+  std::unordered_map<node_id_t, std::mutex> free_list_mutex_;
+  std::thread victim_page_thread_;
+  bool stop_victim = false;
+  RCQP* qp;
+  RingFreeFrameBuffer ring_free_frame_buffer_;
+
+  // 设置环形缓冲区元信息的offset，便于RDMA访问
+  offset_t ring_buffer_base_off;
+  offset_t ring_buffer_head_off;
+  offset_t ring_buffer_tail_off;
+  offset_t ring_buffer_item_num_off;
 };
 
+void PageTableStore::VictimPageThread(){
+  // 这里需要一个线程，不断的将超时页面放入空闲页面链表中
+  std::thread victim_page_thread_ = std::thread([this] {
+    char* cas_buf = new char[sizeof(lock_t)];
+    char* faa_buf = new char[sizeof(lock_t)];
+    while (!stop_victim) {
+      for(int i=0; i<* fill_page_count; i++){
+        offset_t offset = base_off + i * sizeof(PageTableNode);
+
+        // ****************************************************************************************
+        // 这里手写了一个RDMACAS + RDMARead的操作，因为这是memstore的操作，不在DTX中，因此无法使用DTX的接口
+        // 这里需要注意，这里的RDMACAS因为和本地原子操作和RDMA原子操作不兼容，因此需要使用RDMACAS来加锁
+        auto rc = qp->post_cas(cas_buf, offset, UNLOCKED, EXCLUSIVE_LOCKED, IBV_SEND_SIGNALED);
+        if (rc != SUCC) {
+          RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+          return false;
+        }
+        ibv_wc wc{};
+        rc = qp->poll_till_completion(wc, no_timeout);
+        if (rc != SUCC) {
+          RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+          return false;
+        }
+        
+        if( *(lock_t*)cas_buf == EXCLUSIVE_LOCKED){
+          // 加锁成功
+          PageTableNode* node = (PageTableNode*)(offset + page_table_ptr);
+          timestamp_t min_timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 5;
+          for(int j=0; j<MAX_PAGETABLE_ITEM_NUM_PER_NODE; j++){
+            if(node->page_table_items[j].valid == true){
+              // 该页面是有效页面
+              if(node->page_table_items[j].rwcount == 0 && node->page_table_items[j].last_access_time < min_timestamp){
+                // 该页面没有被修改，可以被替换
+                // 将该页面放入空闲页面链表中
+                free_list_mutex_[node->page_table_items[j].page_address.node_id].lock();
+                free_list_[node->page_table_items[j].page_address.node_id].push_back(node->page_table_items[j].page_address.frame_id);
+                free_list_mutex_[node->page_table_items[j].page_address.node_id].unlock();
+                // 将该页面从页表中删除
+                node->page_table_items[j].valid = false;
+              }
+            }
+          }
+
+          // 释放锁
+          rc = qp->post_faa(faa_buf, offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED, IBV_SEND_SIGNALED);
+          if (rc != SUCC) {
+            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+            return false;
+          }
+        }
+      }
+    }    
+  });
+
+  while (true) {
+    // 从空闲页面链表中取出空闲页面或者从页表中将超时的页面替换掉，放入环形缓冲区从head开始
+    char* faa_cnt_buf = new char[sizeof(int64_t)];
+    char* faa_head_buf = new char[sizeof(uint64_t)];
+    auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_head_off, 1, IBV_SEND_SIGNALED);
+    if (rc != SUCC) {
+      RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+    }
+    rc = qp->post_faa(faa_head_buf, ring_buffer_item_num_off, 1, IBV_SEND_SIGNALED);
+    if (rc != SUCC) {
+      RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+    }
+    ibv_wc wc{};
+    rc = qp->poll_till_completion(wc, no_timeout);
+    if (rc != SUCC) {
+      RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+    }
+
+    if(*(int64_t*)faa_cnt_buf >= MAX_FREE_LIST_BUFFER_SIZE -1){
+      // buffer is full
+      auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_head_off, -1, IBV_SEND_SIGNALED);
+      if (rc != SUCC) {
+        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+      }
+      rc = qp->post_faa(faa_head_buf, ring_buffer_item_num_off, -1, IBV_SEND_SIGNALED);
+      if (rc != SUCC) {
+        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+      }
+      ibv_wc wc{};
+      rc = qp->poll_till_completion(wc, no_timeout);
+      if (rc != SUCC) {
+        RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    else{
+      // buffer is not full
+      for(auto& node_id: free_list_){
+        free_list_mutex_[node_id.first].lock();
+        if(node_id.second.size() > 0){
+          uint64_t head = (*(uint64_t*)faa_head_buf) % MAX_FREE_LIST_BUFFER_SIZE;
+          ring_free_frame_buffer_.free_list_buffer_[head] = {node_id.first, node_id.second.front(), true};
+          node_id.second.pop_front();
+        }
+        free_list_mutex_[node_id.first].unlock();
+        // TODO: 这里或许可以动态调节超时的时间
+      }
+    }
+  }
+}
 
 ALWAYS_INLINE
 PageAddress PageTableStore::LocalGetPageFrame(PageId page_id) {

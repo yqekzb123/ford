@@ -54,6 +54,9 @@ __thread QPManager* qp_man;
 __thread VersionCache* status;
 __thread LockCache* lock_table;
 
+__thread std::list<PageAddress>* free_page_list;
+__thread std::mutex* free_page_list_mutex;
+
 __thread RDMABufferAllocator* rdma_buffer_allocator;
 __thread LogOffsetAllocator* log_offset_allocator;
 __thread AddrCache* addr_cache;
@@ -132,7 +135,9 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
                      coro_sched,
                      rdma_buffer_allocator,
                      log_offset_allocator,
-                     addr_cache);
+                     addr_cache,
+                     free_page_list,
+                     free_page_list_mutex);
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
 
@@ -287,7 +292,9 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      coro_sched,
                      rdma_buffer_allocator,
                      log_offset_allocator,
-                     addr_cache);
+                     addr_cache,
+                     free_page_list,
+                     free_page_list_mutex);
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
 
@@ -425,7 +432,9 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
                      coro_sched,
                      rdma_buffer_allocator,
                      log_offset_allocator,
-                     addr_cache);
+                     addr_cache,
+                     free_page_list,
+                     free_page_list_mutex);
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
 
@@ -554,7 +563,9 @@ void RunMICRO(coro_yield_t& yield, coro_id_t coro_id) {
                      coro_sched,
                      rdma_buffer_allocator,
                      log_offset_allocator,
-                     addr_cache);
+                     addr_cache,
+                     free_page_list,
+                     free_page_list_mutex);
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
 
@@ -724,6 +735,10 @@ void run_thread(thread_params* params,
   meta_man = params->global_meta_man;
   status = params->global_status;
   lock_table = params->global_lcache;
+
+  free_page_list = params->free_list; 
+  free_page_list_mutex = params->free_page_list_mutex;
+
   coro_num = (coro_id_t)params->coro_num;
   coro_sched = new CoroutineScheduler(thread_gid, coro_num);
 
