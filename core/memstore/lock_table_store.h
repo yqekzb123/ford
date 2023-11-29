@@ -22,6 +22,13 @@ class LockDataId {
 
     LockDataId() {}
 
+    // 拷贝构造函数
+    LockDataId(const LockDataId& other) {
+        table_id_ = other.table_id_;
+        itemkey_ = other.itemkey_;
+        type_ = other.type_;
+    }
+
     /* 表级锁 */
     LockDataId(table_id_t table_id, LockDataType type) {
         assert(type == LockDataType::TABLE);

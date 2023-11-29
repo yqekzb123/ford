@@ -115,7 +115,7 @@ PageAddress DTX::GetFreePageSlot(){
     return {-1, INVALID_FRAME_ID};
 }
 
-PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+PageAddress DTX::InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
         PageId page_id, bool is_write, NodeOffset last_node_off, 
          std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off){
     

@@ -5,7 +5,7 @@
 
 #include "base/common.h"
 #include "util/bitmap.h"
-#include "record.h"
+#include "log/record.h"
 #include "rm_file_handle.h"
 
 /* 记录管理器，用于管理表的数据文件，进行文件的创建、打开、删除、关闭 */

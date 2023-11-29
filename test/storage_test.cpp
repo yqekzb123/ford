@@ -1,8 +1,8 @@
 #include <pthread.h>
 #include <brpc/channel.h>
 
-#include "test/record/rm_manager.h"
-#include "test/record/rm_file_handle.h"
+#include "record/rm_manager.h"
+#include "record/rm_file_handle.h"
 #include "util/debug.h"
 #include "log/log_record.h"
 #include "storage/storage_service.pb.h"

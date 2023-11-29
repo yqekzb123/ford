@@ -129,7 +129,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                         }
                         else{
                             // LockDataId already locked
-                            ret_lock_fail_data_id.emplace_back(lock_data_id);
+                            ret_lock_fail_data_id.emplace_back(*it);
                         }
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);
@@ -253,7 +253,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                         }
                         else{
                             // LockDataId already locked
-                            ret_lock_fail_data_id.emplace_back(lock_data_id);
+                            ret_lock_fail_data_id.emplace_back(*it);
                         }
                         // erase from lock_request_list
                         lock_request_list[node_off].erase(it);

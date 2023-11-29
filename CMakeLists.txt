@@ -96,6 +96,7 @@ include_directories(
     workload
     thirdparty
     compute_pool
+    test
 )
 
 add_subdirectory(thirdparty/rlib)

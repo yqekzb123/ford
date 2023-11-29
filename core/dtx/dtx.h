@@ -347,6 +347,11 @@ class DTX {
   std::unordered_set<NodeOffset> pending_hash_node_latch_offs;
   
   // for page table
+  PageAddress GetFreePageSlot();
+  PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+        PageId page_id, bool is_write, NodeOffset last_node_off, 
+         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
+         
   std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, 
       std::unordered_map<PageId,bool>& need_fetch_from_disk, std::unordered_map<PageId,bool>& now_valid, std::vector<bool> is_write);
   void UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std::vector<bool> is_write);
@@ -371,8 +376,6 @@ class DTX {
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data);
 
   DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
-  
-  PageAddress GetFreePageSlot();
 
  public:
   tx_id_t tx_id;  // Transaction ID

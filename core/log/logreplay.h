@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <thread>
 #include <condition_variable>
+#include <assert.h>
 
 #include "log_record.h"
 #include "util/debug.h"

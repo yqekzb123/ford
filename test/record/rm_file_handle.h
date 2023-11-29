@@ -4,13 +4,13 @@
 
 #include <memory>
 
-#include "record.h"
+#include "log/record.h"
 #include "txn/txn.h"
 #include "txn/batch_txn.h"
 #include "util/bitmap.h"
-#include "test/page.h"
+#include "page.h"
 #include "storage/disk_manager.h"
-#include "test/buffer/bufferpool_manager.h"
+#include "buffer/bufferpool_manager.h"
 
 class RmManager;
 

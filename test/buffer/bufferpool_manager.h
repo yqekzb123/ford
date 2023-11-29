@@ -11,7 +11,7 @@
 #include "storage/disk_manager.h"
 #include "util/errors.h"
 #include "base/page.h"
-#include "test/page.h"
+#include "page.h"
 #include "replacer/clock_replacer.h"
 #include "replacer/lru_replacer.h"
 #include "replacer/replacer.h"
