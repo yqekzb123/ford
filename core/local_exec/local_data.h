@@ -3,47 +3,7 @@
 
 #pragma once
 #include "dtx/dtx.h" 
-
-// enum VersionType : int {
-//   NO_VERSION_CHANGED = 0,
-//   VERSION_CHANGED = 1,
-//   VERSION_EVICTED = 2
-// };
-
-struct LVersion{
-    // VersionType type; 
-    DTX *txn; // 标记是哪个事务写的
-    LVersion* next;
-    DataItemPtr value; // 实际的值，可以是空
-    bool has_value;
-
-    LVersion() {
-        next = nullptr;
-        value = nullptr;
-        has_value = false;
-    }
-
-    void SetVersionDTX(DTX *t) {
-        txn = t;
-    }
-
-    void SetDataItem(DataItem* data) {
-        std::shared_ptr<DataItem> p(new DataItem());
-        value = p;
-        memcpy(p.get(), data, sizeof(DataItem));
-        // value.reset(data);
-        has_value = true;
-    }
-
-    void CopyDataItemToNext(){
-        assert(next != nullptr);
-        assert(value != nullptr);
-        std::shared_ptr<DataItem> p(new DataItem());
-        next->value = p;
-        memcpy(p.get(), value.get(), sizeof(DataItem));
-    }
-};
-using LVersionPtr = std::shared_ptr<LVersion>;
+#include "dtx/structs.h"
 
 class LocalData{
 public:
@@ -139,54 +99,7 @@ struct LocalDataNode {
   LocalDataNode* next_expand_node_id[NEXT_NODE_COUNT] = {-1};
 } Aligned8;
 
-#if 0
-class LocalDataStore {
-public:
-    LocalDataStore(uint64_t bucket_num)
-        :bucket_num(bucket_num), lockitem_ptr(nullptr), node_num(0) {
 
-        assert(bucket_num > 0);
-        local_datastore_size = (bucket_num) * sizeof(LocalDataNode);
-
-        lockitem_ptr = (char*)malloc(local_datastore_size);
-        bucket_array = (LocalDataNode*)lockitem_ptr;
-    }
-
-    uint64_t GetLocalDataStoreSize() const {
-        return sizeof(LocalDataNode);
-    }
-
-    uint64_t GetBucketNum() const {
-        return bucket_num;
-    }
-
-    char* GetAddrPtr() const {
-        return lockitem_ptr;
-    }
-
-    uint64_t LocalDataSize() const {
-        return local_datastore_size;
-    }
-
-    uint64_t GetHash(LockDataId key) {
-        return MurmurHash64A(key.Get(), 0xdeadbeef) % bucket_num;
-    }
-
-private:
-    // Total hash buckets
-    uint64_t bucket_num;
-
-    // The point to value in the table
-    char* lockitem_ptr;
-    LocalDataNode* bucket_array;
-
-    // Total hash node nums
-    uint64_t node_num;
-
-    // 整个临时数据存储的大小
-    size_t local_datastore_size;
-};
-#else
 using LocalDataTable = std::unordered_map<itemkey_t,LocalData*>;
 class LocalDataStore{ 
 public:  
@@ -216,4 +129,3 @@ public:
 private:
     std::unordered_map<table_id_t,LocalDataTable> local_store;
 };
-#endif

@@ -12,6 +12,7 @@
 #include <thread>
 #include <mutex>
 #include <list>
+#include <unordered_map>
 
 #include "memstore/mem_store.h"
 #include "rlib/rdma_ctrl.hpp"
