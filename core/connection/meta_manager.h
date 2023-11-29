@@ -13,7 +13,7 @@
 #include "memstore/lock_table_store.h"
 #include "memstore/page_table.h"
 #include "rlib/rdma_ctrl.hpp"
-#include "record/rm_file_handle.h"
+// #include "record/rm_file_handle.h"
 
 using namespace rdmaio;
 

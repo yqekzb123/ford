@@ -59,10 +59,14 @@ class LockDataId {
     itemkey_t itemkey_;
     LockDataType type_;
 };
-template <>
-struct std::hash<LockDataId> {
-    size_t operator()(const LockDataId &obj) const { return std::hash<int64_t>()(obj.Get()); }
-};
+
+namespace std {
+  template <>
+  struct hash<LockDataId> {
+      size_t operator()(const LockDataId &obj) const { return std::hash<int64_t>()(obj.Get()); }
+  };
+}  // namespace std
+
 struct LockItem {
   LockDataId key;
   

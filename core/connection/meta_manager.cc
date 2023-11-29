@@ -122,28 +122,31 @@ node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) 
   }
   snooper += sizeof(remote_machine_id);
   // Get the `end of file' indicator: finish transmitting
-  char* eof = snooper + sizeof(HashMeta) * (primary_meta_num + backup_meta_num);
-  if ((*((uint64_t*)eof)) == MEM_STORE_META_END) {
-    for (size_t i = 0; i < primary_meta_num; i++) {
-      HashMeta meta;
-      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
-      primary_hash_metas[meta.table_id] = meta;
-      primary_table_nodes[meta.table_id] = remote_machine_id;
-      // RDMA_LOG(INFO) << "primary_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: 0x" << std::hex << meta.data_ptr << " base_off: 0x" << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size << " B";
-    }
-    snooper += sizeof(HashMeta) * primary_meta_num;
-    for (size_t i = 0; i < backup_meta_num; i++) {
-      HashMeta meta;
-      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
 
-      // RDMA_LOG(INFO) << "backup_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: " << std::hex << meta.data_ptr << " base_off: " << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size;
-      backup_hash_metas[meta.table_id].push_back(meta);
-      backup_table_nodes[meta.table_id].push_back(remote_machine_id);
-    }
-  } else {
-    free(recv_buf);
-    return -1;
-  }
+  // hcy note: need to add code about dtx receive meta from memstore
+
+  // char* eof = snooper + sizeof(HashMeta) * (primary_meta_num + backup_meta_num);
+  // if ((*((uint64_t*)eof)) == MEM_STORE_META_END) {
+  //   for (size_t i = 0; i < primary_meta_num; i++) {
+  //     HashMeta meta;
+  //     memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
+  //     primary_hash_metas[meta.table_id] = meta;
+  //     primary_table_nodes[meta.table_id] = remote_machine_id;
+  //     // RDMA_LOG(INFO) << "primary_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: 0x" << std::hex << meta.data_ptr << " base_off: 0x" << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size << " B";
+  //   }
+  //   snooper += sizeof(HashMeta) * primary_meta_num;
+  //   for (size_t i = 0; i < backup_meta_num; i++) {
+  //     HashMeta meta;
+  //     memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
+
+  //     // RDMA_LOG(INFO) << "backup_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: " << std::hex << meta.data_ptr << " base_off: " << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size;
+  //     backup_hash_metas[meta.table_id].push_back(meta);
+  //     backup_table_nodes[meta.table_id].push_back(remote_machine_id);
+  //   }
+  // } else {
+  //   free(recv_buf);
+  //   return -1;
+  // }
   free(recv_buf);
   return remote_machine_id;
 }

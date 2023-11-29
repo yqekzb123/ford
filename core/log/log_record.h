@@ -5,7 +5,7 @@
 
 #include "base/common.h"
 #include "base/page.h"
-#include "record/record.h"
+#include "record.h"
 
 const int OFFSET_BATCH_ID = 0;
 // the offset of log_type_ in log header

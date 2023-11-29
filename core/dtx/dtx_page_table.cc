@@ -35,11 +35,11 @@ PageAddress DTX::GetFreePageSlot(){
                 return res;
             }
             else{
-                rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, -100, IBV_SEND_SIGNALED);
+                auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, -100, IBV_SEND_SIGNALED);
                 if (rc != SUCC) {
                     RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
                 }
-                rc = qp->post_faa(faa_tail_buf, ring_buffer_item_num_off, 100, IBV_SEND_SIGNALED);
+                rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, 100, IBV_SEND_SIGNALED);
                 if (rc != SUCC) {
                 RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
                 }
@@ -50,12 +50,12 @@ PageAddress DTX::GetFreePageSlot(){
                 }
 
                 if(*(int64_t*)faa_cnt_buf < 100){
-                    // buffer has enough not free page
-                    auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_head_off, 100, IBV_SEND_SIGNALED);
+                    // buffer has not enough free page
+                    auto rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, -100, IBV_SEND_SIGNALED);
                     if (rc != SUCC) {
                         RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
                     }
-                    rc = qp->post_faa(faa_tail_buf, ring_buffer_item_num_off, -100, IBV_SEND_SIGNALED);
+                    rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, 100, IBV_SEND_SIGNALED);
                     if (rc != SUCC) {
                         RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
                     }
@@ -105,7 +105,7 @@ PageAddress DTX::GetFreePageSlot(){
                     for(int i=0; i<100; i++){
                         RingBufferItem* item =  reinterpret_cast<RingBufferItem*>(read_free_page + i * sizeof(RingBufferItem));
                         assert(item->valid == true);
-                        free_page_list->push_back({item->page_id, item->frame_id});
+                        free_page_list->push_back({item->node_id, item->frame_id});
                     }
                     free_page_list_mutex->unlock();
                 }
