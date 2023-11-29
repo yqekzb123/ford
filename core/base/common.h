@@ -46,7 +46,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 #define BACKUP_DEGREE 2          // Backup memory node number. MUST **NOT** BE SET TO 0
 #define MAX_REMOTE_NODE_NUM 100  // Max remote memory node number
 #define MAX_DB_TABLE_NUM 15      // Max DB tables
-
+#define MAX_FREE_LIST_BUFFER_SIZE 20480 // 20480*4k = 80M
 // Data state
 #define STATE_INVISIBLE 0x8000000000000000  // Data cannot be read
 #define STATE_LOCKED 1                      // Data cannot be written. Used for serializing transactions

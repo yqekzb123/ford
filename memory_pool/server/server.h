@@ -126,7 +126,7 @@ class Server {
   // The page cache
   char* page_buffer;  // the cache stored pages
   char* page_array_buffer; // the start address of the pages
-  Page* page_array;   // the page_array
+  // Page* page_array;   // the page_array
   int   page_slot_count;
 
   // char* addr_index;

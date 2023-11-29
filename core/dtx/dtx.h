@@ -30,6 +30,7 @@
 #include "memstore/hash_store.h"
 #include "memstore/hash_index_store.h"
 #include "memstore/lock_table_store.h"
+#include "memstore/page_table.h"
 #include "util/debug.h"
 #include "util/hash.h"
 #include "util/json_config.h"
@@ -75,7 +76,9 @@ class DTX {
       CoroutineScheduler* sched,
       RDMABufferAllocator* rdma_buffer_allocator,
       LogOffsetAllocator* log_offset_allocator,
-      AddrCache* addr_buf);
+      AddrCache* addr_buf,
+      std::list<PageAddress>* free_page_list, 
+      std::mutex* free_page_list_mutex);
   ~DTX() {
     Clean();
   }
@@ -124,12 +127,12 @@ class DTX {
     item->Debug();
   }
 
-  void DebugFetchHashBucket(RCQP* qp, uint64_t remote_offset) {
-    auto* tmp_hash_node = thread_rdma_buffer_alloc->Alloc(sizeof(HashNode));
-    RDMAReadRoundTrip(qp, tmp_hash_node, remote_offset, sizeof(HashNode));
-    HashNode* bucket = (HashNode*)tmp_hash_node;
-    for (int i = 0; i < ITEM_NUM_PER_NODE; i++) bucket->data_items[i].Debug();
-  }
+  // void DebugFetchHashBucket(RCQP* qp, uint64_t remote_offset) {
+  //   auto* tmp_hash_node = thread_rdma_buffer_alloc->Alloc(sizeof(HashNode));
+  //   RDMAReadRoundTrip(qp, tmp_hash_node, remote_offset, sizeof(HashNode));
+  //   HashNode* bucket = (HashNode*)tmp_hash_node;
+  //   for (int i = 0; i < ITEM_NUM_PER_NODE; i++) bucket->data_items[i].Debug();
+  // }
 
  private:
   // Transfer locking and validation into compute pool
@@ -367,6 +370,8 @@ class DTX {
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data);
 
   DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
+  
+  PageAddress GetFreePageSlot();
 
  public:
   tx_id_t tx_id;  // Transaction ID
@@ -430,6 +435,9 @@ class DTX {
 
   // Global <key, lock> lock table
   LockCache* global_lcache;
+
+  std::list<PageAddress>* free_page_list;
+  std::mutex* free_page_list_mutex;
 };
 
 /*************************************************************
