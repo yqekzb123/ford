@@ -25,6 +25,8 @@ public:
         } else return false;
     }
     bool ExeBatchRW(coro_yield_t& yield);
+    std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
+    bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr> data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
 private:
     bool IssueReadRO(std::vector<DirectRead>& pending_direct_ro, std::vector<HashRead>& pending_hash_ro);
     bool IssueReadLock(std::vector<CasRead>& pending_cas_rw,
@@ -76,7 +78,16 @@ public:
         local_store.push_back(batch);
     }
 
+    void ExeBatch(coro_yield_t& yield) {
+        if (now_exec == nullptr) {
+            now_exec = GetBatch();
+            CreateBatch();
+        }
+        now_exec->ExeBatchRW(yield);
+    }
 private:
     std::vector<LocalBatch*> local_store;
     batch_id_t batch_id_count;
+
+    LocalBatch* now_exec;
 };

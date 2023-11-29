@@ -336,6 +336,8 @@ class DTX {
   
   std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
 
+  std::vector<DataItemPtr> WriteTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, std::vector<DataItemPtr> data, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
+
  private:
   // 用来记录每次要批获取hash node latch的offset
   std::unordered_set<NodeOffset> pending_hash_node_latch_offs;

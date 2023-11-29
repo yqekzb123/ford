@@ -20,6 +20,9 @@
 #include "util/latency.h"
 #include "util/zipf.h"
 
+#include "global.h"
+#include "batch/local_batch.h"
+
 using namespace std::placeholders;
 
 // All the functions are executed in each thread
@@ -72,6 +75,7 @@ __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
 __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
 const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
+const coro_id_t BATCH_TXN_ID = 1;
 
 // For MICRO benchmark
 __thread ZipfGen* zipf_gen = nullptr;
@@ -95,6 +99,10 @@ void PollCompletion(coro_yield_t& yield) {
     }
     if (stop_run) break;
   }
+}
+
+void BatchExec(coro_yield_t& yield) {
+  local_batch_store.ExeBatch(yield);
 }
 
 void RecordTpLat(double msr_sec) {
@@ -762,6 +770,8 @@ void run_thread(thread_params* params,
     // Bind workload to coroutine
     if (coro_i == POLL_ROUTINE_ID) {
       coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
+    } else if (coro_i == POLL_ROUTINE_ID) {
+      coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
     } else {
       if (bench_name == "tatp") {
         coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));

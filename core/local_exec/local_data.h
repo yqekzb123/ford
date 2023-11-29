@@ -28,7 +28,10 @@ struct LVersion{
     }
 
     void SetDataItem(DataItem* data) {
-        value.reset(data);
+        std::shared_ptr<DataItem> p(new DataItem());
+        value = p;
+        memcpy(p.get(), data, sizeof(DataItem));
+        // value.reset(data);
         has_value = true;
     }
 
