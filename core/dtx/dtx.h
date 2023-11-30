@@ -50,9 +50,9 @@ class DTX {
 
   void AddToReadWriteSet(DataItemPtr item, LVersionPtr version);
 
-  bool TxExe(coro_yield_t& yield, bool fail_abort = true);
+  // bool TxExe(coro_yield_t& yield, bool fail_abort = true);
 
-  bool TxCommit(coro_yield_t& yield);
+  // bool TxCommit(coro_yield_t& yield);
 
   bool TxLocalExe(coro_yield_t& yield, bool fail_abort = true);
 
@@ -228,72 +228,72 @@ class DTX {
 
  private:
   // For comparisons
-  bool CompareExeRO(coro_yield_t& yield);
+  // bool CompareExeRO(coro_yield_t& yield);
 
-  bool CompareExeRW(coro_yield_t& yield);
+  // bool CompareExeRW(coro_yield_t& yield);
 
-  bool CompareLocking(coro_yield_t& yield);
+  // bool CompareLocking(coro_yield_t& yield);
 
-  bool CompareValidation(coro_yield_t& yield);
+  // bool CompareValidation(coro_yield_t& yield);
 
-  bool CompareLockingValidation(coro_yield_t& yield);
+  // bool CompareLockingValidation(coro_yield_t& yield);
 
-  bool CompareCommitBackup(coro_yield_t& yield);
+  // bool CompareCommitBackup(coro_yield_t& yield);
 
-  bool CompareCommitPrimary(coro_yield_t& yield);
+  // bool CompareCommitPrimary(coro_yield_t& yield);
 
  private:
   // For comparisons. Coroutine issue before yield
-  bool CompareIssueReadRO(std::vector<DirectRead>& pending_direct_ro,
-                          std::vector<HashRead>& pending_hash_ro);
+  // bool CompareIssueReadRO(std::vector<DirectRead>& pending_direct_ro,
+  //                         std::vector<HashRead>& pending_hash_ro);
 
-  bool CompareIssueReadRW(std::vector<DirectRead>& pending_direct_rw,
-                          std::vector<HashRead>& pending_hash_rw,
-                          std::vector<InsertOffRead>& pending_insert_off_rw);
+  // bool CompareIssueReadRW(std::vector<DirectRead>& pending_direct_rw,
+  //                         std::vector<HashRead>& pending_hash_rw,
+  //                         std::vector<InsertOffRead>& pending_insert_off_rw);
 
-  bool CompareIssueLocking(std::vector<Lock>& pending_lock);
+  // bool CompareIssueLocking(std::vector<Lock>& pending_lock);
 
-  bool CompareIssueValidation(std::vector<Version>& pending_version_read);
+  // bool CompareIssueValidation(std::vector<Version>& pending_version_read);
 
-  bool CompareIssueLockValidation(std::vector<ValidateRead>& pending_validate);
+  // bool CompareIssueLockValidation(std::vector<ValidateRead>& pending_validate);
 
-  bool CompareIssueCommitBackup();
+  // bool CompareIssueCommitBackup();
 
-  bool CompareIssueCommitBackupFullFlush();
+  // bool CompareIssueCommitBackupFullFlush();
 
-  bool CompareIssueCommitBackupSelectiveFlush();
+  // bool CompareIssueCommitBackupSelectiveFlush();
 
-  bool CompareIssueCommitBackupBatchSelectFlush();
+  // bool CompareIssueCommitBackupBatchSelectFlush();
 
-  bool CompareIssueCommitPrimary();
+  // bool CompareIssueCommitPrimary();
 
-  bool CompareIssueTruncate();
+  // bool CompareIssueTruncate();
 
  private:
   // For comparisons. Coroutine check after yield
-  bool CompareCheckDirectRW(std::vector<DirectRead>& pending_direct_rw,
-                            std::list<HashRead>& pending_next_hash_rw,
-                            std::list<InsertOffRead>& pending_next_off_rw,
-                            std::list<InvisibleRead>& pending_invisible_ro);
+  // bool CompareCheckDirectRW(std::vector<DirectRead>& pending_direct_rw,
+  //                           std::list<HashRead>& pending_next_hash_rw,
+  //                           std::list<InsertOffRead>& pending_next_off_rw,
+  //                           std::list<InvisibleRead>& pending_invisible_ro);
 
-  bool CompareCheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
-                            std::vector<DirectRead>& pending_direct_rw,
-                            std::vector<HashRead>& pending_hash_ro,
-                            std::vector<HashRead>& pending_hash_rw,
-                            std::list<HashRead>& pending_next_hash_ro,
-                            std::list<HashRead>& pending_next_hash_rw,
-                            std::vector<InsertOffRead>& pending_insert_off_rw,
-                            std::list<InsertOffRead>& pending_next_off_rw,
-                            std::list<InvisibleRead>& pending_invisible_ro,
-                            coro_yield_t& yield);
+  // bool CompareCheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
+  //                           std::vector<DirectRead>& pending_direct_rw,
+  //                           std::vector<HashRead>& pending_hash_ro,
+  //                           std::vector<HashRead>& pending_hash_rw,
+  //                           std::list<HashRead>& pending_next_hash_ro,
+  //                           std::list<HashRead>& pending_next_hash_rw,
+  //                           std::vector<InsertOffRead>& pending_insert_off_rw,
+  //                           std::list<InsertOffRead>& pending_next_off_rw,
+  //                           std::list<InvisibleRead>& pending_invisible_ro,
+  //                           coro_yield_t& yield);
 
-  bool CompareCheckLocking(std::vector<Lock>& pending_lock);
+  // bool CompareCheckLocking(std::vector<Lock>& pending_lock);
 
-  bool CompareCheckValidation(std::vector<Version>& pending_version_read);
+  // bool CompareCheckValidation(std::vector<Version>& pending_version_read);
 
-  bool CompareCheckCommitPrimary(std::vector<Unlock>& pending_unlock);
+  // bool CompareCheckCommitPrimary(std::vector<Unlock>& pending_unlock);
 
-  bool CompareTruncateAsync(coro_yield_t& yield);
+  // bool CompareTruncateAsync(coro_yield_t& yield);
   
  public:
   // for hash index

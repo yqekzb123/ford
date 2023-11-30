@@ -19,14 +19,14 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
   // a1.sav_obj_0->value = std::make_shared<DataItem>((table_id_t)
   a1.sav_obj_0 = std::make_shared<DataItem>((table_id_t)
   SmallBankTableType::kSavingsTable, sav_key_0.item_key);
-  dtx->AddToReadWriteSet(a1.sav_obj_0, a1.sav_obj_0);
+  dtx->AddToReadWriteSet(a1.sav_obj_0);
 
   smallbank_checking_key_t chk_key_0;
   chk_key_0.acct_id = acct_id_0;
   a1.chk_obj_0 = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kCheckingTable, chk_key_0.item_key);
   //  = std::make_shared<LVersion>();
   // a1.chk_obj_0->value 
-  dtx->AddToReadWriteSet(a1.chk_obj_0, a1.chk_obj_0);
+  dtx->AddToReadWriteSet(a1.chk_obj_0);
 
   /* Read from checking account for acct_id_1 */
   smallbank_checking_key_t chk_key_1;
@@ -34,7 +34,7 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
   a1.chk_obj_1 = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kCheckingTable, chk_key_1.item_key);
   // = std::make_shared<LVersion>();
   // a1.chk_obj_1->value
-  dtx->AddToReadWriteSet(a1.chk_obj_1, a1.chk_obj_1);
+  dtx->AddToReadWriteSet(a1.chk_obj_1);
 
   if (!dtx->TxLocalExe(yield)) return false;
 
@@ -173,7 +173,7 @@ bool SmallBankDTX::TxLocalSendPayment(SmallBank* smallbank_client, uint64_t* see
 
   if (!dtx->TxLocalExe(yield)) return false;
 
-  bool commit_status = dtx->TxCommit(yield);
+  bool commit_status = dtx->TxLocalCommit(yield,this);
   return commit_status;
 }
 

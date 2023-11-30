@@ -96,7 +96,7 @@ struct LocalDataNode {
   // node id
   LocalData data_item[MAX_LOCAL_DATA_NUM_PER_NODE];
 
-  LocalDataNode* next_expand_node_id[NEXT_NODE_COUNT] = {-1};
+  LocalDataNode* next_expand_node_id[NEXT_NODE_COUNT] = {nullptr};
 } Aligned8;
 
 

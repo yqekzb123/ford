@@ -2,6 +2,7 @@
 // Copyright (c) 2023
 
 #pragma once
+#include "worker/global.h"
 #include "dtx/dtx.h" 
 #include "bench_dtx.h" 
 

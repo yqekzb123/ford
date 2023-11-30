@@ -6,6 +6,9 @@
 #include "memstore/hash_store.h"
 #include "rlib/rdma_ctrl.hpp"
 
+node_id_t g_machine_id;
+node_id_t g_machine_num;
+
 enum DTX_SYS : int {
   FaRM = 0,
   DrTMH = 1,

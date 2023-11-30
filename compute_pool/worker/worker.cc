@@ -15,6 +15,7 @@
 #include "dtx/dtx.h"
 #include "micro/micro_txn.h"
 #include "smallbank/smallbank_txn.h"
+#include "smallbank_batch/smallbank_txn.h"
 #include "tatp/tatp_txn.h"
 #include "tpcc/tpcc_txn.h"
 #include "util/latency.h"
@@ -189,7 +190,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
         if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
-      case TATPTxType::kCallForwarding: {
+      case TATPTxType::kInsertCallForwarding: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = TxInsertCallForwarding(tatp_client, &seed, yield, iter, dtx);
         if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
