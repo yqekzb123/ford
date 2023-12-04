@@ -83,6 +83,7 @@ int SmallBank::LoadRecord(RmFileHandle* file_handle,
 
 void SmallBank::PopulateSavingsTable() {
   /* All threads must execute the loop below deterministically */
+  rm_manager->create_file(bench_name + "_savings", sizeof(smallbank_savings_val_t));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_savings");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_savings_index.txt");
@@ -106,6 +107,7 @@ void SmallBank::PopulateSavingsTable() {
 
 void SmallBank::PopulateCheckingTable( ) {
   /* All threads must execute the loop below deterministically */
+  rm_manager->create_file(bench_name + "_checking", sizeof(smallbank_checking_val_t));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_checking");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_checking_index.txt");
@@ -121,7 +123,7 @@ void SmallBank::PopulateCheckingTable( ) {
 
     LoadRecord(table_file.get(), checking_key.item_key,
                (void*)&checking_val, sizeof(smallbank_checking_val_t),
-                (table_id_t)SmallBankTableType::kSavingsTable,
+                (table_id_t)SmallBankTableType::kCheckingTable,
                 indexfile);
   }
 }

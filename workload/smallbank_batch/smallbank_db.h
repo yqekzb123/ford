@@ -201,8 +201,7 @@ class SmallBank {
                  void* val_ptr,
                  size_t val_size,
                  table_id_t table_id,
-                 std::ofstream& indexfile
-                 );
+                 std::ofstream& indexfile);
 
   ALWAYS_INLINE
   std::vector<HashStore*> GetPrimaryHashStore() {
