@@ -181,4 +181,5 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
 std::vector<DataItemPtr> DTX::WriteTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, 
     std::vector<Rid> rids, std::vector<FetchPageType> types, std::vector<DataItemPtr> data, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec){
     // TODO : todo finish
+    
 }

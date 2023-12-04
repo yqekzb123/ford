@@ -8,7 +8,8 @@
 #include <brpc/channel.h>
 
 #include "storage/storage_rpc.h"
-// #include "rlib/rdma_ctrl.hpp"
+#include "record/rm_manager.h"
+#include "record/rm_file_handle.h"
 
 // Load DB
 #include "micro/micro_db.h"
@@ -49,8 +50,6 @@ public:
     }
 
     ~Server() {}
-
-    void LoadData(node_id_t machine_id, node_id_t machine_num, std::string& workload);
 
 private:
     DiskManager* disk_manager_;

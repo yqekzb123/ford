@@ -83,12 +83,14 @@ Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
     // // context->txn_->append_write_record(write_record);
     // return rid;
 
-    RmRecord record(key, file_hdr_.record_size_, buf);
-    InsertLogRecord* log = new InsertLogRecord(txn->batch_id_, 1, txn->batch_id_, record, rid, "table");
-    int bucket_no = Bitmap::get_bucket(slot_no);
-    log->set_meta(OFFSET_BITMAP + bucket_no, page_handle.bitmap[bucket_no], 
-                    page_handle.page_hdr->num_records_, file_hdr_.first_free_page_no_);
-    txn->logs.push_back(log);
+    if(txn != nullptr){
+        RmRecord record(key, file_hdr_.record_size_, buf);
+        InsertLogRecord* log = new InsertLogRecord(txn->batch_id_, 1, txn->batch_id_, record, rid, "table");
+        int bucket_no = Bitmap::get_bucket(slot_no);
+        log->set_meta(OFFSET_BITMAP + bucket_no, page_handle.bitmap[bucket_no], 
+                        page_handle.page_hdr->num_records_, file_hdr_.first_free_page_no_);
+        txn->logs.push_back(log);
+    }
 
     return rid;
 }
@@ -229,9 +231,11 @@ RmPageHandle RmFileHandle::create_new_page_handle(BatchTxn* txn) {
     file_hdr_.num_pages_ = new_page_id.page_no + 1;
     file_hdr_.first_free_page_no_ = page->get_page_id().page_no;  // 更新文件中当前第一个可用的page_no
 
-    NewPageLogRecord* log = new NewPageLogRecord(txn->batch_id_, 1, txn->batch_id_, "table", new_page_id.page_no);
-    log->set_meta(file_hdr_.num_pages_, file_hdr_.first_free_page_no_);
-    txn->logs.push_back(log);
+    if(txn != nullptr){
+        NewPageLogRecord* log = new NewPageLogRecord(txn->batch_id_, 1, txn->batch_id_, "table", new_page_id.page_no);
+        log->set_meta(file_hdr_.num_pages_, file_hdr_.first_free_page_no_);
+        txn->logs.push_back(log);
+    }
     
     return page_handle;
 }
