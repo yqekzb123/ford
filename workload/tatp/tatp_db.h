@@ -9,6 +9,7 @@
 
 #include "config/table_type.h"
 #include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
 #include "util/fast_random.h"
 #include "util/json_config.h"
 
@@ -258,6 +259,17 @@ class TATP {
 
   HashStore* call_forwarding_table;
 
+  /* Indexs */
+  IndexStore* subscriber_index;
+
+  IndexStore* sec_subscriber_index;
+
+  IndexStore* special_facility_index;
+
+  IndexStore* access_info_index;
+
+  IndexStore* call_forwarding_index;
+
   std::vector<HashStore*> primary_table_ptrs;
 
   std::vector<HashStore*> backup_table_ptrs;
@@ -294,6 +306,12 @@ class TATP {
     special_facility_table = nullptr;
     access_info_table = nullptr;
     call_forwarding_table = nullptr;
+    
+    subscriber_index = nullptr;
+    sec_subscriber_index = nullptr;
+    special_facility_index = nullptr;
+    access_info_index = nullptr;
+    call_forwarding_index = nullptr;
   }
 
   ~TATP() {
@@ -302,6 +320,12 @@ class TATP {
     if (special_facility_table) delete special_facility_table;
     if (access_info_table) delete access_info_table;
     if (call_forwarding_table) delete call_forwarding_table;
+
+    if (subscriber_index) delete subscriber_index;
+    if (sec_subscriber_index) delete sec_subscriber_index;
+    if (special_facility_index) delete special_facility_index;
+    if (access_info_index) delete access_info_index;
+    if (call_forwarding_index) delete call_forwarding_index;
   }
 
   /* create workload generation array for benchmarking */

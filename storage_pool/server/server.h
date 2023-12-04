@@ -48,9 +48,9 @@ public:
 
     }
 
-    ~Server() {
+    ~Server() {}
 
-    }
+    void LoadData(node_id_t machine_id, node_id_t machine_num, std::string& workload);
 
 private:
     DiskManager* disk_manager_;
