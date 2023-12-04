@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "dtx/dtx.h"
-#include "local_exec/local_data.h"
+// #include "local_exec/local_data.h"
 #include "bench_dtx.h"
 #include "smallbank_batch/smallbank_db.h"
 

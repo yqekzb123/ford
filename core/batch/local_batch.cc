@@ -100,7 +100,7 @@ std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dt
 bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr> data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index) {
   std::vector<Rid> id_list;
   std::vector<table_id_t> tid_list;
-  std::vector<DataItemPtr> data_list;
+  // std::vector<DataItemPtr> data_list;
 
   std::vector<DTX::FetchPageType> fetch_type;
   std::vector<PageAddress> page_address;

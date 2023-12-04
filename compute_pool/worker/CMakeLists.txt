@@ -3,7 +3,8 @@
 
 set(WORKER_SRC
         handler.cc
-        worker.cc)
+        worker.cc
+        global.cc)
 
 add_library(worker STATIC
         ${WORKER_SRC}

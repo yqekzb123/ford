@@ -5,19 +5,14 @@ set(CONNECTION_SRC
 
 set(DTX_SRC
         dtx/doorbell.cc
-        dtx/dtx_check.cc
-        dtx/dtx_check_ro.cc
-        dtx/dtx_check_rw.cc
-        dtx/dtx_issue.cc
+        dtx/dtx_bufferpool.cc
         dtx/dtx.cc
-        dtx/dtx_exe_commit.cc
-        dtx/dtx_local_meta.cc
-        dtx/dtx_compare.cc
-        dtx/dtx_compare_issue.cc
-        dtx/dtx_compare_check.cc
         dtx/dtx_hash_index.cc
         dtx/dtx_lock.cc
+        dtx/dtx_local.cc
+        dtx/dtx_local_exe_commit.cc
         dtx/dtx_page_table.cc
+        dtx/structs.cc
         )
 
 set(SCHEDULER_SRC
@@ -44,6 +39,7 @@ add_library(ford STATIC
         ${DTX_SRC}
         ${SCHEDULER_SRC}
         ${STORAGE_SRC}
+        ${BATCH_SRC}
         ${LOG_SRC}
         )
 

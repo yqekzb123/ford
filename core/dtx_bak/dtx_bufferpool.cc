@@ -1,7 +1,6 @@
 #include <brpc/channel.h>
 #include "dtx/dtx.h"
 #include "storage/storage_service.pb.h"
-#include "log/record.h"
 
 DEFINE_string(protocol, "baidu_std", "Protocol type");
 DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
@@ -145,7 +144,7 @@ DataItemPtr DTX::GetDataItemFromPage(table_id_t table_id, char* data, Rid rid){
     char *bitmap = data + sizeof(RmPageHdr) + OFFSET_PAGE_HDR;
     char *slots = bitmap + global_meta_man->GetTableMeta(table_id).bitmap_size_;
     char* tuple = slots + rid.slot_no_ * sizeof(DataItem);
-    DataItemPtr itemPtr((DataItem*)tuple);
+    DataItemPtr itemPtr(tuple);
     return itemPtr;
 }
 
