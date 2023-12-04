@@ -1,5 +1,4 @@
 #include "dtx/dtx.h"
-#include "dtx/rwlock.h"
 
 // 如果出现初始桶中没有itemkey的情况，似乎无法使用桶尾部的多个指针
 // 并行加多个锁，因为可能会造成死锁, 无法保证按顺序加锁

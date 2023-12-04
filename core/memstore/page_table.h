@@ -205,6 +205,7 @@ class PageTableStore {
   offset_t ring_buffer_item_num_off;
 };
 
+ALWAYS_INLINE
 void PageTableStore::VictimPageThread(){
   // 这里需要一个线程，不断的将超时页面放入空闲页面链表中
   std::thread victim_page_thread_ = std::thread([this] {

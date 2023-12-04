@@ -13,6 +13,7 @@ set(DTX_SRC
         dtx/dtx_local_exe_commit.cc
         dtx/dtx_page_table.cc
         dtx/structs.cc
+        dtx/rwlock.cc
         )
 
 set(SCHEDULER_SRC
@@ -45,4 +46,4 @@ add_library(ford STATIC
 
 set_target_properties(ford PROPERTIES LINKER_LANGUAGE CXX)
 
-target_link_libraries(ford rlib pthread boost_coroutine boost_context boost_system)
+target_link_libraries(ford ${DYNAMIC_LIB} ${BRPC_LIB} rlib pthread boost_coroutine boost_context boost_system)
