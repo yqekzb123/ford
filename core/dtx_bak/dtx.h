@@ -50,6 +50,10 @@ class DTX {
 
   void AddToReadWriteSet(DataItemPtr item, LVersionPtr version);
 
+  // bool TxExe(coro_yield_t& yield, bool fail_abort = true);
+
+  // bool TxCommit(coro_yield_t& yield);
+
   bool TxLocalExe(coro_yield_t& yield, bool fail_abort = true);
 
   bool TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);
@@ -95,11 +99,202 @@ class DTX {
 
   // bool ExeBatchRW(coro_yield_t& yield);  // 批次在远程读取数据
   // bool BatchValidate(coro_yield_t& yield);  //读回数据后，本地验证和重新计算数据
+  // todo：需要一个事务或者操作数组。。
   
  private:
+  // Internal transaction functions
+  bool ExeRO(coro_yield_t& yield);  // Execute read-only transaction
+
+  bool ExeRW(coro_yield_t& yield);  // Execute read-write transaction, use doorbell read+cas(lock) and background undo log
+
+  bool Validate(coro_yield_t& yield);  // RDMA read value versions
+
+  bool CoalescentCommit(coro_yield_t& yield);
+
   void Abort();
 
+  bool RDMAWriteRoundTrip(RCQP* qp, char* wt_data, uint64_t remote_offset, size_t size);  // RDMA write wrapper
+
+  bool RDMAReadRoundTrip(RCQP* qp, char* rd_data, uint64_t remote_offset, size_t size);  // RDMA read wrapper
+
+  void ParallelUndoLog();
+
   void Clean();  // Clean data sets after commit/abort
+
+  void DebugFetchDataItem(RCQP* qp, uint64_t remote_offset) {
+    char* buf = thread_rdma_buffer_alloc->Alloc(DataItemSize);
+    RDMAReadRoundTrip(qp, buf, remote_offset, DataItemSize);
+    DataItem* item = (DataItem*)buf;
+    item->Debug();
+  }
+
+  // void DebugFetchHashBucket(RCQP* qp, uint64_t remote_offset) {
+  //   auto* tmp_hash_node = thread_rdma_buffer_alloc->Alloc(sizeof(HashNode));
+  //   RDMAReadRoundTrip(qp, tmp_hash_node, remote_offset, sizeof(HashNode));
+  //   HashNode* bucket = (HashNode*)tmp_hash_node;
+  //   for (int i = 0; i < ITEM_NUM_PER_NODE; i++) bucket->data_items[i].Debug();
+  // }
+
+ private:
+  // Transfer locking and validation into compute pool
+  bool LocalLock();
+  
+  void LocalUnlock();
+
+  bool LocalValidate();
+
+ private:  
+  // For coroutine issues RDMA requests before yield
+  bool IssueReadRO(std::vector<DirectRead>& pending_direct_ro,
+                   std::vector<HashRead>& pending_hash_ro);
+
+  bool IssueReadRW(std::vector<DirectRead>& pending_direct_rw,
+                   std::vector<HashRead>& pending_hash_rw,
+                   std::vector<InsertOffRead>& pending_insert_off_rw);
+
+  bool IssueReadLock(std::vector<CasRead>& pending_cas_rw,
+                     std::vector<HashRead>& pending_hash_rw,
+                     std::vector<InsertOffRead>& pending_insert_off_rw);
+
+  ValStatus IssueLocalValidate(std::vector<ValidateRead>& pending_validate);
+
+  bool IssueRemoteValidate(std::vector<ValidateRead>& pending_validate);
+
+  bool IssueCommitAll(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+
+  bool IssueCommitAllFullFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+
+  bool IssueCommitAllSelectFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+
+  bool IssueCommitAllBatchSelectFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+
+ private:
+  // For coroutine check RDMA requests after yield
+  bool CheckReadRO(std::vector<DirectRead>& pending_direct_ro,
+                   std::vector<HashRead>& pending_hash_ro,
+                   std::list<InvisibleRead>& pending_invisible_ro,
+                   std::list<HashRead>& pending_next_hash_ro,
+                   coro_yield_t& yield);
+
+  bool CheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
+                     std::vector<HashRead>& pending_hash_ro,
+                     std::vector<HashRead>& pending_hash_rw,
+                     std::vector<InsertOffRead>& pending_insert_off_rw,
+                     std::vector<CasRead>& pending_cas_rw,
+                     std::list<InvisibleRead>& pending_invisible_ro,
+                     std::list<HashRead>& pending_next_hash_ro,
+                     std::list<HashRead>& pending_next_hash_rw,
+                     std::list<InsertOffRead>& pending_next_off_rw,
+                     coro_yield_t& yield);
+
+  bool CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
+                     std::list<InvisibleRead>& pending_invisible_ro,
+                     std::list<HashRead>& pending_next_hash_ro);
+
+  bool CheckInvisibleRO(std::list<InvisibleRead>& pending_invisible_ro);
+
+  bool CheckHashRO(std::vector<HashRead>& pending_hash_ro,
+                   std::list<InvisibleRead>& pending_invisible_ro,
+                   std::list<HashRead>& pending_next_hash_ro);
+
+  bool CheckNextHashRO(std::list<InvisibleRead>& pending_invisible_ro,
+                       std::list<HashRead>& pending_next_hash_ro);
+
+  bool CheckCasRW(std::vector<CasRead>& pending_cas_rw,
+                  std::list<HashRead>& pending_next_hash_rw,
+                  std::list<InsertOffRead>& pending_next_off_rw);
+
+  int FindMatchSlot(HashRead& res, std::list<InvisibleRead>& pending_invisible_ro);
+
+  bool CheckHashRW(std::vector<HashRead>& pending_hash_rw,
+                   std::list<InvisibleRead>& pending_invisible_ro,
+                   std::list<HashRead>& pending_next_hash_rw);
+
+  bool CheckNextHashRW(std::list<InvisibleRead>& pending_invisible_ro,
+                       std::list<HashRead>& pending_next_hash_rw);
+
+  int FindInsertOff(InsertOffRead& res, std::list<InvisibleRead>& pending_invisible_ro);
+
+  bool CheckInsertOffRW(std::vector<InsertOffRead>& pending_insert_off_rw,
+                        std::list<InvisibleRead>& pending_invisible_ro,
+                        std::list<InsertOffRead>& pending_next_off_rw);
+
+  bool CheckNextOffRW(std::list<InvisibleRead>& pending_invisible_ro,
+                      std::list<InsertOffRead>& pending_next_off_rw);
+
+  bool CheckValidate(std::vector<ValidateRead>& pending_validate);
+
+  bool CheckCommitAll(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+
+ private:
+  // For comparisons
+  // bool CompareExeRO(coro_yield_t& yield);
+
+  // bool CompareExeRW(coro_yield_t& yield);
+
+  // bool CompareLocking(coro_yield_t& yield);
+
+  // bool CompareValidation(coro_yield_t& yield);
+
+  // bool CompareLockingValidation(coro_yield_t& yield);
+
+  // bool CompareCommitBackup(coro_yield_t& yield);
+
+  // bool CompareCommitPrimary(coro_yield_t& yield);
+
+ private:
+  // For comparisons. Coroutine issue before yield
+  // bool CompareIssueReadRO(std::vector<DirectRead>& pending_direct_ro,
+  //                         std::vector<HashRead>& pending_hash_ro);
+
+  // bool CompareIssueReadRW(std::vector<DirectRead>& pending_direct_rw,
+  //                         std::vector<HashRead>& pending_hash_rw,
+  //                         std::vector<InsertOffRead>& pending_insert_off_rw);
+
+  // bool CompareIssueLocking(std::vector<Lock>& pending_lock);
+
+  // bool CompareIssueValidation(std::vector<Version>& pending_version_read);
+
+  // bool CompareIssueLockValidation(std::vector<ValidateRead>& pending_validate);
+
+  // bool CompareIssueCommitBackup();
+
+  // bool CompareIssueCommitBackupFullFlush();
+
+  // bool CompareIssueCommitBackupSelectiveFlush();
+
+  // bool CompareIssueCommitBackupBatchSelectFlush();
+
+  // bool CompareIssueCommitPrimary();
+
+  // bool CompareIssueTruncate();
+
+ private:
+  // For comparisons. Coroutine check after yield
+  // bool CompareCheckDirectRW(std::vector<DirectRead>& pending_direct_rw,
+  //                           std::list<HashRead>& pending_next_hash_rw,
+  //                           std::list<InsertOffRead>& pending_next_off_rw,
+  //                           std::list<InvisibleRead>& pending_invisible_ro);
+
+  // bool CompareCheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
+  //                           std::vector<DirectRead>& pending_direct_rw,
+  //                           std::vector<HashRead>& pending_hash_ro,
+  //                           std::vector<HashRead>& pending_hash_rw,
+  //                           std::list<HashRead>& pending_next_hash_ro,
+  //                           std::list<HashRead>& pending_next_hash_rw,
+  //                           std::vector<InsertOffRead>& pending_insert_off_rw,
+  //                           std::list<InsertOffRead>& pending_next_off_rw,
+  //                           std::list<InvisibleRead>& pending_invisible_ro,
+  //                           coro_yield_t& yield);
+
+  // bool CompareCheckLocking(std::vector<Lock>& pending_lock);
+
+  // bool CompareCheckValidation(std::vector<Version>& pending_version_read);
+
+  // bool CompareCheckCommitPrimary(std::vector<Unlock>& pending_unlock);
+
+  // bool CompareTruncateAsync(coro_yield_t& yield);
+  
  public:
   // for hash index
   std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
@@ -302,6 +497,50 @@ void DTX::TxAbortReadWrite() { Abort(); }
 
 ALWAYS_INLINE
 void DTX::RemoveLastROItem() { read_only_set.pop_back(); }
+
+// RDMA write `wt_data' with size `size' to remote
+ALWAYS_INLINE
+bool DTX::RDMAWriteRoundTrip(RCQP* qp, char* wt_data,
+                             uint64_t remote_offset,
+                             size_t size) {
+  // ***ONLY FOR DEBUG***
+  auto rc = qp->post_send(IBV_WR_RDMA_WRITE, wt_data, size, remote_offset, 0);
+  if (rc != SUCC) {
+    TLOG(ERROR, t_id) << "client: post write fail. rc=" << rc;
+    return false;
+  }
+  // wait finish
+  sleep(1);
+  // ibv_wc wc{};
+  // rc = qp->poll_till_completion(wc, no_timeout);
+  // if (rc != SUCC) {
+  //   TLOG(ERROR, t_id) << "client: poll write fail. rc=" << rc;
+  // }
+  return true;
+}
+
+// RDMA read value with size `size` from remote mr at offset `remote_offset` to
+// rd_data
+ALWAYS_INLINE
+bool DTX::RDMAReadRoundTrip(RCQP* qp, char* rd_data,
+                            uint64_t remote_offset, size_t size) {
+  // ***ONLY FOR DEBUG***
+  auto rc = qp->post_send(IBV_WR_RDMA_READ, rd_data, size, remote_offset, 0);
+  if (rc != SUCC) {
+    TLOG(ERROR, t_id) << "client: post read fail. rc=" << rc;
+    return false;
+  }
+  // wait finish
+  usleep(20);
+  // ibv_wc wc{};
+  // rc = qp->poll_till_completion(wc, no_timeout);
+  // // then get the results, stored in the local_buffer
+  // if (rc != SUCC) {
+  //   TLOG(ERROR, t_id) << "client: poll read fail. rc=" << rc;
+  //   return false;
+  // }
+  return true;
+}
 
 ALWAYS_INLINE
 void DTX::Clean() {

@@ -45,6 +45,11 @@ bool DTX::ExeLocalRW(coro_yield_t& yield) {
     // !创建新版本
     localdata->CreateNewVersion(this);
   }
+
+#if COMMIT_TOGETHER
+  ParallelUndoLog();
+#endif
+
   return true;
 }
 
