@@ -21,6 +21,7 @@ void SmallBank::LoadIndex(node_id_t node_id, node_id_t num_server,
                                        table_config.get("bkt_num").get_uint64(),
                                        mem_store_alloc_param, mem_store_reserve_param);
     PopulateIndexSavingsTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(savings_table_index);
   }
   if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == node_id) {
     printf("Hash Index: Initializing CHECKING table index\n");
@@ -31,6 +32,7 @@ void SmallBank::LoadIndex(node_id_t node_id, node_id_t num_server,
                                         table_config.get("bkt_num").get_uint64(),
                                         mem_store_alloc_param, mem_store_reserve_param);
     PopulateIndexCheckingTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(checking_table_index);
   }
 }
 
@@ -39,12 +41,10 @@ void SmallBank::LoadTable(node_id_t node_id, node_id_t num_server) {
   if ((node_id_t)SmallBankTableType::kSavingsTable % num_server == node_id) {
     printf("Primary: Initializing SAVINGS table\n");
     PopulateSavingsTable();
-    // primary_table_ptrs.push_back(savings_table);
   }
   if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == node_id) {
     printf("Primary: Initializing CHECKING table\n");
     PopulateCheckingTable();
-    // primary_table_ptrs.push_back(checking_table);
   }
 
   // Initiate + Populate table for backup role
@@ -53,12 +53,10 @@ void SmallBank::LoadTable(node_id_t node_id, node_id_t num_server) {
       if ((node_id_t)SmallBankTableType::kSavingsTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing SAVINGS table\n");
         PopulateSavingsTable();
-        // backup_table_ptrs.push_back(savings_table);
       }
       if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing CHECKING table\n");
         PopulateCheckingTable();
-        // backup_table_ptrs.push_back(checking_table);
       }
     }
   }

@@ -10,13 +10,13 @@
     "pm_root": "/dev/dax0.1",
     "workload": "TPCC"
   },
-  "local_address_node": {
+  "local_index_node": {
     "machine_num": 3,
     "machine_id": 0,
     "local_port": 12348,
     "local_meta_port": 12349,
-    "index_size_GB": 1,
-    "txn_list_size_GB": 1
+    "mem_size_GB": 1,
+    "workload": "TPCC"
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],

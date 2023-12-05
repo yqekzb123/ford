@@ -62,11 +62,11 @@ class HashIndexServer {
 
   void SendMeta(node_id_t machine_id, std::string& workload, size_t compute_node_num);
 
-  void PrepareHashMeta(node_id_t machine_id, std::string& workload, char** hash_meta_buffer, size_t& total_meta_size);
+  void PrepareIndexMeta(node_id_t machine_id, std::string& workload, char** hash_meta_buffer, size_t& total_meta_size);
 
-  void SendHashMeta(char* hash_meta_buffer, size_t& total_meta_size);
+  void SendIndexMeta(char* hash_meta_buffer, size_t& total_meta_size);
 
-  void CleanTable();
+  void CleanIndex();
 
   void CleanQP();
 

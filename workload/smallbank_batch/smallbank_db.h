@@ -107,9 +107,9 @@ class SmallBank {
 
   IndexStore* checking_table_index;
 
-  // std::vector<HashStore*> primary_table_ptrs;
+  std::vector<IndexStore*> index_store_ptrs;
 
-  // std::vector<HashStore*> backup_table_ptrs;
+  // std::vector<IndexStore*> backup_table_ptrs;
 
   RmManager* rm_manager;
 
@@ -214,13 +214,13 @@ class SmallBank {
                  table_id_t table_id,
                  std::ofstream& indexfile);
 
-  // ALWAYS_INLINE
-  // std::vector<HashStore*> GetPrimaryHashStore() {
-  //   return primary_table_ptrs;
-  // }
+  ALWAYS_INLINE
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
+  }
 
-  // ALWAYS_INLINE
-  // std::vector<HashStore*> GetBackupHashStore() {
-  //   return backup_table_ptrs;
-  // }
+  ALWAYS_INLINE
+  std::vector<HashStore*> GetBackupHashStore() {
+    // return backup_table_ptrs;
+  }
 };

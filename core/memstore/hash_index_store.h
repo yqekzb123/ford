@@ -102,19 +102,23 @@ class IndexStore {
     expand_region_base_ptr = param_reserve->mem_store_reserve;
   }
 
+  table_id_t GetTableID() const {
+    return table_id;
+  }
+
   offset_t GetBaseOff() const {
     return base_off;
   }
 
-  uint64_t GetIndexMetaSize() const {
-    return sizeof(IndexMeta);
+  uint64_t GetIndexNodeSize() const {
+    return sizeof(IndexNode);
   }
 
   uint64_t GetBucketNum() const {
     return bucket_num;
   }
 
-  char* GetAddrPtr() const {
+  char* GetIndexPtr() const {
     return index_ptr;
   }
 
