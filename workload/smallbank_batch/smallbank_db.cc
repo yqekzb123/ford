@@ -7,30 +7,44 @@
 #include "util/json_config.h"
 
 /* Called by main. Only initialize here. The worker threads will populate. */
+
+void SmallBank::LoadIndex(node_id_t node_id, node_id_t num_server, 
+                          MemStoreAllocParam* mem_store_alloc_param,
+                          MemStoreReserveParam* mem_store_reserve_param) {
+  // Initiate Index in memory node
+  if ((node_id_t)SmallBankTableType::kSavingsTable % num_server == node_id) {
+    printf("Hash Index: Initializing SAVINGS table index\n");
+    std::string config_filepath = "../../../workload/smallbank/smallbank_tables/savings.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    savings_table_index = new IndexStore((table_id_t)SmallBankTableType::kSavingsTable,
+                                       table_config.get("bkt_num").get_uint64(),
+                                       mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexSavingsTable(mem_store_reserve_param);
+  }
+  if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == node_id) {
+    printf("Hash Index: Initializing CHECKING table index\n");
+    std::string config_filepath = "../../../workload/smallbank/smallbank_tables/checking.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    checking_table_index = new IndexStore((table_id_t)SmallBankTableType::kCheckingTable,
+                                        table_config.get("bkt_num").get_uint64(),
+                                        mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexCheckingTable(mem_store_reserve_param);
+  }
+}
+
 void SmallBank::LoadTable(node_id_t node_id, node_id_t num_server) {
   // Initiate + Populate table for primary role
   if ((node_id_t)SmallBankTableType::kSavingsTable % num_server == node_id) {
     printf("Primary: Initializing SAVINGS table\n");
-    // std::string config_filepath = "../../../workload/smallbank/smallbank_tables/savings.json";
-    // auto json_config = JsonConfig::load_file(config_filepath);
-    // auto table_config = json_config.get("table");
-    // savings_table = new HashStore((table_id_t)SmallBankTableType::kSavingsTable,
-    //                               table_config.get("bkt_num").get_uint64(),
-    //                               mem_store_alloc_param);
-
     PopulateSavingsTable();
-    primary_table_ptrs.push_back(savings_table);
+    // primary_table_ptrs.push_back(savings_table);
   }
   if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == node_id) {
     printf("Primary: Initializing CHECKING table\n");
-    // std::string config_filepath = "../../../workload/smallbank/smallbank_tables/checking.json";
-    // auto json_config = JsonConfig::load_file(config_filepath);
-    // auto table_config = json_config.get("table");
-    // checking_table = new HashStore((table_id_t)SmallBankTableType::kCheckingTable,
-    //                                table_config.get("bkt_num").get_uint64(),
-    //                                mem_store_alloc_param);
     PopulateCheckingTable();
-    primary_table_ptrs.push_back(checking_table);
+    // primary_table_ptrs.push_back(checking_table);
   }
 
   // Initiate + Populate table for backup role
@@ -38,25 +52,13 @@ void SmallBank::LoadTable(node_id_t node_id, node_id_t num_server) {
     for (node_id_t i = 1; i <= BACKUP_DEGREE; i++) {
       if ((node_id_t)SmallBankTableType::kSavingsTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing SAVINGS table\n");
-        // std::string config_filepath = "../../../workload/smallbank/smallbank_tables/savings.json";
-        // auto json_config = JsonConfig::load_file(config_filepath);
-        // auto table_config = json_config.get("table");
-        // savings_table = new HashStore((table_id_t)SmallBankTableType::kSavingsTable,
-        //                               table_config.get("bkt_num").get_uint64(),
-        //                               mem_store_alloc_param);
         PopulateSavingsTable();
-        backup_table_ptrs.push_back(savings_table);
+        // backup_table_ptrs.push_back(savings_table);
       }
       if ((node_id_t)SmallBankTableType::kCheckingTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing CHECKING table\n");
-        // std::string config_filepath = "../../../workload/smallbank/smallbank_tables/checking.json";
-        // auto json_config = JsonConfig::load_file(config_filepath);
-        // auto table_config = json_config.get("table");
-        // checking_table = new HashStore((table_id_t)SmallBankTableType::kCheckingTable,
-        //                                table_config.get("bkt_num").get_uint64(),
-        //                                mem_store_alloc_param);
         PopulateCheckingTable();
-        backup_table_ptrs.push_back(checking_table);
+        // backup_table_ptrs.push_back(checking_table);
       }
     }
   }
@@ -126,4 +128,38 @@ void SmallBank::PopulateCheckingTable( ) {
                 (table_id_t)SmallBankTableType::kCheckingTable,
                 indexfile);
   }
+}
+
+void SmallBank::PopulateIndexSavingsTable(MemStoreReserveParam* mem_store_reserve_param) {
+  /* Populate the tables */
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open(bench_name + "_savings_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_savings_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    savings_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void SmallBank::PopulateIndexCheckingTable(MemStoreReserveParam* mem_store_reserve_param) {
+  /* Populate the tables */
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open(bench_name + "_checking_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_checking_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    checking_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
 }

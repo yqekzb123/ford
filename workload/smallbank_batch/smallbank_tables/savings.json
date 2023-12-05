@@ -1,5 +1,5 @@
 {
-  "table": {
+  "index": {
     "name": "SAVINGS",
     "bkt_num": 200000
   }

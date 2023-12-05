@@ -68,23 +68,23 @@ struct IndexNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // IndexNode* next;
-} Aligned8;
+} Aligned4096;
 
 class IndexStore {
  public:
-  IndexStore(table_id_t table_id, uint64_t bucket_num, MemStoreAllocParam* param)
+  IndexStore(table_id_t table_id, uint64_t bucket_num, MemStoreAllocParam* param, MemStoreReserveParam* param_reserve)
       :table_id(table_id), base_off(0), bucket_num(bucket_num), index_ptr(nullptr), node_num(0) {
 
     assert(bucket_num > 0);
     index_size = (bucket_num) * sizeof(IndexNode);
     region_start_ptr = param->mem_region_start;
-    assert((uint64_t)param->mem_store_start + param->mem_store_alloc_offset + index_size + sizeof(uint64_t) <= (uint64_t)param->mem_store_reserve);
+    assert((uint64_t)param->mem_store_start + param->mem_store_alloc_offset + index_size <= (uint64_t)param->mem_store_reserve);
 
     // fill_page_count是指针，指向额外分配页面的数量，安排已分配页面数量的位置，在地址索引空间的头部
     // 额外指开始分配了bucket_num数量的bucket_key, 如果bucket已满，则需要在保留空间中新建桶
-    fill_page_count = (uint64_t*)&param->mem_store_start + param->mem_store_alloc_offset;
-    *fill_page_count = 0;
-    param->mem_store_alloc_offset += sizeof(uint64_t);
+    // fill_page_count = (uint64_t*)&param->mem_store_start + param->mem_store_alloc_offset;
+    // *fill_page_count = 0;
+    // param->mem_store_alloc_offset += sizeof(uint64_t);
 
     // 安排哈希表的位置
     index_ptr = param->mem_store_start + param->mem_store_alloc_offset;
@@ -97,6 +97,9 @@ class IndexStore {
     memset(index_ptr, 0, index_size);
     
     bucket_array = (IndexNode*)index_ptr;
+
+    // 安排额外的空间，用于扩展哈希表
+    expand_region_base_ptr = param_reserve->mem_store_reserve;
   }
 
   offset_t GetBaseOff() const {
@@ -159,9 +162,7 @@ class IndexStore {
   // Start of the index region address, for installing remote offset for index item
   char* region_start_ptr;
 
-  // 地址索引中，已经被分配的页面数量
-  uint64_t* fill_page_count;
-
+  char* expand_region_base_ptr;
 };
 
 
@@ -178,7 +179,7 @@ Rid IndexStore::LocalGetIndexRid(itemkey_t key) {
     }
     // short begin with bucket_num
     next_expand_node_id = node->next_expand_node_id[0];
-    node = (IndexNode*)((bucket_num + next_expand_node_id) * sizeof(IndexNode) + index_ptr);
+    node = (IndexNode*)(next_expand_node_id * sizeof(IndexNode) + expand_region_base_ptr);
   } while( next_expand_node_id >= 0);
   return {INVALID_PAGE_ID, -1};  // failed to found one
 }
@@ -205,12 +206,12 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
     }
 
     if (node->next_expand_node_id[0] <= 0) break;
-    node = (IndexNode*)((bucket_num + node->next_expand_node_id[0]) * sizeof(IndexNode) + index_ptr);
+    node = (IndexNode*)(node->next_expand_node_id[0] * sizeof(IndexNode) + expand_region_base_ptr);
   }
 
   // Allocate
   // RDMA_LOG(INFO) << "Table " << table_id << " alloc a new bucket for key: " << key << ". Current slotnum/bucket: " << ITEM_NUM_PER_NODE;
-  assert((uint64_t)param->mem_store_reserve + param->mem_store_reserve_offset <= (uint64_t)param->mem_store_end);
+  assert((uint64_t)param->mem_store_reserve + param->mem_store_reserve_offset + sizeof(IndexNode) <= (uint64_t)param->mem_store_end);
   auto* new_node = (IndexNode*)(param->mem_store_reserve + param->mem_store_reserve_offset);
   param->mem_store_reserve_offset += sizeof(IndexNode);
   memset(new_node, 0, sizeof(IndexNode));
@@ -219,10 +220,10 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
   new_node->index_items[0].valid = true;
   new_node->next_expand_node_id[0] = -1;
   new_node->page_id = node_num;
-  node->next_expand_node_id[0] = node_num - bucket_num;
+  // node->next_expand_node_id[0] = node_num - bucket_num;
+  node->next_expand_node_id[0] = param->mem_store_reserve_offset / sizeof(IndexNode) - 1;
   
   node_num++;
-  *fill_page_count = *fill_page_count + 1;
   return true;
 }
 
@@ -241,7 +242,7 @@ bool IndexStore::LocalDelete(itemkey_t key) {
     }
     // short begin with bucket_num
     next_expand_node_id = node->next_expand_node_id[0];
-    node = (IndexNode*)((bucket_num + next_expand_node_id) * sizeof(IndexNode) + index_ptr);
+    node = (IndexNode*)(next_expand_node_id * sizeof(IndexNode) + expand_region_base_ptr);
   } while( next_expand_node_id >= 0);
   return false;
 }

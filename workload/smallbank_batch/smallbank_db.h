@@ -5,9 +5,10 @@
 #include <cassert>
 #include <cstdint>
 #include <vector>
+#include <fstream>
 
 #include "config/table_type.h"
-#include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
 #include "util/fast_random.h"
 #include "util/json_config.h"
 #include "record/rm_manager.h"
@@ -101,14 +102,14 @@ class SmallBank {
 
   uint32_t num_accounts_global, num_hot_global;
 
-  /* Tables */
-  HashStore* savings_table;
+  /* Indexs */
+  IndexStore* savings_table_index;
 
-  HashStore* checking_table;
+  IndexStore* checking_table_index;
 
-  std::vector<HashStore*> primary_table_ptrs;
+  // std::vector<HashStore*> primary_table_ptrs;
 
-  std::vector<HashStore*> backup_table_ptrs;
+  // std::vector<HashStore*> backup_table_ptrs;
 
   RmManager* rm_manager;
 
@@ -126,13 +127,13 @@ class SmallBank {
     /* Up to 2 billion accounts */
     assert(num_accounts_global <= 2ull * 1024 * 1024 * 1024);
 
-    savings_table = nullptr;
-    checking_table = nullptr;
+    savings_table_index = nullptr;
+    checking_table_index = nullptr;
   }
 
   ~SmallBank() {
-    if (savings_table) delete savings_table;
-    if (checking_table) delete checking_table;
+    if (savings_table_index) delete savings_table_index;
+    if (checking_table_index) delete checking_table_index;
   }
 
   SmallBankTxType* CreateWorkgenArray() {
@@ -192,9 +193,19 @@ class SmallBank {
 
   void LoadTable(node_id_t node_id, node_id_t num_server);
 
+  // For server-side usage
+  void LoadIndex(node_id_t node_id,
+                 node_id_t num_server,
+                 MemStoreAllocParam* mem_store_alloc_param,
+                 MemStoreReserveParam* mem_store_reserve_param);
+
   void PopulateSavingsTable();
 
   void PopulateCheckingTable();
+
+  void PopulateIndexSavingsTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexCheckingTable(MemStoreReserveParam* mem_store_reserve_param);
 
   int LoadRecord(RmFileHandle* file_handle,
                  itemkey_t item_key,
@@ -203,13 +214,13 @@ class SmallBank {
                  table_id_t table_id,
                  std::ofstream& indexfile);
 
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
+  // ALWAYS_INLINE
+  // std::vector<HashStore*> GetPrimaryHashStore() {
+  //   return primary_table_ptrs;
+  // }
 
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  // ALWAYS_INLINE
+  // std::vector<HashStore*> GetBackupHashStore() {
+  //   return backup_table_ptrs;
+  // }
 };

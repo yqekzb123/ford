@@ -55,6 +55,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 
 // Alias
 #define Aligned8 __attribute__((aligned(8)))
+#define Aligned4096 __attribute__((aligned(4096)))
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define TID (std::this_thread::get_id())
 
