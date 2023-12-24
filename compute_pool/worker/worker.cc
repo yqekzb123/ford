@@ -15,7 +15,7 @@
 #include "dtx/dtx.h"
 // #include "micro/micro_txn.h"
 // #include "smallbank/smallbank_txn.h"
-#include "smallbank_batch/smallbank_txn.h"
+#include "smallbank/smallbank_txn.h"
 // #include "tatp/tatp_txn.h"
 // #include "tpcc/tpcc_txn.h"
 #include "util/latency.h"

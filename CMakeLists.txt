@@ -103,9 +103,9 @@ add_subdirectory(thirdparty/rlib)
 
 add_subdirectory(core)
 
-add_subdirectory(workload)
-
 add_subdirectory(test) 
+
+add_subdirectory(workload)
 
 add_subdirectory(compute_pool) # Dep list: rlib->ford->workload_db+_txn->worker
 

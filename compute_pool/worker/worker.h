@@ -10,7 +10,7 @@
 #include "connection/meta_manager.h"
 
 #include "tatp/tatp_db.h"
-#include "smallbank_batch/smallbank_db.h"
+#include "smallbank/smallbank_db.h"
 #include "tpcc/tpcc_db.h"
 #include "micro/micro_db.h"
 

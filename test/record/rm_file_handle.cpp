@@ -56,7 +56,7 @@ Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
     // // get slot number 找page_handle.bitmap中第一个为0的位
     int slot_no = Bitmap::first_bit(false, page_handle.bitmap, file_hdr_.num_records_per_page_);
     assert(slot_no < file_hdr_.num_records_per_page_);
-    Rid rid{.page_no_ = page_handle.page->get_page_id().page_no, .slot_no_ = page_handle.get_slot_offset(slot_no)};
+    Rid rid{.page_no_ = page_handle.page->get_page_id().page_no, .slot_no_ = slot_no};
 
     // if(context != nullptr)
     //     context->lock_mgr_->lock_exclusive_on_record(context->txn_, rid, fd_);

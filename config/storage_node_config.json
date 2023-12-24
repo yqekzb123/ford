@@ -6,7 +6,7 @@
       "local_meta_port": 12349,
       "log_buf_size_GB": 1,
       "use_rdma": true,
-      "workload": "smallbank"
+      "workload": "SmallBank"
     },
     "remote_compute_nodes": {
       "compute_node_ips": ["127.0.0.1"],

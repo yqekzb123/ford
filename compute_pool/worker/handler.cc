@@ -91,11 +91,11 @@ void Handler::GenThreads(std::string bench_name) {
   TPCC* tpcc_client = nullptr;
 
   if (bench_name == "tatp") {
-    tatp_client = new TATP();
+    tatp_client = new TATP(nullptr);
     total_try_times.resize(TATP_TX_TYPES, 0);
     total_commit_times.resize(TATP_TX_TYPES, 0);
   } else if (bench_name == "smallbank") {
-    smallbank_client = new SmallBank();
+    smallbank_client = new SmallBank(nullptr);
     total_try_times.resize(SmallBank_TX_TYPES, 0);
     total_commit_times.resize(SmallBank_TX_TYPES, 0);
   } else if (bench_name == "tpcc") {

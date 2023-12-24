@@ -36,6 +36,7 @@ static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                 
 const mr_id_t SERVER_HASH_BUFF_ID = 97;
 const mr_id_t SERVER_LOG_BUFF_ID = 98;
 const mr_id_t SERVER_HASH_INDEX_ID = 99;
+const mr_id_t SERVER_LOCK_TABLE_ID = 100;
 
 // Memory region ids for client's local_mr
 const mr_id_t CLIENT_MR_ID = 100;

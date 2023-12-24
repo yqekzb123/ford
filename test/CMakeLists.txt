@@ -6,10 +6,12 @@ set(BUFFER_SRC
         buffer/bufferpool_manager.cpp
         buffer/replacer/lru_replacer.cpp)
 
-# add_library(storage_test_lib STATIC
-#     ${RECORD_SRC}
-#     ${BUFFER_SRC}
-#     )   
+add_library(load_table STATIC
+    ${RECORD_SRC}
+    ${BUFFER_SRC}
+    )   
+
+target_link_libraries(load_table pthread ford)
 
 set(STORAGE_TEST_SRC storage_test.cpp)
 

@@ -5,6 +5,6 @@
 
 # add_subdirectory(tatp)
 
-add_subdirectory(smallbank_batch)
+add_subdirectory(smallbank)
 
 # add_subdirectory(micro)

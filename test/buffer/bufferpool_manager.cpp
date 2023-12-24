@@ -245,3 +245,19 @@ void BufferPoolManager::flush_all_pages(int fd) {
         }
     }
 }
+
+/**
+ * @description: 将buffer_pool中的所有页写回到磁盘
+ * @param {int} fd 文件句柄
+ */
+void BufferPoolManager::flush_all_pages() {
+    std::unique_lock<std::mutex> lock{latch_};
+
+    for (size_t i = 0; i < pool_size_; i++) {
+        Page *page = &pages_[i];
+        if (page->get_page_id().page_no != INVALID_PAGE_ID) {
+            disk_manager_->write_page(page->get_page_id().table_id, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+            page->is_dirty_ = false;
+        }
+    }
+}

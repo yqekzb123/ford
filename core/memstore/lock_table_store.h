@@ -132,7 +132,7 @@ struct LockNode {
 class LockTableStore {
  public:
   LockTableStore(uint64_t bucket_num, MemStoreAllocParam* param)
-      :base_off(0), bucket_num(bucket_num), lockitem_ptr(nullptr), node_num(0) {
+      :base_off(0), bucket_num(bucket_num), locktable_ptr(nullptr), node_num(0) {
 
     assert(bucket_num > 0);
     locktable_size = (bucket_num) * sizeof(LockNode);
@@ -141,21 +141,21 @@ class LockTableStore {
 
     // fill_page_count是指针，指向额外分配页面的数量，安排已分配页面数量的位置，在地址索引空间的头部
     // 额外指开始分配了bucket_num数量的bucket_key, 如果bucket已满，则需要在保留空间中新建桶
-    fill_page_count = (uint64_t*)&param->mem_store_start + param->mem_store_alloc_offset;
+    fill_page_count = (uint64_t*)(param->mem_store_start + param->mem_store_alloc_offset);
     *fill_page_count = 0;
     param->mem_store_alloc_offset += sizeof(uint64_t);
 
-    // 安排哈希表的位置
-    lockitem_ptr = param->mem_store_start + param->mem_store_alloc_offset;
+    // 安排锁表的位置
+    locktable_ptr = param->mem_store_start + param->mem_store_alloc_offset;
     param->mem_store_alloc_offset += locktable_size;
 
-    base_off = (uint64_t)lockitem_ptr - (uint64_t)region_start_ptr;
+    base_off = (uint64_t)locktable_ptr - (uint64_t)region_start_ptr;
     assert(base_off >= 0);
 
-    assert(lockitem_ptr != nullptr);
-    memset(lockitem_ptr, 0, locktable_size);
+    assert(locktable_ptr != nullptr);
+    memset(locktable_ptr, 0, locktable_size);
     
-    bucket_array = (LockNode*)lockitem_ptr;
+    bucket_array = (LockNode*)locktable_ptr;
   }
 
   offset_t GetBaseOff() const {
@@ -171,7 +171,11 @@ class LockTableStore {
   }
 
   char* GetAddrPtr() const {
-    return lockitem_ptr;
+    return locktable_ptr;
+  }
+
+  size_t GetLockTableNodeSize() const {
+    return sizeof(LockNode);
   }
 
   uint64_t LockTableSize() const {
@@ -193,7 +197,7 @@ class LockTableStore {
   uint64_t bucket_num;
 
   // The point to value in the table
-  char* lockitem_ptr;
+  char* locktable_ptr;
   LockNode* bucket_array;
 
   // Total hash node nums

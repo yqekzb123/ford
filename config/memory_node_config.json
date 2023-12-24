@@ -11,12 +11,19 @@
     "workload": "TPCC"
   },
   "local_index_node": {
-    "machine_num": 3,
+    "machine_num": 1,
     "machine_id": 0,
     "local_port": 12348,
     "local_meta_port": 12349,
     "mem_size_GB": 1,
-    "workload": "TPCC"
+    "workload": "SmallBank"
+  },
+  "local_lock_table_node": {
+    "machine_num": 1,
+    "machine_id": 0,
+    "local_port": 12350,
+    "local_meta_port": 12351,
+    "mem_size_GB": 1
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],

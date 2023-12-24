@@ -10,7 +10,8 @@
 // 664: tpcc
 // 40: micro-benchmark
 
-const size_t MAX_ITEM_SIZE = 664;
+// ! pay attention: need modify this when use different workload
+const size_t MAX_ITEM_SIZE = 8;
 
 /*********************** For FORD **********************/
 // 0: Read rw data without lock

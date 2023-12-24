@@ -19,7 +19,7 @@ void LoadData(node_id_t machine_id,
   /************************************* Load Data ***************************************/
   RDMA_LOG(INFO) << "Start loading database data...";
   if (workload == "TATP") {
-    TATP* tatp_server = new TATP();
+    TATP* tatp_server = new TATP(rm_manager);
     // tatp_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   } else if (workload == "SmallBank") {
     SmallBank* smallbank_server = new SmallBank(rm_manager);
@@ -30,6 +30,9 @@ void LoadData(node_id_t machine_id,
   } else if (workload == "MICRO") {
     MICRO* micro_server = new MICRO();
     // micro_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+  } else{
+    RDMA_LOG(ERROR) << "Unsupported workload: " << workload;
+    assert(false);
   }
   RDMA_LOG(INFO) << "Loading table successfully!";
 }
@@ -60,20 +63,21 @@ int main(int argc, char* argv[]) {
     
     // Init table in disk
     auto buffer_mgr = std::make_shared<BufferPoolManager>(BUFFER_POOL_SIZE, disk_manager.get());
-    auto rm_manager = std::make_shared<RmManager>(disk_manager, buffer_mgr.get());
+    auto rm_manager = std::make_shared<RmManager>(disk_manager.get(), buffer_mgr.get());
     LoadData(machine_id, machine_num, workload, rm_manager.get());
-
+    buffer_mgr->flush_all_pages();
+    
     // used for test
-    disk_manager->create_file("table");
-    int fd = disk_manager->open_file("table");
-    RmFileHdr file_hdr{};
-    file_hdr.record_size_ = 8;
-    file_hdr.num_pages_ = 1;
-    file_hdr.first_free_page_no_ = RM_NO_PAGE;
-    file_hdr.num_records_per_page_ = (BITMAP_WIDTH * (PAGE_SIZE - 1 - (int)sizeof(RmFileHdr)) + 1) / (1 + (file_hdr.record_size_ + sizeof(itemkey_t)) * BITMAP_WIDTH);
-    file_hdr.bitmap_size_ = (file_hdr.num_records_per_page_ + BITMAP_WIDTH - 1) / BITMAP_WIDTH;
-    disk_manager->write_page(fd, RM_FILE_HDR_PAGE, (char*)&file_hdr, sizeof(file_hdr));
-    disk_manager->close_file(fd);
+    // disk_manager->create_file("table");
+    // int fd = disk_manager->open_file("table");
+    // RmFileHdr file_hdr{};
+    // file_hdr.record_size_ = 8;
+    // file_hdr.num_pages_ = 1;
+    // file_hdr.first_free_page_no_ = RM_NO_PAGE;
+    // file_hdr.num_records_per_page_ = (BITMAP_WIDTH * (PAGE_SIZE - 1 - (int)sizeof(RmFileHdr)) + 1) / (1 + (file_hdr.record_size_ + sizeof(itemkey_t)) * BITMAP_WIDTH);
+    // file_hdr.bitmap_size_ = (file_hdr.num_records_per_page_ + BITMAP_WIDTH - 1) / BITMAP_WIDTH;
+    // disk_manager->write_page(fd, RM_FILE_HDR_PAGE, (char*)&file_hdr, sizeof(file_hdr));
+    // disk_manager->close_file(fd);
 
     auto server = std::make_shared<Server>(local_port, use_rdma, disk_manager.get(), log_manager.get());
 
