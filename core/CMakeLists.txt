@@ -35,9 +35,6 @@ set(LOG_SRC
         # log/logparse.cc
         log/log_manager.cc)
 
-set(MEMSTORE_SRC
-        memstore/hash_index_store.cc)
-
 add_library(ford STATIC
         ${CONNECTION_SRC}
         ${DTX_SRC}
@@ -45,7 +42,6 @@ add_library(ford STATIC
         ${STORAGE_SRC}
         ${BATCH_SRC}
         ${LOG_SRC}
-        ${MEMSTORE_SRC}
         )
 
 set_target_properties(ford PROPERTIES LINKER_LANGUAGE CXX)

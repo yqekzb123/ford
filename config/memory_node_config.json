@@ -25,6 +25,13 @@
     "local_meta_port": 12351,
     "mem_size_GB": 1
   },
+  "data_node": {
+    "machine_num": 1,
+    "machine_id": 0,
+    "local_port": 12352,
+    "local_meta_port": 12353,
+    "mem_size_GB": 1
+  },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],
     "compute_node_ports": [12345]

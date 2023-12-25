@@ -4,3 +4,4 @@
 # add_subdirectory(server)
 add_subdirectory(hash_index_server)
 add_subdirectory(lock_table_server)
+add_subdirectory(data_server)
