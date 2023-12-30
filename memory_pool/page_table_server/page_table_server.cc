@@ -1,7 +1,7 @@
 // Author: huangdund
 // Copyrigth (c) 2023
 
-#include "data_server.h"
+#include "page_table_server.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,72 +10,80 @@
 
 #include "util/json_config.h"
 
-void DataStoreServer::AllocMem() {
+void PageTableServer::AllocMem() {
   RDMA_LOG(INFO) << "Start allocating memory...";
-  data_page_buffer = (char*)malloc(data_page_buffer_size);
-  assert(data_page_buffer);
+  page_table_buffer = (char*)malloc(page_table_buffer_size);
+  assert(page_table_buffer);
   RDMA_LOG(INFO) << "Alloc DRAM data region success!";
+  
+  offset_t reserve_start = page_table_buffer_size * 0.75;  // reserve 1/4 for hash conflict in case of full bucket
+  page_table_reserve_buffer = page_table_buffer + reserve_start;
 }
 
-void DataStoreServer::InitMem() {
+void PageTableServer::InitMem() {
   RDMA_LOG(INFO) << "Start initializing memory...";
-  memset(data_page_buffer, 0, data_page_buffer_size);
+  memset(page_table_buffer, 0, page_table_buffer_size);
   RDMA_LOG(INFO) << "Init DRAM data region success!";
 }
 
-void DataStoreServer::InitRDMA() {
+void PageTableServer::InitRDMA() {
   RDMA_LOG(INFO) << "Start initializing RDMA...";
   rdma_ctrl = std::make_shared<RdmaCtrl>(server_node_id, local_port);
   RdmaCtrl::DevIdx idx{.dev_id = 0, .port_id = 1};  // using the first RNIC's first port
   rdma_ctrl->open_thread_local_device(idx);
   RDMA_ASSERT(
-      rdma_ctrl->register_memory(SERVER_DATA_ID, data_page_buffer, data_page_buffer_size, rdma_ctrl->get_device()) == true);
+      rdma_ctrl->register_memory(SERVER_PAGETABLE_ID, page_table_buffer, page_table_buffer_size, rdma_ctrl->get_device()) == true);
+  RDMA_ASSERT(
+      rdma_ctrl->register_memory(SERVER_PAGETABLE_RING_FREE_FRAME_BUFFER_ID, 
+        page_table_store->GetRingBufferPtr(), page_table_store->GetRingBufferSize(), rdma_ctrl->get_device()) == true);
   RDMA_LOG(INFO) << "Register memory success!";
 }
 
-// All servers need to load data table
-void DataStoreServer::LoadDataStore(int page_num) {
+void PageTableServer::LoadPageTableStore() {
 
-  /************************************* Load DataTable ***************************************/
-  // Init DataTable
-  MemStoreAllocParam mem_store_alloc_param(data_page_buffer, data_page_buffer, 0, data_page_reserve_buffer);
+  /************************************* Load PageTable ***************************************/
+  RDMA_LOG(INFO) << "Start loading PageTable index...";
+  // Init PageTable
+  MemStoreAllocParam mem_store_alloc_param(page_table_buffer, page_table_buffer, 0, page_table_reserve_buffer);
   RDMA_LOG(INFO) << "Start loading database DataTable ...";
-  // Init DataTable
-  data_store = new DataStore(page_num, &mem_store_alloc_param);
+  // Init PageTable
+  int bucket_num = (page_table_buffer_size * 0.75 - sizeof(uint64_t)) / sizeof(PageTableNode);
+
+  page_table_store = new PageTableStore(bucket_num, &mem_store_alloc_param);
   RDMA_LOG(INFO) << "Loading Data Page Pool successfully!";
 }
 
-void DataStoreServer::CleanDataStore() {}
+void PageTableServer::CleanPageTableStore() {}
 
-void DataStoreServer::CleanQP() {
+void PageTableServer::CleanQP() {
   rdma_ctrl->destroy_rc_qp();
 }
 
-void DataStoreServer::SendMeta(node_id_t machine_id, size_t compute_node_num) {
+void PageTableServer::SendMeta(node_id_t machine_id, size_t compute_node_num) {
   // Prepare LockTable meta
   char* hash_meta_buffer = nullptr;
   size_t total_meta_size = 0;
-  PrepareDataStoreMeta(machine_id, &hash_meta_buffer, total_meta_size);
+  PreparePageTableStoreMeta(machine_id, &hash_meta_buffer, total_meta_size);
   assert(hash_meta_buffer != nullptr);
   assert(total_meta_size != 0);
 
   // Send memory store meta to all the compute nodes via TCP
   for (size_t index = 0; index < compute_node_num; index++) {
-    SendDataStoreMeta(hash_meta_buffer, total_meta_size);
+    SendPageTableStoreMeta(hash_meta_buffer, total_meta_size);
   }
   free(hash_meta_buffer);
 }
 
-void DataStoreServer::PrepareDataStoreMeta(node_id_t machine_id, char** hash_meta_buffer, size_t& total_meta_size){
-  // Get DataStore meta
-  DataStoreMeta* lock_table_meta;
+void PageTableServer::PreparePageTableStoreMeta(node_id_t machine_id, char** hash_meta_buffer, size_t& total_meta_size){
+  // Get PageTableStore meta
+  PageTableMeta* page_table_meta;
 
-  lock_table_meta = new DataStoreMeta((uint64_t)data_store->GetAddrPtr(),
-                                        data_store->GetPageNum(),
-                                        data_store->GetNodeSize(),
-                                        data_store->GetBaseOff());
+  page_table_meta = new PageTableMeta((uint64_t)page_table_store->GetAddrPtr(),
+                                        page_table_store->GetBucketNum(),
+                                        page_table_store->PageTableNodeSize(),
+                                        page_table_store->GetBaseOff());
 
-  int hash_meta_len = sizeof(DataStoreMeta);
+  int hash_meta_len = sizeof(PageTableMeta);
   total_meta_size = sizeof(machine_id) + hash_meta_len + sizeof(MEM_STORE_META_END);
   RDMA_LOG(INFO) << "DataStore total_meta_size: " << total_meta_size;
 
@@ -87,15 +95,14 @@ void DataStoreServer::PrepareDataStoreMeta(node_id_t machine_id, char** hash_met
   *((node_id_t*)local_buf) = machine_id;
   local_buf += sizeof(machine_id);
   
-  memcpy(local_buf, (char*)lock_table_meta, hash_meta_len);
+  memcpy(local_buf, (char*)page_table_meta, hash_meta_len);
 
   local_buf += hash_meta_len;
   // EOF
   *((uint64_t*)local_buf) = MEM_STORE_META_END;
 }
 
-
-void DataStoreServer::SendDataStoreMeta(char* hash_meta_buffer, size_t& total_meta_size) {
+void PageTableServer::SendPageTableStoreMeta(char* hash_meta_buffer, size_t& total_meta_size) {
   //> Using TCP to send hash meta
   /* --------------- Initialize socket ---------------- */
   struct sockaddr_in server_addr;
@@ -159,7 +166,11 @@ void DataStoreServer::SendDataStoreMeta(char* hash_meta_buffer, size_t& total_me
   close(listen_socket);
 }
 
-bool DataStoreServer::Run() {
+void PageTableServer::ConnectWithRingBuffer(){
+  page_table_store->BuildConnectWithRingBuffer();
+}
+
+bool PageTableServer::Run() {
   // Now server just waits for user typing quit to finish
   // Server's CPU is not used during one-sided RDMA requests from clients
   printf("====================================================================================================\n");
@@ -182,10 +193,10 @@ bool DataStoreServer::Run() {
 
 int main(int argc, char* argv[]) {
   // Configure of this server
-  std::string config_filepath = "../../../config/memory_data_node_config.json";
+  std::string config_filepath = "../../../config/memory_page_table_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);
 
-  auto local_node = json_config.get("data_node");
+  auto local_node = json_config.get("local_page_table_node");
   node_id_t machine_num = (node_id_t)local_node.get("machine_num").get_int64();
   node_id_t machine_id = (node_id_t)local_node.get("machine_id").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
@@ -198,26 +209,24 @@ int main(int argc, char* argv[]) {
   size_t compute_node_num = compute_node_ips.size();
 
   size_t mem_size = (size_t)1024 * 1024 * 1024 * mem_size_GB;
-  size_t data_page_buf_size = mem_size;  // Currently, we support the hash structure
+  size_t page_table_buf_size = mem_size;  // Currently, we support the hash structure
 
-  auto server = std::make_shared<DataStoreServer>(machine_id, local_port, local_meta_port, data_page_buf_size);
+  auto server = std::make_shared<PageTableServer>(machine_id, local_port, local_meta_port, page_table_buf_size);
   server->AllocMem();
   server->InitMem();
-  
-  // 在这里计算数据页数
-  int page_num = mem_size / PAGE_SIZE;
-  server->LoadDataStore(page_num);
-
+  server->LoadPageTableStore();
+  server->InitRDMA(); // !这里注意了，这里的RDMA注册要注册两个内存，一个是页表hash table，另一个是空闲页面的环形缓冲区
+  server->ConnectWithRingBuffer();
   server->SendMeta(machine_id, compute_node_num);
-  server->InitRDMA();
+
   bool run_next_round = server->Run();
 
   // Continue to run the next round. RDMA does not need to be inited twice
   while (run_next_round) {
     server->InitMem();
-    server->CleanDataStore();
+    server->CleanPageTableStore();
     server->CleanQP();
-    server->LoadDataStore(page_num);
+    server->LoadPageTableStore();
     server->SendMeta(machine_id, compute_node_num);
     run_next_round = server->Run();
   }

@@ -155,6 +155,16 @@ class LockTableStore {
     assert(locktable_ptr != nullptr);
     memset(locktable_ptr, 0, locktable_size);
     
+    for(int i=0; i<bucket_num; i++){
+      LockNode* node = (LockNode*)(i * sizeof(LockNode) + locktable_ptr);
+      node->next_expand_node_id[0] = -1;
+      node->next_expand_node_id[1] = -1;
+      node->next_expand_node_id[2] = -1;
+      node->next_expand_node_id[3] = -1;
+      node->next_expand_node_id[4] = -1;
+      node->page_id = i;
+    }
+
     bucket_array = (LockNode*)locktable_ptr;
   }
 

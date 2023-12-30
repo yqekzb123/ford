@@ -38,6 +38,8 @@ const mr_id_t SERVER_LOG_BUFF_ID = 98;
 const mr_id_t SERVER_HASH_INDEX_ID = 99;
 const mr_id_t SERVER_LOCK_TABLE_ID = 101;
 const mr_id_t SERVER_DATA_ID = 102;
+const mr_id_t SERVER_PAGETABLE_ID = 103;
+const mr_id_t SERVER_PAGETABLE_RING_FREE_FRAME_BUFFER_ID = 104; // !提示：这里还没注册呢
 
 // Memory region ids for client's local_mr
 const mr_id_t CLIENT_MR_ID = 100;

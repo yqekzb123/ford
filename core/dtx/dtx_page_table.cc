@@ -1,3 +1,4 @@
+// author: huang chunyue
 #include "dtx/dtx.h"
 #include <chrono>
 #include <future>
@@ -12,6 +13,8 @@
 // 注意，每个内存节点都有一个页表，页表管理自己内存节点的所有页
 // 因此，计算节点要访问所有内存节点的页表去找到对应的帧号frame_id_t
 // 为了提高性能，使用多线程并行访问所有内存节点的页表
+
+#define BATCH_GET_FREE_PAGE_SIZE 100
 
 PageAddress DTX::GetFreePageSlot(){
     auto nodes = global_meta_man->GetPageTableNode();
@@ -34,74 +37,74 @@ PageAddress DTX::GetFreePageSlot(){
                 return res;
             }
             else{
-                auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, -100, IBV_SEND_SIGNALED);
+                auto rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, -BATCH_GET_FREE_PAGE_SIZE, IBV_SEND_SIGNALED);
                 if (rc != SUCC) {
-                    RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                    RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                 }
-                rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, 100, IBV_SEND_SIGNALED);
+                rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, BATCH_GET_FREE_PAGE_SIZE, IBV_SEND_SIGNALED);
                 if (rc != SUCC) {
-                RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                    RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                 }
                 ibv_wc wc{};
                 rc = qp->poll_till_completion(wc, no_timeout);
                 if (rc != SUCC) {
-                RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                    RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                 }
 
-                if(*(int64_t*)faa_cnt_buf < 100){
+                if(*(int64_t*)faa_cnt_buf < BATCH_GET_FREE_PAGE_SIZE){
                     // buffer has not enough free page
-                    auto rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, -100, IBV_SEND_SIGNALED);
+                    auto rc = qp->post_faa(faa_tail_buf, ring_buffer_tail_off, -BATCH_GET_FREE_PAGE_SIZE, IBV_SEND_SIGNALED);
                     if (rc != SUCC) {
-                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                     }
-                    rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, 100, IBV_SEND_SIGNALED);
+                    rc = qp->post_faa(faa_cnt_buf, ring_buffer_cnt_off, BATCH_GET_FREE_PAGE_SIZE, IBV_SEND_SIGNALED);
                     if (rc != SUCC) {
-                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                        RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                     }
                     ibv_wc wc{};
                     rc = qp->poll_till_completion(wc, no_timeout);
                     if (rc != SUCC) {
-                        RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                        RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                     }
                     free_page_list_mutex->unlock();
                     continue;
                 }
                 else{
                     // buffer has enough page
-                    char* read_free_page = thread_rdma_buffer_alloc->Alloc(sizeof(RingBufferItem) * 100);
-                    if(*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE + 100 > MAX_FREE_LIST_BUFFER_SIZE){
+                    char* read_free_page = thread_rdma_buffer_alloc->Alloc(sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE);
+                    if(*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE + BATCH_GET_FREE_PAGE_SIZE > MAX_FREE_LIST_BUFFER_SIZE){
                         offset_t read_off_1 = ring_buffer_base_off + (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE) * sizeof(RingBufferItem);
                         offset_t read_off_2 = ring_buffer_base_off + 0 * sizeof(RingBufferItem);
                         size_t read_size_1 = sizeof(RingBufferItem) * (MAX_FREE_LIST_BUFFER_SIZE - (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE));
-                        size_t read_size_2 = sizeof(RingBufferItem) * (100 - (MAX_FREE_LIST_BUFFER_SIZE - (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE)));
+                        size_t read_size_2 = sizeof(RingBufferItem) * (BATCH_GET_FREE_PAGE_SIZE - (MAX_FREE_LIST_BUFFER_SIZE - (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE)));
                         auto rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page, read_size_1, read_off_1, IBV_SEND_SIGNALED);
                         if (rc != SUCC) {
-                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                         }
                         rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page + read_size_1, read_size_2, read_off_2, IBV_SEND_SIGNALED);
                         if (rc != SUCC) {
-                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                         }
                         ibv_wc wc{};
                         rc = qp->poll_till_completion(wc, no_timeout);
                         if (rc != SUCC) {
-                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                         }
                     }
                     else{
                         offset_t read_off = ring_buffer_base_off + (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE) * sizeof(RingBufferItem);
-                        size_t read_size = sizeof(RingBufferItem) * 100;
+                        size_t read_size = sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE;
                         auto rc = qp->post_send(IBV_WR_RDMA_READ, read_free_page, read_size, read_off, IBV_SEND_SIGNALED);
                         if (rc != SUCC) {
-                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "VictimPageThread";
+                            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                         }
                         ibv_wc wc{};
                         rc = qp->poll_till_completion(wc, no_timeout);
                         if (rc != SUCC) {
-                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
+                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                         }
                     }
-                    for(int i=0; i<100; i++){
+                    for(int i=0; i<BATCH_GET_FREE_PAGE_SIZE; i++){
                         RingBufferItem* item =  reinterpret_cast<RingBufferItem*>(read_free_page + i * sizeof(RingBufferItem));
                         assert(item->valid == true);
                         free_page_list->push_back({item->node_id, item->frame_id});

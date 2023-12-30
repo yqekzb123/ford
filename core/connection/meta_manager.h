@@ -44,6 +44,18 @@ class MetaManager {
 
   void GetMRMeta(const RemoteNode& node);
 
+  // get global_rdma_ctrl
+  ALWAYS_INLINE
+  RdmaCtrlPtr GetGlobalRdmaCtrl() {
+    return global_rdma_ctrl;
+  }
+
+  // get rnic
+  ALWAYS_INLINE
+  RNicHandler* GetOpenedRnic() {
+    return opened_rnic;
+  }
+
   /*** Memory Store Metadata ***/
   // ALWAYS_INLINE
   // const HashMeta& GetPrimaryHashMetaWithTableID(const table_id_t table_id) const {

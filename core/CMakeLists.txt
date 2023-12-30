@@ -35,6 +35,9 @@ set(LOG_SRC
         # log/logparse.cc
         log/log_manager.cc)
 
+set(MEM_SRC
+        memstore/page_table.cc)
+
 add_library(ford STATIC
         ${CONNECTION_SRC}
         ${DTX_SRC}
@@ -42,6 +45,7 @@ add_library(ford STATIC
         ${STORAGE_SRC}
         ${BATCH_SRC}
         ${LOG_SRC}
+        ${MEM_SRC}
         )
 
 set_target_properties(ford PROPERTIES LINKER_LANGUAGE CXX)

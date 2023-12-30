@@ -115,6 +115,7 @@ add_subdirectory(storage_pool)
 
 set(TEST test.cpp)
 add_executable(TEST ${TEST})
-
-
-
+set(TEST2 test2.cpp)
+add_executable(TEST2 ${TEST2})
+target_link_libraries(TEST rlib)
+target_link_libraries(TEST2 rlib)

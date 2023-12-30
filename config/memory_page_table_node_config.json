@@ -1,0 +1,18 @@
+{
+  "local_page_table_node": {
+    "machine_num": 1,
+    "machine_id": 0,
+    "local_port": 12354,
+    "local_client_port": 12355,
+    "local_meta_port": 12356,
+    "mem_size_GB": 1
+  },
+  "remote_data_node_nodes": {
+    "remote_data_node_ips": ["127.0.0.1"],
+    "remote_data_node_meta_ports": [12353]
+  },
+  "remote_compute_nodes": {
+    "compute_node_ips": ["127.0.0.1"],
+    "compute_node_ports": [12345]
+  }
+}

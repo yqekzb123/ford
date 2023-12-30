@@ -82,7 +82,7 @@ void Handler::GenThreads(std::string bench_name) {
   auto* global_node_free_list_mutex = new std::mutex();
 
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
-  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man, thread_num_per_machine);
+  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man->GetGlobalRdmaCtrl(), global_meta_man->GetOpenedRnic(), thread_num_per_machine);
 
   auto* param_arr = new struct thread_params[thread_num_per_machine];
 
@@ -287,7 +287,7 @@ void Handler::GenThreadsForMICRO() {
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
-  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man, thread_num_per_machine);
+  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man->GetGlobalRdmaCtrl(), global_meta_man->GetOpenedRnic(), thread_num_per_machine);
 
   auto* param_arr = new struct thread_params[thread_num_per_machine];
 
