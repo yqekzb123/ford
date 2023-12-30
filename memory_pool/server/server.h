@@ -10,8 +10,11 @@
 #include <string>
 
 #include "memstore/data_item.h"
+#include "memstore/page_table.h"
 #include "memstore/hash_store.h"
+#include "memstore/lock_table_store.h"
 #include "rlib/rdma_ctrl.hpp"
+#include "base/page.h"
 
 // Load DB
 #include "micro/micro_db.h"
@@ -78,6 +81,8 @@ class Server {
 
   void InitMem();
 
+  void InitPage();
+
   void InitRDMA();
 
   void LoadData(node_id_t machine_id, node_id_t machine_num, std::string& workload);
@@ -117,6 +122,17 @@ class Server {
 
   // The start address of the whole hash store space
   char* hash_buffer;
+
+  // The page cache
+  char* page_buffer;  // the cache stored pages
+  char* page_array_buffer; // the start address of the pages
+  // Page* page_array;   // the page_array
+  int   page_slot_count;
+
+  // char* addr_index;
+  // char* txn_list;
+  char* metatable;
+  
 
   // The start address of the reserved space in hash store. For insertion in case of conflict in a full bucket
   char* hash_reserve_buffer;

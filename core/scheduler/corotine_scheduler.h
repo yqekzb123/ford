@@ -52,6 +52,8 @@ class CoroutineScheduler {
 
   bool RDMAReadSync(coro_id_t coro_id, RCQP* qp, char* rd_data, uint64_t remote_offset, size_t size);
 
+  bool RDMAFAA(coro_id_t coro_id, RCQP* qp, char* local_buf, uint64_t remote_offset, uint64_t add);
+
   bool RDMACAS(coro_id_t coro_id, RCQP* qp, char* local_buf, uint64_t remote_offset, uint64_t compare, uint64_t swap);
 
   // For polling
@@ -205,6 +207,17 @@ bool CoroutineScheduler::RDMAReadSync(coro_id_t coro_id, RCQP* qp, char* rd_data
     RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << ", tid = " << t_id << ", coroid = " << coro_id;
     return false;
   }
+  return true;
+}
+
+ALWAYS_INLINE
+bool CoroutineScheduler::RDMAFAA(coro_id_t coro_id, RCQP* qp, char* local_buf, uint64_t remote_offset, uint64_t add) {
+  auto rc = qp->post_faa(local_buf, remote_offset, add, IBV_SEND_SIGNALED, coro_id);
+  if (rc != SUCC) {
+    RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << ", tid = " << t_id << ", coroid = " << coro_id;
+    return false;
+  }
+  AddPendingQP(coro_id, qp);
   return true;
 }
 

@@ -1,6 +1,7 @@
 // Author: Ming Zhang
 // Copyright (c) 2022
 
+#include "global.h"
 #include "worker/handler.h"
 
 #include <algorithm>
@@ -32,8 +33,10 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
   if (argc == 5) {
     std::string s1 = "sed -i '5c \"thread_num_per_machine\": " + std::string(argv[3]) + ",' " + config_file;
     std::string s2 = "sed -i '6c \"coroutine_num\": " + std::string(argv[4]) + ",' " + config_file;
+    std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
     system(s1.c_str());
     system(s2.c_str());
+    system(s3.c_str());
   }
   // Customized test without modifying configs
   int txn_system_value = 0;
@@ -57,8 +60,12 @@ void Handler::GenThreads(std::string bench_name) {
   auto client_conf = json_config.get("local_compute_node");
   node_id_t machine_num = (node_id_t)client_conf.get("machine_num").get_int64();
   node_id_t machine_id = (node_id_t)client_conf.get("machine_id").get_int64();
+  g_machine_num = machine_num;
+  g_machine_id = machine_id;
   t_id_t thread_num_per_machine = (t_id_t)client_conf.get("thread_num_per_machine").get_int64();
   const int coro_num = (int)client_conf.get("coroutine_num").get_int64();
+  //! notice: the local_cache_size
+  const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
 
   /* Start working */
@@ -69,8 +76,13 @@ void Handler::GenThreads(std::string bench_name) {
   auto* global_meta_man = new MetaManager();
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
+
+  // hcy add node local free list
+  auto* global_node_free_list = new std::list<PageAddress>();
+  auto* global_node_free_list_mutex = new std::mutex();
+
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
-  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man, thread_num_per_machine);
+  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man->GetGlobalRdmaCtrl(), global_meta_man->GetOpenedRnic(), thread_num_per_machine);
 
   auto* param_arr = new struct thread_params[thread_num_per_machine];
 
@@ -79,11 +91,11 @@ void Handler::GenThreads(std::string bench_name) {
   TPCC* tpcc_client = nullptr;
 
   if (bench_name == "tatp") {
-    tatp_client = new TATP();
+    tatp_client = new TATP(nullptr);
     total_try_times.resize(TATP_TX_TYPES, 0);
     total_commit_times.resize(TATP_TX_TYPES, 0);
   } else if (bench_name == "smallbank") {
-    smallbank_client = new SmallBank();
+    smallbank_client = new SmallBank(nullptr);
     total_try_times.resize(SmallBank_TX_TYPES, 0);
     total_commit_times.resize(SmallBank_TX_TYPES, 0);
   } else if (bench_name == "tpcc") {
@@ -105,6 +117,8 @@ void Handler::GenThreads(std::string bench_name) {
     param_arr[i].global_rdma_region = global_rdma_region;
     param_arr[i].thread_num_per_machine = thread_num_per_machine;
     param_arr[i].total_thread_num = thread_num_per_machine * machine_num;
+    param_arr[i].free_list = global_node_free_list;
+    param_arr[i].free_page_list_mutex = global_node_free_list_mutex;
     thread_arr[i] = std::thread(run_thread,
                                 &param_arr[i],
                                 tatp_client,
@@ -273,7 +287,7 @@ void Handler::GenThreadsForMICRO() {
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
-  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man, thread_num_per_machine);
+  auto* global_rdma_region = new RDMARegionAllocator(global_meta_man->GetGlobalRdmaCtrl(), global_meta_man->GetOpenedRnic(), thread_num_per_machine);
 
   auto* param_arr = new struct thread_params[thread_num_per_machine];
 

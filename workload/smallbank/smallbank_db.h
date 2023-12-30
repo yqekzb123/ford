@@ -5,11 +5,15 @@
 #include <cassert>
 #include <cstdint>
 #include <vector>
+#include <fstream>
 
 #include "config/table_type.h"
-#include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
+
 #include "util/fast_random.h"
 #include "util/json_config.h"
+#include "record/rm_manager.h"
+#include "record/rm_file_handle.h"
 
 /* STORED PROCEDURE EXECUTION FREQUENCIES (0-100) */
 #define FREQUENCY_AMALGAMATE 15
@@ -99,18 +103,20 @@ class SmallBank {
 
   uint32_t num_accounts_global, num_hot_global;
 
-  /* Tables */
-  HashStore* savings_table;
+  /* Indexs */
+  IndexStore* savings_table_index;
 
-  HashStore* checking_table;
+  IndexStore* checking_table_index;
 
-  std::vector<HashStore*> primary_table_ptrs;
+  std::vector<IndexStore*> index_store_ptrs;
 
-  std::vector<HashStore*> backup_table_ptrs;
+  // std::vector<IndexStore*> backup_table_ptrs;
+
+  RmManager* rm_manager;
 
   // For server usage: Provide interfaces to servers for loading tables
   // Also for client usage: Provide interfaces to clients for generating ids during tests
-  SmallBank() {
+  SmallBank(RmManager* rm_manager): rm_manager(rm_manager) {
     bench_name = "SmallBank";
     // Used for populate table (line num) and get account
     std::string config_filepath = "../../../config/smallbank_config.json";
@@ -122,13 +128,13 @@ class SmallBank {
     /* Up to 2 billion accounts */
     assert(num_accounts_global <= 2ull * 1024 * 1024 * 1024);
 
-    savings_table = nullptr;
-    checking_table = nullptr;
+    savings_table_index = nullptr;
+    checking_table_index = nullptr;
   }
 
   ~SmallBank() {
-    if (savings_table) delete savings_table;
-    if (checking_table) delete checking_table;
+    if (savings_table_index) delete savings_table_index;
+    if (checking_table_index) delete checking_table_index;
   }
 
   SmallBankTxType* CreateWorkgenArray() {
@@ -186,29 +192,32 @@ class SmallBank {
     }
   }
 
-  void LoadTable(node_id_t node_id,
+  void LoadTable(node_id_t node_id, node_id_t num_server);
+
+  // For server-side usage
+  void LoadIndex(node_id_t node_id,
                  node_id_t num_server,
                  MemStoreAllocParam* mem_store_alloc_param,
                  MemStoreReserveParam* mem_store_reserve_param);
 
-  void PopulateSavingsTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSavingsTable();
 
-  void PopulateCheckingTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateCheckingTable();
 
-  int LoadRecord(HashStore* table,
+  void PopulateIndexSavingsTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexCheckingTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  int LoadRecord(RmFileHandle* file_handle,
                  itemkey_t item_key,
                  void* val_ptr,
                  size_t val_size,
                  table_id_t table_id,
-                 MemStoreReserveParam* mem_store_reserve_param);
+                 std::ofstream& indexfile);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
   }
-
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  
 };

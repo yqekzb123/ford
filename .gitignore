@@ -3,3 +3,5 @@ cmake-build-release
 build
 .idea
 .vscode
+bench_results
+thirdparty

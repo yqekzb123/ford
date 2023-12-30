@@ -3,7 +3,13 @@
 
 #pragma once
 
-#include "connection/meta_manager.h"
+#include <atomic>
+#include <cassert>
+
+#include "base/common.h"
+#include "rlib/rdma_ctrl.hpp"
+
+using namespace rdmaio;
 
 const uint64_t PER_THREAD_ALLOC_SIZE = (size_t)500 * 1024 * 1024;
 
@@ -21,13 +27,13 @@ const uint64_t PER_THREAD_ALLOC_SIZE = (size_t)500 * 1024 * 1024;
 
 class RDMARegionAllocator {
  public:
-  RDMARegionAllocator(MetaManager* global_meta_man, t_id_t thread_num_per_machine) {
+  RDMARegionAllocator(RdmaCtrlPtr global_rdma_ctrl, RNicHandler* opened_rnic, t_id_t thread_num_per_machine) {
     size_t global_mr_size = (size_t)thread_num_per_machine * PER_THREAD_ALLOC_SIZE;
     // Register a buffer to the previous opened device. It's DRAM in compute pools
     global_mr = (char*)malloc(global_mr_size);
     thread_num = thread_num_per_machine;
     memset(global_mr, 0, global_mr_size);
-    RDMA_ASSERT(global_meta_man->global_rdma_ctrl->register_memory(CLIENT_MR_ID, global_mr, global_mr_size, global_meta_man->opened_rnic));
+    RDMA_ASSERT(global_rdma_ctrl->register_memory(CLIENT_MR_ID, global_mr, global_mr_size, opened_rnic));
   }
 
   ~RDMARegionAllocator() {

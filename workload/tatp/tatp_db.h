@@ -9,8 +9,11 @@
 
 #include "config/table_type.h"
 #include "memstore/hash_store.h"
+#include "memstore/hash_index_store.h"
 #include "util/fast_random.h"
 #include "util/json_config.h"
+#include "record/rm_manager.h"
+#include "record/rm_file_handle.h"
 
 /*
  * Up to 1 billion subscribers so that FastGetSubscribeNumFromSubscribeID() requires
@@ -258,12 +261,26 @@ class TATP {
 
   HashStore* call_forwarding_table;
 
+  /* Indexs */
+  IndexStore* subscriber_index;
+
+  IndexStore* sec_subscriber_index;
+
+  IndexStore* special_facility_index;
+
+  IndexStore* access_info_index;
+
+  IndexStore* call_forwarding_index;
+
   std::vector<HashStore*> primary_table_ptrs;
 
   std::vector<HashStore*> backup_table_ptrs;
 
+  // for load data
+  RmManager* rm_manager;
+
   // For server and client usage: Provide interfaces to servers for loading tables
-  TATP() {
+  TATP(RmManager* rm_manager): rm_manager(rm_manager) {
     bench_name = "TATP";
     /* Init the precomputed decimal map */
     map_1000 = (uint16_t*)malloc(1000 * sizeof(uint16_t));
@@ -294,6 +311,12 @@ class TATP {
     special_facility_table = nullptr;
     access_info_table = nullptr;
     call_forwarding_table = nullptr;
+    
+    subscriber_index = nullptr;
+    sec_subscriber_index = nullptr;
+    special_facility_index = nullptr;
+    access_info_index = nullptr;
+    call_forwarding_index = nullptr;
   }
 
   ~TATP() {
@@ -302,6 +325,12 @@ class TATP {
     if (special_facility_table) delete special_facility_table;
     if (access_info_table) delete access_info_table;
     if (call_forwarding_table) delete call_forwarding_table;
+
+    if (subscriber_index) delete subscriber_index;
+    if (sec_subscriber_index) delete sec_subscriber_index;
+    if (special_facility_index) delete special_facility_index;
+    if (access_info_index) delete access_info_index;
+    if (call_forwarding_index) delete call_forwarding_index;
   }
 
   /* create workload generation array for benchmarking */
@@ -413,25 +442,22 @@ class TATP {
   }
 
   // For server-side usage
-  void LoadTable(node_id_t node_id,
-                 node_id_t num_server,
-                 MemStoreAllocParam* mem_store_alloc_param,
-                 MemStoreReserveParam* mem_store_reserve_param);
+  void LoadTable(node_id_t node_id, node_id_t num_server);
 
-  void PopulateSubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSubscriberTable();
 
-  void PopulateSecondarySubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSecondarySubscriberTable();
 
-  void PopulateAccessInfoTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateAccessInfoTable();
 
-  void PopulateSpecfacAndCallfwdTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSpecfacAndCallfwdTable();
 
-  int LoadRecord(HashStore* table,
+  int LoadRecord(RmFileHandle* file_handle,
                  itemkey_t item_key,
                  void* val_ptr,
                  size_t val_size,
                  table_id_t table_id,
-                 MemStoreReserveParam* mem_store_reserve_param);
+                 std::ofstream& indexfile);
 
   std::vector<uint8_t> SelectUniqueItem(uint64_t* tmp_seed, std::vector<uint8_t> values, unsigned N, unsigned M);
 

@@ -5,7 +5,15 @@ cmake_minimum_required(VERSION 3.3)
 
 project(FORD)
 
-set(CMAKE_CXX_STANDARD 11)
+# option(WITH_SNAPPY "With snappy" ON)
+
+execute_process(
+    COMMAND bash -c "find ${PROJECT_SOURCE_DIR}/ -type d -regex \".*output/include$\" | head -n1 | xargs dirname | tr -d '\n'"
+    OUTPUT_VARIABLE OUTPUT_PATH
+)
+set(CMAKE_PREFIX_PATH ${OUTPUT_PATH})
+
+set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-result -fPIC")
 
@@ -46,14 +54,30 @@ if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
 endif()
 include_directories(${LEVELDB_INCLUDE_PATH})
 
+# if(WITH_SNAPPY)
+find_path(SNAPPY_INCLUDE_PATH NAMES snappy.h)
+find_library(SNAPPY_LIB NAMES snappy)
+if ((NOT SNAPPY_INCLUDE_PATH) OR (NOT SNAPPY_LIB))
+    message(FATAL_ERROR "Fail to find snappy")
+endif()
+include_directories(${SNAPPY_INCLUDE_PATH})
+# endif()
+
 find_package(OpenSSL)
 include_directories(${OPENSSL_INCLUDE_DIR})
+
+find_path(RDMA_INCLUDE_PATH NAMES infiniband/verbs.h)
+find_library(RDMA_LIB NAMES ibverbs)
+if ((NOT RDMA_INCLUDE_PATH) OR (NOT RDMA_LIB))
+    message(FATAL_ERROR "Fail to find ibverbs")
+endif()
 
 set(DYNAMIC_LIB
     ${CMAKE_THREAD_LIBS_INIT}
     ${GFLAGS_LIBRARY}
     ${PROTOBUF_LIBRARIES}
     ${LEVELDB_LIB}
+    ${SNAPPY_LIB}
     ${OPENSSL_CRYPTO_LIBRARY}
     ${OPENSSL_SSL_LIBRARY}
     ${THRIFT_LIB}
@@ -72,14 +96,26 @@ include_directories(
     workload
     thirdparty
     compute_pool
+    test
 )
 
 add_subdirectory(thirdparty/rlib)
 
 add_subdirectory(core)
 
+add_subdirectory(test) 
+
 add_subdirectory(workload)
 
 add_subdirectory(compute_pool) # Dep list: rlib->ford->workload_db+_txn->worker
 
 add_subdirectory(memory_pool) # Dep list: rlib->workload_db->server
+
+add_subdirectory(storage_pool) 
+
+set(TEST test.cpp)
+add_executable(TEST ${TEST})
+set(TEST2 test2.cpp)
+add_executable(TEST2 ${TEST2})
+target_link_libraries(TEST rlib)
+target_link_libraries(TEST2 rlib)
