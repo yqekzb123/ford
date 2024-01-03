@@ -199,7 +199,7 @@ void PageTableStore::FillFreeListThread() {
       
       if( *(lock_t*)cas_buf == UNLOCKED){
         
-        std::cout << "lock page table id: " << i << std::endl;
+        // std::cout << "lock page table id: " << i << std::endl;
         // 加锁成功
         PageTableNode* node = (PageTableNode*)(offset + page_table_ptr);
         timestamp_t min_timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 5;
@@ -270,7 +270,7 @@ void PageTableStore::VictimPageThread(){
     if (rc != SUCC) {
       RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
     }
-    std::cout << "cnt_buf: " << *(int64_t*)faa_cnt_buf << "head_buf: " << *(int64_t*)faa_head_buf << std::endl;
+    // std::cout << "cnt_buf: " << *(int64_t*)faa_cnt_buf << "head_buf: " << *(int64_t*)faa_head_buf << std::endl;
 
     if(*(int64_t*)faa_cnt_buf >= MAX_FREE_LIST_BUFFER_SIZE -1){
       // buffer is full

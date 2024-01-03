@@ -28,7 +28,7 @@ DTX::DTX(MetaManager* meta_man,
   tx_status = TXStatus::TX_INIT;
 
   select_backup = 0;
-  thread_remote_log_offset_alloc = remote_log_offset_allocator;
+  // thread_remote_log_offset_alloc = remote_log_offset_allocator;
   addr_cache = addr_buf;
 
   hit_local_cache_times = 0;

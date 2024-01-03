@@ -2,6 +2,7 @@
 // Copyright (c) 2022
 
 #include "worker/worker.h"
+#include <time.h>
 
 #include <atomic>
 #include <cstdio>
@@ -322,6 +323,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
 
 #if 1
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
+    printf("worker.cc:326\n");
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
         thread_local_try_times[uint64_t(tx_type)]++;
@@ -735,6 +737,8 @@ void run_thread(thread_params* params,
     // tatp_workgen_arr = tatp_client->CreateWorkgenArray();
     // thread_local_try_times = new uint64_t[TATP_TX_TYPES]();
     // thread_local_commit_times = new uint64_t[TATP_TX_TYPES]();
+    // 目前只实现了smallbank
+    assert(false);
   } else if (bench_name == "smallbank") {
     smallbank_client = smallbank_cli;
     smallbank_workgen_arr = smallbank_client->CreateWorkgenArray();
@@ -745,6 +749,8 @@ void run_thread(thread_params* params,
     // tpcc_workgen_arr = tpcc_client->CreateWorkgenArray();
     // thread_local_try_times = new uint64_t[TPCC_TX_TYPES]();
     // thread_local_commit_times = new uint64_t[TPCC_TX_TYPES]();
+    // 目前只实现了smallbank
+    assert(false);
   }
 
   stop_run = false;
@@ -764,7 +770,7 @@ void run_thread(thread_params* params,
   auto alloc_rdma_region_range = params->global_rdma_region->GetThreadLocalRegion(thread_local_id);
   addr_cache = new AddrCache();
   rdma_buffer_allocator = new RDMABufferAllocator(alloc_rdma_region_range.first, alloc_rdma_region_range.second);
-  log_offset_allocator = new LogOffsetAllocator(thread_gid, params->total_thread_num);
+  // log_offset_allocator = new LogOffsetAllocator(thread_gid, params->total_thread_num);
   timer = new double[ATTEMPTED_NUM]();
 
   // Initialize Zipf generator for MICRO benchmark

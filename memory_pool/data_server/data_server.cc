@@ -197,6 +197,10 @@ int main(int argc, char* argv[]) {
   auto compute_node_ips = compute_nodes.get("compute_node_ips");  // Array
   size_t compute_node_num = compute_node_ips.size();
 
+  auto page_table_nodes = json_config.get("remote_page_table_node");
+  auto page_table_node_ips = page_table_nodes.get("page_table_node_ip");  // Array
+  size_t page_table_node_num = page_table_node_ips.size();
+
   size_t mem_size = (size_t)1024 * 1024 * 1024 * mem_size_GB;
   size_t data_page_buf_size = mem_size;  // Currently, we support the hash structure
 
@@ -208,7 +212,7 @@ int main(int argc, char* argv[]) {
   int page_num = mem_size / PAGE_SIZE;
   server->LoadDataStore(page_num);
 
-  server->SendMeta(machine_id, compute_node_num);
+  server->SendMeta(machine_id, compute_node_num + page_table_node_num);
   server->InitRDMA();
   bool run_next_round = server->Run();
 
@@ -218,7 +222,7 @@ int main(int argc, char* argv[]) {
     server->CleanDataStore();
     server->CleanQP();
     server->LoadDataStore(page_num);
-    server->SendMeta(machine_id, compute_node_num);
+    server->SendMeta(machine_id, compute_node_num + page_table_node_num);
     run_next_round = server->Run();
   }
 

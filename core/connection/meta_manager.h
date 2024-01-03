@@ -42,6 +42,10 @@ class MetaManager {
 
   node_id_t GetAddrStoreMeta(std::string& remote_ip, int remote_port);
 
+  void GetDataNodeMeta(const RemoteNode& node);
+
+  void GetPageNodeMeta(const RemoteNode& node);
+
   void GetMRMeta(const RemoteNode& node);
 
   // get global_rdma_ctrl
@@ -121,6 +125,28 @@ class MetaManager {
   const MemoryAttr& GetRemoteHashMR(const node_id_t node_id) const {
     auto mrsearch = remote_hash_mrs.find(node_id);
     assert(mrsearch != remote_hash_mrs.end());
+    return mrsearch->second;
+  }
+
+  ALWAYS_INLINE
+  const MemoryAttr& GetaDataNodeMR(const node_id_t node_id) const {
+    auto mrsearch = remote_data_mrs.find(node_id);
+    assert(mrsearch != remote_data_mrs.end());
+    return mrsearch->second;
+  }
+
+  /*** RDMA Memory Region Metadata ***/
+  ALWAYS_INLINE
+  const MemoryAttr& GetPageTableMR(const node_id_t node_id) const {
+    auto mrsearch = remote_page_table_mrs.find(node_id);
+    assert(mrsearch != remote_page_table_mrs.end());
+    return mrsearch->second;
+  }
+
+  ALWAYS_INLINE
+  const MemoryAttr& GetPageTableRingbufferMR(const node_id_t node_id) const {
+    auto mrsearch = remote_page_table_ringbuffer_mrs.find(node_id);
+    assert(mrsearch != remote_page_table_ringbuffer_mrs.end());
     return mrsearch->second;
   }
 
@@ -242,10 +268,13 @@ class MetaManager {
   std::vector<node_id_t> backup_table_nodes[MAX_DB_TABLE_NUM];
 
   std::unordered_map<node_id_t, MemoryAttr> remote_hash_mrs;
-
   std::unordered_map<node_id_t, MemoryAttr> remote_log_mrs;
 
-  std::vector<RemoteNode> page_addr_nodes;
+  std::unordered_map<node_id_t, MemoryAttr> remote_data_mrs;
+  std::unordered_map<node_id_t, MemoryAttr> remote_page_table_mrs;
+  std::unordered_map<node_id_t, MemoryAttr> remote_page_table_ringbuffer_mrs;
+
+  
   std::unordered_map<node_id_t, uint64_t> page_addr_node_bucket_num;
 
   std::unordered_map<table_id_t, IndexMeta> hash_index_meta;
@@ -277,6 +306,7 @@ class MetaManager {
   RdmaCtrlPtr global_rdma_ctrl;
 
   std::vector<RemoteNode> remote_nodes;
+  std::vector<RemoteNode> page_addr_nodes;
 
   RNicHandler* opened_rnic;
 

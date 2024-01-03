@@ -104,18 +104,23 @@ using LocalDataTable = std::unordered_map<itemkey_t,LocalData*>;
 class LocalDataStore{ 
 public:  
     LocalDataStore(){
-
+        local_store.clear();
     }
     
     LocalData* GetData(table_id_t table_id, itemkey_t key) {
         LocalData* data = nullptr;
-        LocalDataTable table = local_store.at(table_id);
-        data = table.at(key);
+        printf("local_data.h:112\n");
+        LocalDataTable table = local_store[table_id];
+        printf("local_data.h:114\n");
+        data = table[key];
+        printf("local_data.h:116\n");
         if (data == nullptr) {
             // 如果data不存在，则自动创建一个临时的
-            data = (LocalData*)malloc(sizeof(LocalData));
+            data = new LocalData();
+            // (LocalData*)malloc(sizeof(LocalData));
             table.insert(std::make_pair(key,data));
         }
+        printf("local_data.h:122\n");
         return data;
     }
 

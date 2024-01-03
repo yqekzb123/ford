@@ -14,14 +14,15 @@ MetaManager::MetaManager() {
   txn_system = local_node.get("txn_system").get_int64();
   RDMA_LOG(INFO) << "Run " << (txn_system == 0 ? "FaRM" : (txn_system == 1 ? "DrTM+H" : (txn_system == 2 ? "FORD" : "FORD-LOCAL")));
 
-  auto pm_nodes = json_config.get("remote_pm_nodes");
-  auto remote_ips = pm_nodes.get("remote_ips");                // Array
-  auto remote_ports = pm_nodes.get("remote_ports");            // Array Used for RDMA exchanges
-  auto remote_meta_ports = pm_nodes.get("remote_meta_ports");  // Array Used for transferring datastore metas
+  auto dn_nodes = json_config.get("remote_data_node_nodes");
+  auto remote_ips = dn_nodes.get("remote_data_node_ips");                // Array
+  auto remote_ports = dn_nodes.get("remote_data_node_port");            // Array Used for RDMA exchanges
+  auto remote_meta_ports = dn_nodes.get("remote_data_node_meta_ports");  // Array Used for transferring datastore metas
 
-  auto addr_nodes = json_config.get("remote_address_nodes");
-  auto remote_addr_ips = addr_nodes.get("remote_ips");                // Array
-  auto remote_addr_meta_ports = addr_nodes.get("remote_meta_ports");  // Array Used for transferring datastore metas
+  auto addr_nodes = json_config.get("remote_page_table_node");
+  auto remote_addr_ips = addr_nodes.get("page_table_node_ip");                // Array
+  auto remote_addr_ports = addr_nodes.get("page_table_node_port");            // Array Used for RDMA exchanges
+  auto remote_addr_meta_ports = addr_nodes.get("page_table_node_meta_port");  // Array Used for transferring datastore metas
 
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_ips.size(); index++) {
@@ -35,7 +36,7 @@ MetaManager::MetaManager() {
     int remote_port = (int)remote_ports.get(index).get_int64();
     remote_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
   }
-  RDMA_LOG(INFO) << "All hash meta received";
+  RDMA_LOG(INFO) << "All data meta received";
 
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_addr_ips.size(); index++) {
@@ -46,8 +47,7 @@ MetaManager::MetaManager() {
     if (remote_machine_id == -1) {
       std::cerr << "Thread " << std::this_thread::get_id() << " GetAddrStoreMeta() failed!, remote_machine_id = -1" << std::endl;
     }
-    int remote_port = (int)remote_ports.get(index).get_int64();
-    remote_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
+    int remote_port = (int)remote_addr_ports.get(index).get_int64();
     page_addr_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
   }
   RDMA_LOG(INFO) << "All addr meta received";
@@ -63,10 +63,15 @@ MetaManager::MetaManager() {
 
   // Open device
   opened_rnic = global_rdma_ctrl->open_device(idx);
-
   for (auto& remote_node : remote_nodes) {
-    GetMRMeta(remote_node);
+    GetDataNodeMeta(remote_node);
   }
+  for (auto& remote_node : page_addr_nodes) {
+    GetPageNodeMeta(remote_node);
+  }
+  // for (auto& remote_node : remote_nodes) {
+  //   GetMRMeta(remote_node);
+  // }
   // RDMA_LOG(INFO) << "client: All remote mr meta received!";
 }
 
@@ -204,6 +209,30 @@ node_id_t MetaManager::GetAddrStoreMeta(std::string& remote_ip, int remote_port)
   snooper += sizeof(bucket_num);
   free(recv_buf);
   return remote_machine_id;
+}
+
+void MetaManager::GetDataNodeMeta(const RemoteNode& node) {
+  // Get remote node's memory region information via TCP
+  MemoryAttr remote_data_mr{}, remote_log_mr{};
+
+  while (QP::get_remote_mr(node.ip, node.port, SERVER_DATA_ID, &remote_data_mr) != SUCC) {
+    usleep(2000);
+  }
+  remote_data_mrs[node.node_id] = remote_data_mr;
+}
+
+void MetaManager::GetPageNodeMeta(const RemoteNode& node) {
+  // Get remote node's memory region information via TCP
+  MemoryAttr remote_page_table_mr{}, remote_page_table_ringbuffer_mr{};
+
+  while (QP::get_remote_mr(node.ip, node.port, SERVER_PAGETABLE_ID, &remote_page_table_mr) != SUCC) {
+    usleep(2000);
+  }
+  while (QP::get_remote_mr(node.ip, node.port, SERVER_PAGETABLE_RING_FREE_FRAME_BUFFER_ID, &remote_page_table_ringbuffer_mr) != SUCC) {
+    usleep(2000);
+  }
+  remote_page_table_mrs[node.node_id] = remote_page_table_mr;
+  remote_page_table_ringbuffer_mrs[node.node_id] = remote_page_table_ringbuffer_mr;
 }
 
 void MetaManager::GetMRMeta(const RemoteNode& node) {

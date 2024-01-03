@@ -272,6 +272,7 @@ ALWAYS_INLINE
 void DTX::AddToReadWriteSet(DataItemPtr item) {
   DataSetItem data_set_item(item);
   // DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  printf("DTX.h:275\n");
   read_write_set.emplace_back(data_set_item);
 }
 

@@ -38,6 +38,7 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
 
   if (!dtx->TxLocalExe(yield)) return false;
 
+  printf("smallbank_txn.cc:41\n");
   // 如果成功了，本地提交。
   // 只是将事务塞入batch中
   bool commit_status = dtx->TxLocalCommit(yield, this);
@@ -216,7 +217,7 @@ bool SmallBankDTX::TxLocalTransactSaving(SmallBank* smallbank_client, uint64_t* 
   smallbank_savings_key_t sav_key;
   sav_key.acct_id = acct_id;
   t1.sav_obj = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kSavingsTable, sav_key.item_key);
-  dtx->AddToReadWriteSet(w1.sav_obj);
+  dtx->AddToReadWriteSet(t1.sav_obj);
   if (!dtx->TxLocalExe(yield)) return false;
 
   bool commit_status = dtx->TxLocalCommit(yield,this);
