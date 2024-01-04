@@ -7,7 +7,7 @@
 bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   // Start executing transaction
   tx_status = TXStatus::TX_EXE;
-  printf("dtx_local_exe_commit.cc:10\n");
+  // printf("dtx_local_exe_commit.cc:10\n");
   if (read_write_set.empty() && read_only_set.empty()) {
     return true;
   }
@@ -15,22 +15,27 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   assert(global_meta_man->txn_system == DTX_SYS::OUR);
   // Run our system
   if (read_write_set.empty()) {
-    if (ExeLocalRO(yield))
+    if (ExeLocalRO(yield)) {
+      printf("dtx_local_exe_commit.cc:19\n");
       return true;
+    }
     else {
       goto ABORT;
     }
   } else {
-    if (ExeLocalRW(yield))
+    if (ExeLocalRW(yield)){
+      printf("dtx_local_exe_commit.cc:26\n");
       return true;
+    } 
     else {
       goto ABORT;
     }
   }
+  printf("dtx_local_exe_commit.cc:33\n");
   return true;
 
 ABORT:
-  printf("dtx_local_exe_commit.cc:33\n");
+  printf("dtx_local_exe_commit.cc:37\n");
   if (fail_abort) Abort();
   return false;
 }

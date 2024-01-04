@@ -17,6 +17,7 @@ class CoroutineScheduler {
   // The coro_num includes all the coroutines
   CoroutineScheduler(t_id_t thread_id, coro_id_t coro_num) {
     t_id = thread_id;
+    _coro_num = coro_num;
     pending_counts = new int[coro_num];
     pending_log_counts = new int[coro_num];
     for (coro_id_t c = 0; c < coro_num; c++) {
@@ -87,6 +88,8 @@ class CoroutineScheduler {
 
  private:
   t_id_t t_id;
+
+  coro_id_t _coro_num;
 
   std::list<RCQP*> pending_qps;
 
@@ -251,7 +254,8 @@ void CoroutineScheduler::LoopLinkCoroutine(coro_id_t coro_num) {
 ALWAYS_INLINE
 void CoroutineScheduler::Yield(coro_yield_t& yield, coro_id_t cid) {
   if (unlikely(pending_counts[cid] == 0)) {
-    return;
+    // printf("no need to yield\n");
+    // return;
   }
   // 1. Remove this coroutine from the yield-able coroutine list
   Coroutine* coro = &coro_array[cid];
