@@ -9,6 +9,7 @@
 
 #include "base/common.h"
 #include "memstore/hash_store.h"
+#include "memstore/data_store.h"
 #include "memstore/hash_index_store.h"
 #include "memstore/lock_table_store.h"
 #include "memstore/page_table.h"
@@ -38,15 +39,21 @@ class MetaManager {
  public:
   MetaManager();
 
-  node_id_t GetMemStoreMeta(std::string& remote_ip, int remote_port);
+  node_id_t GetRemoteDataStoreMeta(std::string& remote_ip, int remote_port);
 
-  node_id_t GetAddrStoreMeta(std::string& remote_ip, int remote_port);
+  node_id_t GetRemotePageTableStoreMeta(std::string& remote_ip, int remote_port);
 
-  void GetDataNodeMeta(const RemoteNode& node);
+  node_id_t GetRemoteLockTableStoreMeta(std::string& remote_ip, int remote_port);
 
-  void GetPageNodeMeta(const RemoteNode& node);
+  node_id_t GetRemoteHashIndexStoreMeta(std::string& remote_ip, int remote_port);
 
-  void GetMRMeta(const RemoteNode& node);
+  void GetRemoteDataNodeMR(const RemoteNode& node);
+
+  void GetRemotePageNodeMR(const RemoteNode& node);
+
+  void GetRemoteLockNodeMR(const RemoteNode& node);
+
+  void GetRemoteIndexNodeMR(const RemoteNode& node);
 
   // get global_rdma_ctrl
   ALWAYS_INLINE
@@ -90,16 +97,8 @@ class MetaManager {
   /*** Page Addr Node ID Metadata ***/
   ALWAYS_INLINE
   node_id_t GetPageAddrNodeID(const page_id_t id) const {
-    RemoteNode node = page_addr_nodes[0]; 
+    RemoteNode node = remote_pagetable_nodes[0]; 
     return node.node_id;
-  }
-
-  /*** Memory Store Metadata ***/
-  ALWAYS_INLINE
-  const uint64_t GetPageAddrTableBucketNumWithNodeID(const node_id_t node_id) const {
-    auto search = page_addr_node_bucket_num.find(node_id);
-    assert(search != page_addr_node_bucket_num.end());
-    return search->second;
   }
 
   ALWAYS_INLINE
@@ -113,21 +112,7 @@ class MetaManager {
     return &(backup_table_nodes[table_id]);
   }
 
-  ALWAYS_INLINE
-  const MemoryAttr& GetRemoteLogMR(const node_id_t node_id) const {
-    auto mrsearch = remote_log_mrs.find(node_id);
-    assert(mrsearch != remote_log_mrs.end());
-    return mrsearch->second;
-  }
-
-  /*** RDMA Memory Region Metadata ***/
-  ALWAYS_INLINE
-  const MemoryAttr& GetRemoteHashMR(const node_id_t node_id) const {
-    auto mrsearch = remote_hash_mrs.find(node_id);
-    assert(mrsearch != remote_hash_mrs.end());
-    return mrsearch->second;
-  }
-
+  // /*** RDMA Memory Region Metadata ***/
   ALWAYS_INLINE
   const MemoryAttr& GetaDataNodeMR(const node_id_t node_id) const {
     auto mrsearch = remote_data_mrs.find(node_id);
@@ -135,7 +120,6 @@ class MetaManager {
     return mrsearch->second;
   }
 
-  /*** RDMA Memory Region Metadata ***/
   ALWAYS_INLINE
   const MemoryAttr& GetPageTableMR(const node_id_t node_id) const {
     auto mrsearch = remote_page_table_mrs.find(node_id);
@@ -147,6 +131,20 @@ class MetaManager {
   const MemoryAttr& GetPageTableRingbufferMR(const node_id_t node_id) const {
     auto mrsearch = remote_page_table_ringbuffer_mrs.find(node_id);
     assert(mrsearch != remote_page_table_ringbuffer_mrs.end());
+    return mrsearch->second;
+  }
+
+  ALWAYS_INLINE
+  const MemoryAttr& GetLockTableMR(const node_id_t node_id) const {
+    auto mrsearch = remote_locktable_mrs.find(node_id);
+    assert(mrsearch != remote_locktable_mrs.end());
+    return mrsearch->second;
+  }
+
+  ALWAYS_INLINE
+  const MemoryAttr& GetHashIndexMR(const node_id_t node_id) const {
+    auto mrsearch = remote_hashindex_mrs.find(node_id);
+    assert(mrsearch != remote_hashindex_mrs.end());
     return mrsearch->second;
   }
 
@@ -273,9 +271,8 @@ class MetaManager {
   std::unordered_map<node_id_t, MemoryAttr> remote_data_mrs;
   std::unordered_map<node_id_t, MemoryAttr> remote_page_table_mrs;
   std::unordered_map<node_id_t, MemoryAttr> remote_page_table_ringbuffer_mrs;
-
-  
-  std::unordered_map<node_id_t, uint64_t> page_addr_node_bucket_num;
+  std::unordered_map<node_id_t, MemoryAttr> remote_locktable_mrs;
+  std::unordered_map<node_id_t, MemoryAttr> remote_hashindex_mrs;
 
   std::unordered_map<table_id_t, IndexMeta> hash_index_meta;
   std::unordered_map<table_id_t, node_id_t> hash_index_nodes;
@@ -288,6 +285,10 @@ class MetaManager {
   std::vector<node_id_t> page_table_nodes;
   std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
   std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
+
+  std::vector<node_id_t> data_nodes;
+  std::unordered_map<node_id_t, DataStoreMeta> data_metas;
+  std::unordered_map<node_id_t, offset_t> data_base_off;
 
   std::unordered_map<node_id_t, offset_t> free_ring_base_off;
   std::unordered_map<node_id_t, offset_t> free_ring_head_off;
@@ -305,9 +306,11 @@ class MetaManager {
   // Used by QP manager and RDMA Region
   RdmaCtrlPtr global_rdma_ctrl;
 
-  std::vector<RemoteNode> remote_nodes;
-  std::vector<RemoteNode> page_addr_nodes;
-
+  std::vector<RemoteNode> remote_data_nodes;
+  std::vector<RemoteNode> remote_pagetable_nodes;
+  std::vector<RemoteNode> remote_locktable_nodes;
+  std::vector<RemoteNode> remote_hashindex_nodes;
+  
   RNicHandler* opened_rnic;
 
   // Below are some parameteres from json file

@@ -33,8 +33,8 @@ using timestamp_t = int32_t;  // timestamp type, used for transaction concurrenc
 static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                    // size of a log buffer in byte
 
 // Memory region ids for server's hash store buffer and undo log buffer
-const mr_id_t SERVER_HASH_BUFF_ID = 97;
-const mr_id_t SERVER_LOG_BUFF_ID = 98;
+// const mr_id_t SERVER_HASH_BUFF_ID = 97;
+// const mr_id_t SERVER_LOG_BUFF_ID = 98;
 const mr_id_t SERVER_HASH_INDEX_ID = 99;
 const mr_id_t SERVER_LOCK_TABLE_ID = 101;
 const mr_id_t SERVER_DATA_ID = 102;

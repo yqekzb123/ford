@@ -121,7 +121,7 @@ void HashIndexServer::PrepareIndexMeta(node_id_t machine_id, std::string& worklo
     hash_index_meta_vec.emplace_back(hash_meta);
   }
 
-  int hash_meta_len = sizeof(HashMeta);
+  int hash_meta_len = sizeof(IndexMeta);
   size_t hash_index_meta_num = hash_index_meta_vec.size();
   RDMA_LOG(INFO) << "primary hash meta num: " << hash_index_meta_num;
   total_meta_size = sizeof(hash_index_meta_num) + sizeof(machine_id) + hash_index_meta_num * hash_meta_len + sizeof(MEM_STORE_META_END);
