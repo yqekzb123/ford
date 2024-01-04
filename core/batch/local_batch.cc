@@ -8,6 +8,7 @@
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   // 先随便整个dtx结构出来
+  printf("local_batch.cc:11\n");
   bool res = true;
   BenchDTX* first_bdtx = txn_list.front();
   DTX* first_dtx = first_bdtx->dtx;
@@ -32,14 +33,16 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     }
   }
   
-  std::vector<table_id_t> all_tableid;
-  std::vector<itemkey_t> all_keyid;
-  std::merge(readonly_tableid.begin(), readonly_tableid.end(),
-             readwrite_tableid.begin(), readwrite_tableid.end(),
-             all_tableid.begin());
-  std::merge(readonly_keyid.begin(), readonly_keyid.end(),
-             readwrite_keyid.begin(), readwrite_keyid.end(),
-             all_keyid.begin());
+  std::vector<table_id_t> all_tableid(readonly_tableid);
+  all_tableid.insert(all_tableid.end(),readwrite_tableid.begin(),readwrite_tableid.end());
+  std::vector<itemkey_t> all_keyid(readonly_keyid);
+  all_keyid.insert(all_keyid.end(),readwrite_keyid.begin(),readwrite_keyid.end());
+  // std::merge(readonly_tableid.begin(), readonly_tableid.end(),
+  //            readwrite_tableid.begin(), readwrite_tableid.end(),
+  //            all_tableid.begin());
+  // std::merge(readonly_keyid.begin(), readonly_keyid.end(),
+  //            readwrite_keyid.begin(), readwrite_keyid.end(),
+  //            all_keyid.begin());
   
   //! 1. 对事务访问的数据项加锁
   // 只读加锁

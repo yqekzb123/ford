@@ -53,9 +53,13 @@ public:
     }
 
     LocalBatch* GetBatch() {
-        LocalBatch* batch = local_store.front();
-        local_store.erase(local_store.begin());
-        return batch;
+        if (!local_store.empty()) {
+            LocalBatch* batch = local_store.front();
+            local_store.erase(local_store.begin());
+            return batch;
+        } else {
+            return nullptr;
+        }
     }
     bool InsertTxn(BenchDTX* txn) {
         LocalBatch *batch = nullptr;
@@ -79,7 +83,9 @@ public:
     void ExeBatch(coro_yield_t& yield) {
         if (now_exec == nullptr) {
             now_exec = GetBatch();
-            CreateBatch();
+            if (now_exec == nullptr) {
+                return;
+            }
         }
         now_exec->ExeBatchRW(yield);
     }

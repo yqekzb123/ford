@@ -35,6 +35,12 @@ void CoroutineScheduler::PollRegularCompletion() {
     }
     it = pending_qps.erase(it);
   }
+  for (int coro_id = 1; coro_id < _coro_num ; coro_id++) {
+    assert(_coro_num > 1);
+    if (pending_counts[coro_id] == 0)  {
+      AppendCoroutine(&coro_array[coro_id]);
+    }
+  }
 }
 
 void CoroutineScheduler::PollLogCompletion() {
@@ -66,7 +72,7 @@ void CoroutineScheduler::PollLogCompletion() {
 
 void CoroutineScheduler::PollCompletion() {
   PollRegularCompletion();
-  PollLogCompletion();
+  // PollLogCompletion();
 }
 
 bool CoroutineScheduler::CheckLogAck(coro_id_t c_id) {

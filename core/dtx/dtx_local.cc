@@ -7,7 +7,7 @@
 //! 本地生成读写集，本地执行并发控制
 bool DTX::ExeLocalRO(coro_yield_t& yield) {
   // You can read from primary or backup
-  printf("dtx_local.cc:10\n");
+  // printf("dtx_local.cc:10\n");
   std::vector<DirectRead> pending_direct_ro;
   // std::vector<HashRead> pending_hash_ro;
 
@@ -27,7 +27,7 @@ bool DTX::ExeLocalRO(coro_yield_t& yield) {
 }
 
 bool DTX::ExeLocalRW(coro_yield_t& yield) {
-  printf("dtx_local.cc:30\n");
+  // printf("dtx_local.cc:30\n");
   for (auto& item : read_only_set) {
     if (item.is_fetched) continue;
     auto localdata = local_data_store.GetData(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
@@ -37,13 +37,13 @@ bool DTX::ExeLocalRW(coro_yield_t& yield) {
     // !对当前读取到的最新版本打标记
     item.read_version_dtx = localdata->GetTailVersion()->txn;
   }
-  printf("dtx_local.cc:40\n");
+  // printf("dtx_local.cc:40\n");
   for (size_t i = 0; i < read_write_set.size(); i++) {
-    printf("dtx_local.cc:42\n");
+    // printf("dtx_local.cc:42\n");
     if (read_write_set[i].is_fetched) continue;
-    printf("dtx_local.cc:44\n");
+    // printf("dtx_local.cc:44\n");
     auto localdata = local_data_store.GetData(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
-    printf("dtx_local.cc:46\n");
+    // printf("dtx_local.cc:46\n");
     // !加锁
     bool success = localdata->LockExclusive();
     if (!success) return false;

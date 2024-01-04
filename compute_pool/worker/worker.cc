@@ -93,21 +93,25 @@ __thread uint64_t write_ratio;
 __thread uint64_t* thread_local_try_times;
 __thread uint64_t* thread_local_commit_times;
 
+void BatchExec(coro_yield_t& yield) {
+  printf("worker.cc:97, batch exe\n");
+  local_batch_store.ExeBatch(yield);
+}
+
 // Coroutine 0 in each thread does polling
 void PollCompletion(coro_yield_t& yield) {
   while (true) {
     coro_sched->PollCompletion();
     Coroutine* next = coro_sched->coro_head->next_coro;
+    // if (next->coro_id == BATCH_TXN_ID) {
+    BatchExec(yield);
+    // } else 
     if (next->coro_id != POLL_ROUTINE_ID) {
       // RDMA_LOG(DBG) << "Coro 0 yields to coro " << next->coro_id;
       coro_sched->RunCoroutine(yield, next);
     }
     if (stop_run) break;
   }
-}
-
-void BatchExec(coro_yield_t& yield) {
-  local_batch_store.ExeBatch(yield);
 }
 
 void RecordTpLat(double msr_sec) {
@@ -309,7 +313,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list_mutex);
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
-
+  int execute_cnt = 0;
   // Running transactions
   clock_gettime(CLOCK_REALTIME, &msr_start);
   while (true) {
@@ -321,9 +325,8 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     bench_dtx->dtx = dtx;
     // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
 
-#if 1
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
-    printf("worker.cc:326\n");
+    // printf("worker.cc:326\n");
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
         thread_local_try_times[uint64_t(tx_type)]++;
@@ -365,57 +368,14 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-#else
-    switch (tx_type) {
-      case SmallBankTxType::kAmalgamate: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case SmallBankTxType::kBalance: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxBalance(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case SmallBankTxType::kDepositChecking: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case SmallBankTxType::kSendPayment: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case SmallBankTxType::kTransactSaving: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case SmallBankTxType::kWriteCheck: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      default:
-        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
-        abort();
+    execute_cnt++;
+    if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
+    else {
+      execute_cnt = 0;
+      coro_sched->Yield(yield, coro_id);
+      continue;
     }
-
-#endif
-
+    // 此时只是本地执行完毕,batch还没做完，所以stats都得等等
     /********************************** Stat begin *****************************************/
     // Stat after one transaction finishes
     if (tx_committed) {
@@ -433,7 +393,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     }
     /********************************** Stat end *****************************************/
   }
-
   delete dtx;
 }
 
@@ -802,8 +761,8 @@ void run_thread(thread_params* params,
     // Bind workload to coroutine
     if (coro_i == POLL_ROUTINE_ID) {
       coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
-    } else if (coro_i == POLL_ROUTINE_ID) {
-      coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
+    // } else if (coro_i == BATCH_TXN_ID) {
+      // coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
     } else {
       if (bench_name == "tatp") {
         coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));
