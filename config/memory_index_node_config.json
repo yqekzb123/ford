@@ -2,8 +2,8 @@
   "local_index_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "local_port": 12348,
-    "local_meta_port": 12349,
+    "local_port": 12357,
+    "local_meta_port": 12358,
     "mem_size_GB": 1,
     "workload": "SmallBank"
   },

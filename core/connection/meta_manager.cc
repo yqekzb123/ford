@@ -57,7 +57,7 @@ MetaManager::MetaManager() {
     if (remote_machine_id == -1) {
       std::cerr << "Thread " << std::this_thread::get_id() << " GetMemStoreMeta() failed!, remote_machine_id = -1" << std::endl;
     }
-    int remote_port = (int)remote_hashindex_meta_ports.get(index).get_int64();
+    int remote_port = (int)remote_hashindex_ports.get(index).get_int64();
     remote_hashindex_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
   }
   RDMA_LOG(INFO) << "All hasindex meta received";
@@ -345,9 +345,9 @@ node_id_t MetaManager::GetRemoteHashIndexStoreMeta(std::string& remote_ip, int r
     IndexMeta meta;
     memcpy(&meta, snooper, sizeof(IndexMeta));
     snooper += sizeof(IndexMeta);
-    hash_index_meta[remote_machine_id] = meta;
+    hash_index_meta[meta.table_id] = meta;
   }
-  
+
   assert(*(uint64_t*)snooper == MEM_STORE_META_END);
   free(recv_buf);
   return remote_machine_id;

@@ -184,7 +184,7 @@ bool LockTableServer::Run() {
 
 int main(int argc, char* argv[]) {
   // Configure of this server
-  std::string config_filepath = "../../../config/memory_node_config.json";
+  std::string config_filepath = "../../../config/memory_locktable_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);
 
   auto local_node = json_config.get("local_lock_table_node");

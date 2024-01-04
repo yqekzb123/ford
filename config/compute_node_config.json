@@ -11,8 +11,8 @@
   },
   "remote_hashindex_node_nodes": {
     "remote_hashindex_node_ips": ["127.0.0.1"],
-    "remote_hashindex_node_port": [12348],
-    "remote_hashindex_node_meta_ports": [12349]
+    "remote_hashindex_node_port": [12357],
+    "remote_hashindex_node_meta_ports": [12358]
   },
   "remote_locktable_node_nodes": {
     "remote_locktable_node_ips": ["127.0.0.1"],
