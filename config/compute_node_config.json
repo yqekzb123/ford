@@ -9,14 +9,24 @@
     "comment": "0 is farm, 1 is drtmh, 2 is ford",
     "cache_size_GB": 4
   },
+  "remote_hashindex_node_nodes": {
+    "remote_hashindex_node_ips": ["127.0.0.1"],
+    "remote_hashindex_node_port": [12348],
+    "remote_hashindex_node_meta_ports": [12349]
+  },
+  "remote_locktable_node_nodes": {
+    "remote_locktable_node_ips": ["127.0.0.1"],
+    "remote_locktable_node_port": [12350],
+    "remote_locktable_node_meta_ports": [12351]
+  },
   "remote_data_node_nodes": {
     "remote_data_node_ips": ["127.0.0.1"],
     "remote_data_node_port": [12352],
     "remote_data_node_meta_ports": [12353]
   },
-  "remote_page_table_node": {
-    "page_table_node_ip": ["127.0.0.1"],
-    "page_table_node_port": [12354],
-    "page_table_node_meta_port": [12356]
+  "remote_page_table_nodes": {
+    "remote_page_table_node_ips": ["127.0.0.1"],
+    "remote_page_table_node_port": [12354],
+    "remote_page_table_node_meta_port": [12356]
   }
 }

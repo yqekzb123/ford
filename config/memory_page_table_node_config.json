@@ -13,6 +13,6 @@
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],
-    "compute_node_ports": [12345]
+    "compute_node_ports": [12347]
   }
 }
