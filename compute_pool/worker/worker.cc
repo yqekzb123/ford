@@ -781,6 +781,7 @@ void run_thread(thread_params* params,
 
   // Build qp connection in thread granularity
   qp_man = new QPManager(thread_gid);
+  std::cout << "Thread: " << thread_gid << " Build qp connection" << std::endl;
   qp_man->BuildQPConnection(meta_man);
 
   // Sync qp connections in one compute node before running transactions
