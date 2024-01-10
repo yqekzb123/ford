@@ -76,6 +76,8 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     res = dtx->TxReCaculate(yield);
   }
 
+  std::vector<DataItemPtr> new_data_list;
+
   //! 6. 将确定的数据，利用RDMA刷入页中
   FlushWrite(yield, first_dtx,data_list,index);
 
