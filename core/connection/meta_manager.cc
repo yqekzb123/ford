@@ -87,6 +87,7 @@ MetaManager::MetaManager() {
     }
     int remote_port = (int)remote_pagetable_ports.get(index).get_int64();
     remote_pagetable_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
+    page_table_nodes.push_back(remote_machine_id);
   }
   RDMA_LOG(INFO) << "All lock table meta received";
 
@@ -346,6 +347,7 @@ node_id_t MetaManager::GetRemoteHashIndexStoreMeta(std::string& remote_ip, int r
     memcpy(&meta, snooper, sizeof(IndexMeta));
     snooper += sizeof(IndexMeta);
     hash_index_meta[meta.table_id] = meta;
+    hash_index_nodes[meta.table_id] = remote_machine_id;
   }
 
   assert(*(uint64_t*)snooper == MEM_STORE_META_END);

@@ -30,6 +30,7 @@ void LockTableServer::InitRDMA() {
   RDMA_LOG(INFO) << "Start initializing RDMA...";
   rdma_ctrl = std::make_shared<RdmaCtrl>(server_node_id, local_port);
   RdmaCtrl::DevIdx idx{.dev_id = 0, .port_id = 1};  // using the first RNIC's first port
+
   rdma_ctrl->open_thread_local_device(idx);
   RDMA_ASSERT(
       rdma_ctrl->register_memory(SERVER_LOCK_TABLE_ID, lock_table_bucket_buffer, lock_table_buf_size, rdma_ctrl->get_device()) == true);
@@ -75,7 +76,8 @@ void LockTableServer::PrepareLockTableMeta(node_id_t machine_id, char** hash_met
   lock_table_meta = new LockTableMeta((uint64_t)locktable_store->GetAddrPtr(),
                                         locktable_store->GetBucketNum(),
                                         locktable_store->GetLockTableNodeSize(),
-                                        locktable_store->GetBaseOff());
+                                        locktable_store->GetBaseOff(),
+                                        locktable_store->GetExpandBaseOff());
 
   int hash_meta_len = sizeof(LockTableMeta);
   total_meta_size = sizeof(machine_id) + hash_meta_len + sizeof(MEM_STORE_META_END);
@@ -207,7 +209,7 @@ int main(int argc, char* argv[]) {
   server->InitMem();
 
   // 在这里计算桶数
-  int bucket_num = mem_size * 0.75 / PAGE_SIZE;
+  int bucket_num = (mem_size * 0.75 - sizeof(uint64_t) )/ PAGE_SIZE;
   server->LoadLockTable(bucket_num);
 
   server->SendMeta(machine_id, compute_node_num);

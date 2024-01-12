@@ -1,16 +1,33 @@
+// Author: huangdund
+// Copyright (c) 2023
+
 #include "dtx/dtx.h"
 
-std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& faa_bufs){
+
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
 
     for(auto node_off: pending_hash_node_latch_offs) {
         std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
 
-        // TODO: 统一IndexNode和其他Node的size大小
         doorbell->SetFAAReq(faa_bufs[node_off], node_off.offset);
         doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, sizeof(LockNode));  // Read a hash index bucket
         
-        if (!doorbell->SendReqs(coro_sched, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), coro_id)) {
+        if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
             assert(false);
         }
@@ -20,42 +37,78 @@ std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, std::unorder
 
     std::vector<NodeOffset> success_get_latch_off;
 
-    for(auto node_off: pending_hash_node_latch_offs){
-        if((*(lock_t*)faa_bufs[node_off] & MASKED_SHARED_LOCKS) >> 56 == 0x00){
-            // get lock successfully
-            pending_hash_node_latch_offs.erase(node_off);
-            success_get_latch_off.push_back(node_off);
-        }
-        else{
+    std::unordered_set<NodeOffset>::iterator it = pending_hash_node_latch_offs.begin();
+    while (it != pending_hash_node_latch_offs.end()) {
+        if ((*(lock_t*)faa_bufs[*it] & MASKED_SHARED_LOCKS) >> 56 == 0x00) {
+            success_get_latch_off.push_back(*it);
+            if(pending_hash_node_latch_offs.size() == 1){
+                pending_hash_node_latch_offs.clear();
+                break;
+            } else{
+                it = pending_hash_node_latch_offs.erase(it); // 擦除元素，并将迭代器更新为下一个元素
+            }
+        } else {
             // 探测性FAA失败，FAA(-1)
-            if (!coro_sched->RDMAFAA(coro_id, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), faa_bufs[node_off], node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
+            if (!coro_sched->RDMAFAA(coro_id, qp_arr[(*it).nodeId], faa_bufs[(*it)], (*it).offset, SHARED_UNLOCK_TO_BE_ADDED)){
                 assert(false);
             };
+            ++it; // 继续遍历下一个元素
         }
     }
+
     return success_get_latch_off;
 }
 
-void DTX::ShardUnLockHashNode(NodeOffset node_off){
+void DTX::ShardUnLockHashNode(NodeOffset node_off, QPType qptype){
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
+
     // Unlock Shared Lock
     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-    if (!coro_sched->RDMAFAA(coro_id, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), faa_buf, node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
+    if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
         assert(false);
     };
 }
 
 // 函数根据DTX中的类pending_hash_node_latch_offs, 对这些桶的上锁，本函数在一次RTT完成
 // 返回值为成功获取桶latch的offset
-std::vector<NodeOffset> DTX::ExclusiveLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+std::vector<NodeOffset> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& cas_bufs){
+
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
 
     for(auto node_off: pending_hash_node_latch_offs) {
         std::shared_ptr<ExclusiveLock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveLock_SharedMutex_Batch>();
         doorbell->SetLockReq(cas_bufs[node_off], node_off.offset);
         // TODO: 统一IndexNode和其他Node的size大小
-        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, sizeof(LockNode));  // Read a hash index bucket
+        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
-        if (!doorbell->SendReqs(coro_sched, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), coro_id)) {
+        if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
             assert(false);
         }
@@ -65,21 +118,43 @@ std::vector<NodeOffset> DTX::ExclusiveLockHashNode(coro_yield_t& yield, std::uno
 
     std::vector<NodeOffset> success_get_latch_off;
 
-    for(auto node_off: pending_hash_node_latch_offs){
-        if(*(lock_t*)cas_bufs[node_off] == UNLOCKED){
-            // latch successful
-            pending_hash_node_latch_offs.erase(node_off);
-            success_get_latch_off.push_back(node_off);
+    std::unordered_set<NodeOffset>::iterator it = pending_hash_node_latch_offs.begin();
+    while (it != pending_hash_node_latch_offs.end()) {
+        if (*(lock_t*)cas_bufs[*it] == UNLOCKED) {
+            success_get_latch_off.push_back(*it);
+            if(pending_hash_node_latch_offs.size() == 1){
+                pending_hash_node_latch_offs.clear();
+                break;
+            } else{
+                it = pending_hash_node_latch_offs.erase(it); // 擦除元素，并将迭代器更新为下一个元素
+            }
+        } else {
+            ++it; // 继续遍历下一个元素
         }
     }
     return success_get_latch_off;
 }
 
-void DTX::ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off){
+void DTX::ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype){
+
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
 
     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
     // release exclusive lock
-    if (!coro_sched->RDMAFAA(coro_id, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
+    if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
         assert(false);
     };
 
@@ -93,7 +168,22 @@ void DTX::ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off){
     // }
 }
 
-void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data){
+void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype){
+
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
 
     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
 
@@ -104,7 +194,7 @@ void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_bac
     // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
     doorbell->SetUnLockReq(faa_buf, node_off.offset);
 
-    if (!doorbell->SendReqs(coro_sched, thread_qp_man->GetRemoteDataQPWithNodeID(node_off.nodeId), coro_id)) {
+    if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
         std::cerr << "GetHashIndex release Exclusive mutex sendreqs faild" << std::endl;
         assert(false);
     }

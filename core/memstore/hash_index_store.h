@@ -34,6 +34,8 @@ struct IndexMeta {
   // Offset of the index, relative to the RDMA local_mr
   offset_t base_off;
 
+  offset_t expand_base_off;
+
   // Total hash buckets
   uint64_t bucket_num;
 
@@ -44,11 +46,13 @@ struct IndexMeta {
            uint64_t data_ptr,
            uint64_t bucket_num,
            size_t node_size,
-           offset_t base_off) : table_id(table_id),
+           offset_t base_off,
+           offset_t expand_base_off) : table_id(table_id),
                                 index_ptr(data_ptr),
                                 base_off(base_off),
                                 bucket_num(bucket_num),
-                                node_size(node_size) {}
+                                node_size(node_size),
+                                expand_base_off(expand_base_off) {}
   IndexMeta() {}
 } Aligned8;
 
@@ -92,6 +96,7 @@ class IndexStore {
 
     base_off = (uint64_t)index_ptr - (uint64_t)region_start_ptr;
     assert(base_off >= 0);
+    expand_base_off = (uint64_t)param_reserve->mem_store_reserve - (uint64_t)region_start_ptr;
 
     assert(index_ptr != nullptr);
     memset(index_ptr, 0, index_size);
@@ -120,6 +125,10 @@ class IndexStore {
     return base_off;
   }
 
+  offset_t GetExpandBaseOff() const {
+    return expand_base_off;
+  }
+  
   uint64_t GetIndexNodeSize() const {
     return sizeof(IndexNode);
   }
@@ -159,6 +168,8 @@ class IndexStore {
   // The offset in the RDMA region
   // Attention: the base_off is offset of fisrt index bucket
   offset_t base_off;
+  
+  offset_t expand_base_off;
 
   // Total hash buckets
   uint64_t bucket_num;

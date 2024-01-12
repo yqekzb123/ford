@@ -7,7 +7,7 @@
 #include "bench_dtx.h" 
 
 #define LOCAL_BATCH_TXN_SIZE 100
-
+#define BATCH_TXN_ID 1
 class LocalBatch{
 public:
     batch_id_t batch_id;
@@ -21,6 +21,7 @@ public:
         txn_list.clear();
     }
     bool InsertTxn(BenchDTX* txn) {
+        txn->dtx->coro_id = BATCH_TXN_ID;
         pthread_mutex_lock(&latch);
         if (current_batch_cnt < LOCAL_BATCH_TXN_SIZE) {
             txn_list.push_back(txn);

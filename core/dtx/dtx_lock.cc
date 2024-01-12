@@ -1,3 +1,6 @@
+// Author: huangdund
+// Copyright (c) 2023
+
 #include "dtx/dtx.h"
 
 // 这里锁表与哈希索引实现不同的点在于哈希索引要求索引数据全量存放
@@ -105,7 +108,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
 
     while (pending_hash_node_latch_offs.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -131,8 +134,9 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                             ret_lock_fail_data_id.emplace_back(*it);
                         }
                         // erase from lock_request_list
-                        lock_request_list[node_off].erase(it);
+                        it = lock_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -152,9 +156,11 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
             else{
                 // 存在未处理的请求, 保留latch
                 // if LockDataId not exist, find next bucket
-                node_id_t node_id = global_meta_man->GetLockTableNode(lock_request_list[node_off].front().table_id_);
+                // 一个表一定会进入一个哈希桶中
+                table_id_t table_id = lock_request_list[node_off].front().table_id_;
+                node_id_t node_id = global_meta_man->GetLockTableNode(table_id);
                 auto expand_node_id = lock_node->next_expand_node_id[0];
-                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
+                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(table_id);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
                 if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
@@ -187,7 +193,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off), QPType::kLockTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -229,7 +235,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
 
     while (pending_hash_node_latch_offs.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -255,8 +261,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                             ret_lock_fail_data_id.emplace_back(*it);
                         }
                         // erase from lock_request_list
-                        lock_request_list[node_off].erase(it);
+                        it = lock_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -311,7 +318,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off), QPType::kLockTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -350,7 +357,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
 
     while (pending_hash_node_latch_offs.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -372,8 +379,9 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
                         lock_node->lock_items[i].lock--;
 
                         // erase from lock_request_list
-                        lock_request_list[node_off].erase(it);
+                        it = lock_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -425,7 +433,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off), QPType::kLockTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -464,7 +472,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
 
     while (pending_hash_node_latch_offs.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -486,8 +494,9 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
                         lock_node->lock_items[i].lock = UNLOCKED;
 
                         // erase from lock_request_list
-                        lock_request_list[node_off].erase(it);
+                        it = lock_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -539,7 +548,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off));
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes.at(node_off), QPType::kLockTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -556,16 +565,18 @@ bool DTX::LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_i
 
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
+
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id);
 
         auto hash = MurmurHash64A(lock_data_id.Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
 
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
         
@@ -584,16 +595,18 @@ bool DTX::LockExclusiveOnTable(coro_yield_t& yield, std::vector<table_id_t> tabl
 
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
+        
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id);
 
         auto hash = MurmurHash64A(lock_data_id.Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
 
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
         
@@ -612,16 +625,18 @@ bool DTX::LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_
     assert(table_id.size() == key.size());
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
+        
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
 
         auto hash = MurmurHash64A(lock_data_id.Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
 
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
         
@@ -641,15 +656,18 @@ bool DTX::LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> tab
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
 
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
+
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
 
         auto hash = MurmurHash64A(lock_data_id.Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
 
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
         
@@ -669,9 +687,13 @@ bool DTX::LockSharedOnRange(coro_yield_t& yield, std::vector<table_id_t> table_i
     assert(table_id.size() == key.size());
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RANGE);
+
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
@@ -695,10 +717,14 @@ bool DTX::LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> tabl
     assert(table_id.size() == key.size());
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
 
+        if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        else lock_data_id_set.emplace(lock_data_id);
+        
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
 
@@ -726,7 +752,6 @@ bool DTX::UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId>
 
         auto hash = MurmurHash64A(lock_data_id[i].Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
 
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
 
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
@@ -748,7 +773,6 @@ bool DTX::UnlockSharedLockDataID(coro_yield_t& yield, std::vector<LockDataId> lo
 
         auto hash = MurmurHash64A(lock_data_id[i].Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
 
-        RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
         offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
 
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});

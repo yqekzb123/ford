@@ -117,7 +117,8 @@ void HashIndexServer::PrepareIndexMeta(node_id_t machine_id, std::string& worklo
                                    (uint64_t)hash_table->GetIndexPtr(),
                                    hash_table->GetBucketNum(),
                                    hash_table->GetIndexNodeSize(),
-                                   hash_table->GetBaseOff());
+                                   hash_table->GetBaseOff(),
+                                   hash_table->GetExpandBaseOff());
     hash_index_meta_vec.emplace_back(hash_meta);
   }
 
