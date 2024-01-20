@@ -2,8 +2,8 @@
 // Copyright (c) 2022
 
 #include "dtx/dtx.h"
+#include "worker/global.h"
 // #include ""
-
 bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   // Start executing transaction
   tx_status = TXStatus::TX_EXE;
@@ -15,7 +15,7 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   assert(global_meta_man->txn_system == DTX_SYS::OUR);
   // Run our system
   if (read_write_set.empty()) {
-    if (ExeLocalRO(yield)) {
+    if (LockLocalRO(yield)) {
       printf("dtx_local_exe_commit.cc:19\n");
       return true;
     }
@@ -23,7 +23,7 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
       goto ABORT;
     }
   } else {
-    if (ExeLocalRW(yield)){
+    if (LockLocalRW(yield)){
       printf("dtx_local_exe_commit.cc:26\n");
       return true;
     } 

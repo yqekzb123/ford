@@ -1,8 +1,8 @@
 // Author: Hongyao Zhao
 // Copyright (c) 2023
 #pragma once 
-#include "local_exec/local_data.h"
+#include "local_exec/local_lock.h"
 #include "batch/local_batch.h"
 
-extern LocalDataStore local_data_store;
+extern LocalLockStore local_lock_store;
 extern LocalBatchStore local_batch_store;

@@ -56,62 +56,62 @@ bool DTX::ExeRO(coro_yield_t& yield) {
 }
 
 bool DTX::ExeRW(coro_yield_t& yield) {
-//   // For read-only data from primary or backup
-//   std::vector<DirectRead> pending_direct_ro;
-//   std::vector<HashRead> pending_hash_ro;
+  // For read-only data from primary or backup
+  std::vector<DirectRead> pending_direct_ro;
+  std::vector<HashRead> pending_hash_ro;
 
-//   // For read-write data from primary
-//   std::vector<CasRead> pending_cas_rw;
-//   std::vector<DirectRead> pending_direct_rw;
-//   std::vector<HashRead> pending_hash_rw;
-//   std::vector<InsertOffRead> pending_insert_off_rw;
+  // For read-write data from primary
+  std::vector<CasRead> pending_cas_rw;
+  std::vector<DirectRead> pending_direct_rw;
+  std::vector<HashRead> pending_hash_rw;
+  std::vector<InsertOffRead> pending_insert_off_rw;
 
-//   std::list<InvisibleRead> pending_invisible_ro;
+  std::list<InvisibleRead> pending_invisible_ro;
 
-//   std::list<HashRead> pending_next_hash_ro;
-//   std::list<HashRead> pending_next_hash_rw;
-//   std::list<InsertOffRead> pending_next_off_rw;
+  std::list<HashRead> pending_next_hash_ro;
+  std::list<HashRead> pending_next_hash_rw;
+  std::list<InsertOffRead> pending_next_off_rw;
 
-//   if (!IssueReadRO(pending_direct_ro, pending_hash_ro)) return false;  // RW transactions may also have RO data
-// // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read rorw";
-// #if READ_LOCK
-//   if (!IssueReadLock(pending_cas_rw, pending_hash_rw, pending_insert_off_rw)) return false;
-// #else
-//   if (!IssueReadRW(pending_direct_rw, pending_hash_rw, pending_insert_off_rw)) return false;
-// #endif
+  if (!IssueReadRO(pending_direct_ro, pending_hash_ro)) return false;  // RW transactions may also have RO data
+// RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read rorw";
+#if READ_LOCK
+  if (!IssueReadLock(pending_cas_rw, pending_hash_rw, pending_insert_off_rw)) return false;
+#else
+  if (!IssueReadRW(pending_direct_rw, pending_hash_rw, pending_insert_off_rw)) return false;
+#endif
 
-//   // Yield to other coroutines when waiting for network replies
-//   coro_sched->Yield(yield, coro_id);
+  // Yield to other coroutines when waiting for network replies
+  coro_sched->Yield(yield, coro_id);
 
-//   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read rorw";
+  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read rorw";
   bool res = false;
-// #if READ_LOCK
-//   res = CheckReadRORW(pending_direct_ro,
-//                       pending_hash_ro,
-//                       pending_hash_rw,
-//                       pending_insert_off_rw,
-//                       pending_cas_rw,
-//                       pending_invisible_ro,
-//                       pending_next_hash_ro,
-//                       pending_next_hash_rw,
-//                       pending_next_off_rw,
-//                       yield);
-// #else
-//   res = CompareCheckReadRORW(pending_direct_ro,
-//                              pending_direct_rw,
-//                              pending_hash_ro,
-//                              pending_hash_rw,
-//                              pending_next_hash_ro,
-//                              pending_next_hash_rw,
-//                              pending_insert_off_rw,
-//                              pending_next_off_rw,
-//                              pending_invisible_ro,
-//                              yield);
-// #endif
+#if READ_LOCK
+  res = CheckReadRORW(pending_direct_ro,
+                      pending_hash_ro,
+                      pending_hash_rw,
+                      pending_insert_off_rw,
+                      pending_cas_rw,
+                      pending_invisible_ro,
+                      pending_next_hash_ro,
+                      pending_next_hash_rw,
+                      pending_next_off_rw,
+                      yield);
+#else
+  res = CompareCheckReadRORW(pending_direct_ro,
+                             pending_direct_rw,
+                             pending_hash_ro,
+                             pending_hash_rw,
+                             pending_next_hash_ro,
+                             pending_next_hash_rw,
+                             pending_insert_off_rw,
+                             pending_next_off_rw,
+                             pending_invisible_ro,
+                             yield);
+#endif
 
-// #if COMMIT_TOGETHER
-//   ParallelUndoLog();
-// #endif
+#if COMMIT_TOGETHER
+  ParallelUndoLog();
+#endif
 
   return res;
 }

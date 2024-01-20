@@ -89,17 +89,6 @@ public:
     }
 };
 
-// 计算每个哈希桶节点可以存放多少个rids
-const int MAX_LOCAL_DATA_NUM_PER_NODE = (PAGE_SIZE - sizeof(LocalData) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(LocalData) );
-
-struct LocalDataNode {
-  // node id
-  LocalData data_item[MAX_LOCAL_DATA_NUM_PER_NODE];
-
-  LocalDataNode* next_expand_node_id[NEXT_NODE_COUNT] = {nullptr};
-} Aligned8;
-
-
 using LocalDataTable = std::unordered_map<itemkey_t,LocalData*>;
 class LocalDataStore{ 
 public:  

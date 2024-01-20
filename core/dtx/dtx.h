@@ -84,9 +84,12 @@ class DTX {
   size_t GetAddrCacheSize() {
     return addr_cache->TotalAddrSize();
   }
+  bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
+  bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
 
   bool ExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
   bool ExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作
+
   bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
   bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
   // batch操作完后，各个事务重新计算值，重新提交
@@ -194,6 +197,8 @@ class DTX {
   t_id_t t_id;  // Thread ID
 
   coro_id_t coro_id;  // Coroutine ID
+
+  batch_id_t batch_id; // 
 
  public:
   // For statistics
