@@ -27,6 +27,9 @@ DTX::DTX(MetaManager* meta_man,
   thread_rdma_buffer_alloc = rdma_buffer_allocator;
   tx_status = TXStatus::TX_INIT;
 
+  free_page_list = free_page_list;
+  free_page_list_mutex = free_page_list_mutex;
+
   select_backup = 0;
   // thread_remote_log_offset_alloc = remote_log_offset_allocator;
   addr_cache = addr_buf;
