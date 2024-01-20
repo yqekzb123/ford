@@ -58,23 +58,36 @@ struct PageTableMeta {
   // Offset of the index, relative to the RDMA local_mr
   offset_t base_off;
 
+  offset_t expand_base_off;
+  
   // Total hash buckets
   uint64_t bucket_num;
 
   // Size of index node
   size_t node_size;
 
-  // Nodes managed by the page table
-  std::vector<node_id_t> manager_data_nodes;
-  std::vector<size_t> data_node_frame_nums;
+  offset_t free_ring_base_off;
+  offset_t free_ring_head_off;
+  offset_t free_ring_tail_off;
+  offset_t free_ring_cnt_off;
 
   PageTableMeta(uint64_t page_table_ptr,
            uint64_t bucket_num,
            size_t node_size,
-           offset_t base_off) : page_table_ptr(page_table_ptr),
+           offset_t base_off,
+           offset_t expand_base_off,
+           offset_t free_ring_base_off,
+           offset_t free_ring_head_off,
+           offset_t free_ring_tail_off,
+           offset_t free_ring_cnt_off) : page_table_ptr(page_table_ptr),
                                 base_off(base_off),
                                 bucket_num(bucket_num),
-                                node_size(node_size) {}
+                                node_size(node_size),
+                                expand_base_off(expand_base_off),
+                                free_ring_base_off(free_ring_base_off),
+                                free_ring_head_off(free_ring_head_off),
+                                free_ring_tail_off(free_ring_tail_off),
+                                free_ring_cnt_off(free_ring_cnt_off) {}
   PageTableMeta() {}
 } Aligned8;
 
@@ -107,7 +120,7 @@ struct PageTableNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // PageTableNode* next;
-} Aligned8;
+} Aligned4096;
 
 class PageTableStore {
  public:
@@ -131,6 +144,8 @@ class PageTableStore {
 
     base_off = (uint64_t)page_table_ptr - (uint64_t)region_start_ptr;
     assert(base_off >= 0);
+
+    expand_base_off = (uint64_t)param->mem_store_reserve - (uint64_t)region_start_ptr;
 
     assert(page_table_ptr != nullptr);
     memset(page_table_ptr, 0, page_table_size);
@@ -161,6 +176,10 @@ class PageTableStore {
 
   offset_t GetBaseOff() const {
     return base_off;
+  }
+
+  off64_t GetExpandBaseOff() const {
+    return expand_base_off;
   }
 
   uint64_t GetPageTableMetaSize() const {
@@ -212,6 +231,7 @@ class PageTableStore {
   // The offset in the RDMA region
   // Attention: the base_off is offset of fisrt index bucket
   offset_t base_off;
+  offset_t expand_base_off;
 
   // Total hash buckets
   uint64_t bucket_num;
@@ -263,9 +283,10 @@ class PageTableStore {
   std::vector<node_id_t> manager_data_nodes;
   std::vector<size_t> data_node_frame_nums;
 
+public:
   // 设置环形缓冲区元信息的offset，便于RDMA访问
-  offset_t ring_buffer_base_off = 0;
-  offset_t ring_buffer_head_off = sizeof(RingBufferItem) * MAX_FREE_LIST_BUFFER_SIZE;
-  offset_t ring_buffer_tail_off = ring_buffer_head_off + sizeof(uint64_t);
-  offset_t ring_buffer_item_num_off = ring_buffer_tail_off + sizeof(uint64_t);
+  const offset_t ring_buffer_base_off = 0;
+  const offset_t ring_buffer_head_off = sizeof(RingBufferItem) * MAX_FREE_LIST_BUFFER_SIZE;
+  const offset_t ring_buffer_tail_off = ring_buffer_head_off + sizeof(uint64_t);
+  const offset_t ring_buffer_item_num_off = ring_buffer_tail_off + sizeof(uint64_t);
 };

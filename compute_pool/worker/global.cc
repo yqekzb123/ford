@@ -1,8 +1,8 @@
 // Author: Hongyao Zhao
 // Copyright (c) 2023
 #include "global.h"
-#include "local_exec/local_data.h"
+#include "local_exec/local_lock.h"
 #include "batch/local_batch.h"
 
-LocalDataStore local_data_store;
+LocalLockStore local_lock_store;
 LocalBatchStore local_batch_store;

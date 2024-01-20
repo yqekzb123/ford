@@ -1,3 +1,6 @@
+// Author: huangdund
+// Copyright (c) 2023
+
 #include "dtx/dtx.h"
 
 // 如果出现初始桶中没有itemkey的情况，似乎无法使用桶尾部的多个指针
@@ -40,7 +43,7 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
 
     while (pending_hash_node_latch_offs.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ShardLockHashNode(yield, local_hash_nodes, faa_bufs);
+        auto succ_node_off = ShardLockHashNode(yield, QPType::kHashIndex, local_hash_nodes, faa_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -58,8 +61,9 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
                     if (index_node->index_items[i].key == (*it).second && index_node->index_items[i].valid == true) {
                         // find
                         res[(*it).first][(*it).second] = index_node->index_items[i].rid;
-                        find_index_request_list[node_off].erase(it);
+                        it = find_index_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -111,7 +115,7 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
         }
         // release all latch and write back
         for (auto node_off : unlock_shared_node_off){
-            ShardUnLockHashNode(node_off);
+            ShardUnLockHashNode(node_off, QPType::kHashIndex);
             hold_node_off_latch.erase(node_off);
         }
         unlock_shared_node_off.clear();
@@ -121,7 +125,7 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
     assert(hold_node_off_latch.size() == 0);
     // 检查请求的HashIndex是否都被处理了
     for(int i=0; i<table_id.size(); i++){
-        assert(res[table_id[i]].count(item_key[i] == 1)); 
+        assert(res[table_id[i]].count(item_key[i]) == 1); 
     }
     return res;
 }
@@ -162,7 +166,7 @@ bool DTX::InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
 
     while (pending_hash_node_latch_offs.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kHashIndex, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -183,8 +187,9 @@ bool DTX::InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
                         index_node->index_items[i].rid = (*it).second;
                         index_node->index_items[i].valid = true;
                         // erase会返回下一个元素的迭代器
-                        insert_index_request_list[node_off].erase(it);
+                        it = insert_index_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -234,7 +239,7 @@ bool DTX::InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off], QPType::kHashIndex);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -281,7 +286,7 @@ bool DTX::DeleteHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
 
     while (pending_hash_node_latch_offs.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kHashIndex, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -302,8 +307,9 @@ bool DTX::DeleteHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
                         index_node->index_items[i].rid = {INVALID_PAGE_ID, -1};
                         index_node->index_items[i].valid = false;
                         // erase会返回下一个元素的迭代器
-                        delete_index_request_list[node_off].erase(it);
+                        it = delete_index_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -352,7 +358,7 @@ bool DTX::DeleteHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id,
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off], QPType::kHashIndex);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();

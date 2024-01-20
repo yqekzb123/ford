@@ -96,6 +96,8 @@ struct LockTableMeta {
   // Offset of the lock_table_ptr, relative to the RDMA local_mr
   offset_t base_off;
 
+  offset_t expand_base_off;
+
   // Total hash buckets
   uint64_t bucket_num;
 
@@ -105,15 +107,17 @@ struct LockTableMeta {
   LockTableMeta(uint64_t lock_table_ptr,
            uint64_t bucket_num,
            size_t node_size,
-           offset_t base_off) : lock_table_ptr(lock_table_ptr),
+           offset_t base_off,
+           offset_t expand_base_off) : lock_table_ptr(lock_table_ptr),
                                 base_off(base_off),
                                 bucket_num(bucket_num),
-                                node_size(node_size) {}
+                                node_size(node_size),
+                                expand_base_off(expand_base_off) {}
   LockTableMeta() {}
 } Aligned8;
 
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_LOCKS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(LockItem) );
+const int MAX_LOCKS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(LockItem) );
 
 // A LockNode is a bucket
 // 这里注意：sizeof(LockNode)是4064而非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
@@ -127,7 +131,7 @@ struct LockNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // LockNode* next;
-} Aligned8;
+} Aligned4096;
 
 class LockTableStore {
  public:
@@ -152,6 +156,8 @@ class LockTableStore {
     base_off = (uint64_t)locktable_ptr - (uint64_t)region_start_ptr;
     assert(base_off >= 0);
 
+    expand_base_off = (uint64_t)param->mem_store_reserve - (uint64_t)region_start_ptr;
+    
     assert(locktable_ptr != nullptr);
     memset(locktable_ptr, 0, locktable_size);
     
@@ -172,6 +178,10 @@ class LockTableStore {
     return base_off;
   }
 
+  offset_t GetExpandBaseOff() const {
+    return expand_base_off;
+  }
+  
   uint64_t GetLockTableMetaSize() const {
     return sizeof(LockTableMeta);
   }
@@ -202,6 +212,7 @@ class LockTableStore {
   // The offset in the RDMA region
   // Attention: the base_off is offset of fisrt lock table bucket
   offset_t base_off;
+  offset_t expand_base_off;
 
   // Total hash buckets
   uint64_t bucket_num;

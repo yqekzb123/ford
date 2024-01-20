@@ -72,6 +72,9 @@ class CoroutineScheduler {
   // For coroutine yield, used by transactions
   void Yield(coro_yield_t& yield, coro_id_t cid);
 
+  // For coroutine yield, used by batch exc coro
+  void YieldBatch(coro_yield_t& yield, coro_id_t cid);
+
   // Append this coroutine to the tail of the yield-able coroutine list
   // Used by coroutine 0
   void AppendCoroutine(Coroutine* coro);
@@ -265,8 +268,18 @@ void CoroutineScheduler::Yield(coro_yield_t& yield, coro_id_t cid) {
   next->prev_coro = coro->prev_coro;
   if (coro_tail == coro) coro_tail = coro->prev_coro;
   coro->is_wait_poll = true;
-  // 2. Yield to the next coroutine
+  // 2. Yield to the next ccc
   // RDMA_LOG(DBG) << "coro: " << cid << " yields to coro " << next->coro_id;
+  RunCoroutine(yield, next);
+}
+
+// For coroutine yield, used by transactions
+ALWAYS_INLINE
+void CoroutineScheduler::YieldBatch(coro_yield_t& yield, coro_id_t cid) {
+  // assert(cid == BATCH_TXN_ID);
+  Coroutine* coro = &coro_array[cid];
+  assert(coro->is_wait_poll == false);
+  Coroutine* next = coro->next_coro;
   RunCoroutine(yield, next);
 }
 

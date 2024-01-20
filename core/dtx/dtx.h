@@ -84,9 +84,12 @@ class DTX {
   size_t GetAddrCacheSize() {
     return addr_cache->TotalAddrSize();
   }
+  bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
+  bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
 
   bool ExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
   bool ExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作
+
   bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
   bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
   // batch操作完后，各个事务重新计算值，重新提交
@@ -171,14 +174,20 @@ class DTX {
   bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
   // for rwlatch in hash node
-  std::vector<NodeOffset> ShardLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+  enum class QPType {
+    kPageTable,
+    kLockTable,
+    kHashIndex
+  };
+  
+  std::vector<NodeOffset> ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& faa_bufs);
-  void ShardUnLockHashNode(NodeOffset node_off);
+  void ShardUnLockHashNode(NodeOffset node_off, QPType qptype);
   // Exclusive lock hash node 是一个关键路径，因此需要切换到其他协程，也需要记录下来哪些桶已经上锁成功以及RDMA操作返回值在本机的地址
-  std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
+  std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& cas_bufs);
-  void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off);
-  void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data);
+  void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype);
+  void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype);
 
   DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
 
@@ -188,6 +197,8 @@ class DTX {
   t_id_t t_id;  // Thread ID
 
   coro_id_t coro_id;  // Coroutine ID
+
+  batch_id_t batch_id; // 
 
  public:
   // For statistics

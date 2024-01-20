@@ -201,7 +201,7 @@ void PageTableStore::FillFreeListThread() {
         
         // std::cout << "lock page table id: " << i << std::endl;
         // 加锁成功
-        PageTableNode* node = (PageTableNode*)(offset + page_table_ptr);
+        PageTableNode* node = (PageTableNode*)( i * sizeof(PageTableNode) + page_table_ptr);
         timestamp_t min_timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 5;
         for(int j=0; j<MAX_PAGETABLE_ITEM_NUM_PER_NODE; j++){
           if(node->page_table_items[j].valid == true){
@@ -313,81 +313,81 @@ void PageTableStore::VictimPageThread(){
   }
 }
 
-PageAddress PageTableStore::LocalGetPageFrame(PageId page_id) {
-  uint64_t hash = GetHash(page_id);
-  short next_expand_node_id;
-  PageTableNode* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
-  do {
-    for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
-      if (node->page_table_items[i].page_id == page_id && node->page_table_items[i].valid == true) {
-        // 返回帧号
-        return node->page_table_items[i].page_address;
-      }
-    }
-    // short begin with bucket_num
-    next_expand_node_id = node->next_expand_node_id[0];
-    node = (PageTableNode*)((bucket_num + next_expand_node_id) * sizeof(PageTableNode) + page_table_ptr);
-  } while( next_expand_node_id >= 0);
-  return {-1, INVALID_FRAME_ID};  // failed to found one
-}
+// PageAddress PageTableStore::LocalGetPageFrame(PageId page_id) {
+//   uint64_t hash = GetHash(page_id);
+//   short next_expand_node_id;
+//   PageTableNode* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
+//   do {
+//     for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
+//       if (node->page_table_items[i].page_id == page_id && node->page_table_items[i].valid == true) {
+//         // 返回帧号
+//         return node->page_table_items[i].page_address;
+//       }
+//     }
+//     // short begin with bucket_num
+//     next_expand_node_id = node->next_expand_node_id[0];
+//     node = (PageTableNode*)((bucket_num + next_expand_node_id) * sizeof(PageTableNode) + page_table_ptr);
+//   } while( next_expand_node_id >= 0);
+//   return {-1, INVALID_FRAME_ID};  // failed to found one
+// }
 
-bool PageTableStore::LocalInsertPageTableItem(PageId page_id, PageAddress page_address, MemStoreReserveParam* param) {
+// bool PageTableStore::LocalInsertPageTableItem(PageId page_id, PageAddress page_address, MemStoreReserveParam* param) {
 
-  PageAddress find_exits = LocalGetPageFrame(page_id);
-  // exits same key
-  if(find_exits.frame_id == INVALID_FRAME_ID) return false;
+//   PageAddress find_exits = LocalGetPageFrame(page_id);
+//   // exits same key
+//   if(find_exits.frame_id == INVALID_FRAME_ID) return false;
 
-  uint64_t hash = GetHash(page_id);
-  auto* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
+//   uint64_t hash = GetHash(page_id);
+//   auto* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
 
-  // Find
-  while (true) {
-    for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++){
-      if(node->page_table_items[i].valid == false){
-        node->page_table_items[i].page_id = page_id;
-        node->page_table_items[i].page_address = page_address;
-        node->page_table_items[i].valid = true;
-        return true;
-      }
-    }
+//   // Find
+//   while (true) {
+//     for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++){
+//       if(node->page_table_items[i].valid == false){
+//         node->page_table_items[i].page_id = page_id;
+//         node->page_table_items[i].page_address = page_address;
+//         node->page_table_items[i].valid = true;
+//         return true;
+//       }
+//     }
 
-    if (node->next_expand_node_id[0] <= 0) break;
-    node = (PageTableNode*)((bucket_num + node->next_expand_node_id[0]) * sizeof(PageTableNode) + page_table_ptr);
-  }
+//     if (node->next_expand_node_id[0] <= 0) break;
+//     node = (PageTableNode*)((bucket_num + node->next_expand_node_id[0]) * sizeof(PageTableNode) + page_table_ptr);
+//   }
 
-  // Allocate
-  // RDMA_LOG(INFO) << "Table " << table_id << " alloc a new bucket for key: " << key << ". Current slotnum/bucket: " << ITEM_NUM_PER_NODE;
-  assert((uint64_t)param->mem_store_reserve + param->mem_store_reserve_offset <= (uint64_t)param->mem_store_end);
-  auto* new_node = (PageTableNode*)(param->mem_store_reserve + param->mem_store_reserve_offset);
-  param->mem_store_reserve_offset += sizeof(PageTableNode);
-  memset(new_node, 0, sizeof(PageTableNode));
-  new_node->page_table_items[0].page_id = page_id;
-  new_node->page_table_items[0].page_address = page_address;
-  new_node->page_table_items[0].valid = true;
-  new_node->next_expand_node_id[0] = -1;
-  new_node->page_id = node_num;
-  node->next_expand_node_id[0] = node_num - bucket_num;
+//   // Allocate
+//   // RDMA_LOG(INFO) << "Table " << table_id << " alloc a new bucket for key: " << key << ". Current slotnum/bucket: " << ITEM_NUM_PER_NODE;
+//   assert((uint64_t)param->mem_store_reserve + param->mem_store_reserve_offset <= (uint64_t)param->mem_store_end);
+//   auto* new_node = (PageTableNode*)(param->mem_store_reserve + param->mem_store_reserve_offset);
+//   param->mem_store_reserve_offset += sizeof(PageTableNode);
+//   memset(new_node, 0, sizeof(PageTableNode));
+//   new_node->page_table_items[0].page_id = page_id;
+//   new_node->page_table_items[0].page_address = page_address;
+//   new_node->page_table_items[0].valid = true;
+//   new_node->next_expand_node_id[0] = -1;
+//   new_node->page_id = node_num;
+//   node->next_expand_node_id[0] = node_num - bucket_num;
   
-  node_num++;
-  *fill_page_count = *fill_page_count + 1;
-  return true;
-}
+//   node_num++;
+//   *fill_page_count = *fill_page_count + 1;
+//   return true;
+// }
 
-bool PageTableStore::LocalDeletePageTableItem(PageId page_id) {
-  uint64_t hash = GetHash(page_id);
-  auto* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
-  short next_expand_node_id;
-  do{
-    for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
-      if(node->page_table_items[i].page_id == page_id){ 
-        // find it 
-        node->page_table_items[i].valid = 0;
-        return true;
-      }
-    }
-    // short begin with bucket_num
-    next_expand_node_id = node->next_expand_node_id[0];
-    node = (PageTableNode*)((bucket_num + next_expand_node_id) * sizeof(PageTableNode) + page_table_ptr);
-  } while( next_expand_node_id >= 0);
-  return false;
-}
+// bool PageTableStore::LocalDeletePageTableItem(PageId page_id) {
+//   uint64_t hash = GetHash(page_id);
+//   auto* node = (PageTableNode*)(hash * sizeof(PageTableNode) + page_table_ptr);
+//   short next_expand_node_id;
+//   do{
+//     for (int i=0; i<MAX_PAGETABLE_ITEM_NUM_PER_NODE; i++) {
+//       if(node->page_table_items[i].page_id == page_id){ 
+//         // find it 
+//         node->page_table_items[i].valid = 0;
+//         return true;
+//       }
+//     }
+//     // short begin with bucket_num
+//     next_expand_node_id = node->next_expand_node_id[0];
+//     node = (PageTableNode*)((bucket_num + next_expand_node_id) * sizeof(PageTableNode) + page_table_ptr);
+//   } while( next_expand_node_id >= 0);
+//   return false;
+// }

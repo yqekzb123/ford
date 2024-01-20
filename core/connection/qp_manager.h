@@ -40,6 +40,47 @@ class QPManager {
     return log_qps[node_id];
   }
 
+  ALWAYS_INLINE
+  RCQP* GetRemoteLockQPWithNodeID(const node_id_t node_id) const {
+    return lock_table_qps[node_id];
+  }
+
+  ALWAYS_INLINE
+  RCQP* GetRemotePageTableQPWithNodeID(const node_id_t node_id) const {
+    return page_table_qps[node_id];
+  }
+
+  ALWAYS_INLINE
+  RCQP* GetRemotePageRingbufferQPWithNodeID(const node_id_t node_id) const {
+    return page_ringbuffer_qps[node_id];
+  }
+
+  ALWAYS_INLINE
+  RCQP* GetRemoteIndexQPWithNodeID(const node_id_t node_id) const {
+    return index_qps[node_id];
+  }
+  
+  // *****************
+  ALWAYS_INLINE
+  auto GetLockQPPtrWithNodeID() const {
+    return lock_table_qps;
+  }
+
+  ALWAYS_INLINE
+  auto GetPageTableQPPtrWithNodeID() const {
+    return page_table_qps;
+  }
+
+  ALWAYS_INLINE
+  auto GetPageRingbufferQPPtrWithNodeID() const {
+    return page_ringbuffer_qps;
+  }
+
+  ALWAYS_INLINE
+  auto GetIndexQPPtrWithNodeID() const {
+    return index_qps;
+  }
+
  private:
   RCQP* data_qps[MAX_REMOTE_NODE_NUM]{nullptr};
 

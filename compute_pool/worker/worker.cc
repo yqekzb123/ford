@@ -80,7 +80,7 @@ __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
 __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
 const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
-const coro_id_t BATCH_TXN_ID = 1;
+// const coro_id_t BATCH_TXN_ID = 0;
 
 // For MICRO benchmark
 __thread ZipfGen* zipf_gen = nullptr;
@@ -94,8 +94,11 @@ __thread uint64_t* thread_local_try_times;
 __thread uint64_t* thread_local_commit_times;
 
 void BatchExec(coro_yield_t& yield) {
-  printf("worker.cc:97, batch exe\n");
-  local_batch_store.ExeBatch(yield);
+  while (true) {
+    printf("worker.cc:97, batch exe\n");
+    local_batch_store.ExeBatch(yield);
+    coro_sched->YieldBatch(yield, BATCH_TXN_ID);
+  }
 }
 
 // Coroutine 0 in each thread does polling
@@ -104,7 +107,7 @@ void PollCompletion(coro_yield_t& yield) {
     coro_sched->PollCompletion();
     Coroutine* next = coro_sched->coro_head->next_coro;
     // if (next->coro_id == BATCH_TXN_ID) {
-    BatchExec(yield);
+    // BatchExec(yield);
     // } else 
     if (next->coro_id != POLL_ROUTINE_ID) {
       // RDMA_LOG(DBG) << "Coro 0 yields to coro " << next->coro_id;
@@ -761,8 +764,8 @@ void run_thread(thread_params* params,
     // Bind workload to coroutine
     if (coro_i == POLL_ROUTINE_ID) {
       coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
-    // } else if (coro_i == BATCH_TXN_ID) {
-      // coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
+    } else if (coro_i == BATCH_TXN_ID) {
+      coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
     } else {
       if (bench_name == "tatp") {
         coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));

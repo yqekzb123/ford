@@ -81,7 +81,12 @@ void PageTableServer::PreparePageTableStoreMeta(node_id_t machine_id, char** has
   page_table_meta = new PageTableMeta((uint64_t)page_table_store->GetAddrPtr(),
                                         page_table_store->GetBucketNum(),
                                         page_table_store->PageTableNodeSize(),
-                                        page_table_store->GetBaseOff());
+                                        page_table_store->GetBaseOff(),
+                                        page_table_store->GetExpandBaseOff(),
+                                        page_table_store->ring_buffer_base_off,
+                                        page_table_store->ring_buffer_head_off,
+                                        page_table_store->ring_buffer_tail_off,
+                                        page_table_store->ring_buffer_item_num_off);
 
   int hash_meta_len = sizeof(PageTableMeta);
   total_meta_size = sizeof(machine_id) + hash_meta_len + sizeof(MEM_STORE_META_END);

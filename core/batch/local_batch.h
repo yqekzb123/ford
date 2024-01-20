@@ -5,27 +5,35 @@
 // #include "worker/global.h"
 #include "dtx/dtx.h" 
 #include "bench_dtx.h" 
+#include "local_data.h"
 
 #define LOCAL_BATCH_TXN_SIZE 100
-
+#define BATCH_TXN_ID 1
 class LocalBatch{
 public:
     batch_id_t batch_id;
     pthread_mutex_t latch;
     std::vector<BenchDTX*> txn_list; 
-    int current_batch_cnt;
+    int current_txn_cnt;    // 当前batch中已经绑定的事务数量
+
+    int start_commit_txn_cnt;   // 刚刚插入的事务数量
+    int finish_commit_txn_cnt;  // 已经在batch的版本链中填入数据的事务
     LocalBatch(batch_id_t id) {
-        current_batch_cnt = 0;
+        current_txn_cnt = 0;
+        start_commit_txn_cnt = 0;
+        finish_commit_txn_cnt = 0;
         batch_id = id;
         pthread_mutex_init(&latch, nullptr);
         txn_list.clear();
     }
     bool InsertTxn(BenchDTX* txn) {
+        txn->dtx->coro_id = BATCH_TXN_ID;
         pthread_mutex_lock(&latch);
-        if (current_batch_cnt < LOCAL_BATCH_TXN_SIZE) {
+        if (current_txn_cnt < LOCAL_BATCH_TXN_SIZE) {
             txn_list.push_back(txn);
             // txn_list[current_batch_cnt] = txn;
-            current_batch_cnt++;
+            current_txn_cnt++;
+            start_commit_txn_cnt++;
             pthread_mutex_unlock(&latch);
             return true;
         } else {
@@ -33,9 +41,21 @@ public:
             return false;
         }
     }
+    void EndInsertTxn() {
+        pthread_mutex_lock(&latch);
+        finish_commit_txn_cnt++;
+        pthread_mutex_unlock(&latch);
+    }
+    bool CanExec() {
+        bool r1 = start_commit_txn_cnt == finish_commit_txn_cnt;
+        bool r2 = current_txn_cnt >= LOCAL_BATCH_TXN_SIZE;
+        return r1 && r2;
+    }
     bool ExeBatchRW(coro_yield_t& yield);
     std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
     bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr> data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
+
+    LocalDataStore local_data_store;
 private:
 };
 
@@ -55,23 +75,35 @@ public:
     LocalBatch* GetBatch() {
         if (!local_store.empty()) {
             LocalBatch* batch = local_store.front();
-            local_store.erase(local_store.begin());
-            return batch;
-        } else {
-            return nullptr;
-        }
+            if (batch->CanExec()) {
+                local_store.erase(local_store.begin());
+                return batch;
+            }
+        } 
+        return nullptr;
     }
-    bool InsertTxn(BenchDTX* txn) {
+
+    LocalBatch* GetBatchById(batch_id_t id) {
+        for (auto it = local_store.rbegin(); it != local_store.rend(); ++it) {
+            auto batch = *it;
+            if (batch->batch_id == id) return batch;
+        }
+        assert(false);
+    }
+
+
+    LocalBatch* InsertTxn(BenchDTX* txn) {
         LocalBatch *batch = nullptr;
         if (!local_store.empty()) {
             batch = local_store.back();
-            if (batch->InsertTxn(txn)) return true;
+            if (batch->InsertTxn(txn)) return batch;
         } 
         CreateBatch();
         batch = local_store.back();
         batch->InsertTxn(txn);
-        return true;
+        return batch;
     }
+
     void CreateBatch() {
         pthread_mutex_lock(&latch);
         batch_id_t batch_id = GenerateBatchID();

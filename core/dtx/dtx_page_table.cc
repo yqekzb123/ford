@@ -1,4 +1,6 @@
-// author: huang chunyue
+// Author: huangdund
+// Copyright (c) 2023
+
 #include "dtx/dtx.h"
 #include <chrono>
 #include <future>
@@ -21,7 +23,7 @@ PageAddress DTX::GetFreePageSlot(){
     PageAddress res;
     while (true) {    
         for(int i=0; i<nodes.size(); i++){
-            RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(nodes[i]);
+            RCQP* qp = thread_qp_man->GetRemotePageRingbufferQPWithNodeID(nodes[i]);
             char* faa_cnt_buf = thread_rdma_buffer_alloc->Alloc(sizeof(int64_t));
             char* faa_tail_buf = thread_rdma_buffer_alloc->Alloc(sizeof(uint64_t));
             
@@ -222,7 +224,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
 
     while (pending_hash_node_latch_offs.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kPageTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -262,8 +264,9 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                             page_table_node->page_table_items[i].rwcount++;
                         }
                         // erase会返回下一个元素的迭代器
-                        get_pagetable_request_list[node_off].erase(it);
+                        it = get_pagetable_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -342,7 +345,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off], QPType::kPageTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
@@ -395,7 +398,7 @@ void DTX::UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std:
 
     while (pending_hash_node_latch_offs.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
-        auto succ_node_off = ExclusiveLockHashNode(yield, local_hash_nodes, cas_bufs);
+        auto succ_node_off = ExclusiveLockHashNode(yield, QPType::kPageTable, local_hash_nodes, cas_bufs);
         // init hold_node_off_latch
         for(auto node_off : succ_node_off ){
             hold_node_off_latch.emplace(node_off);
@@ -424,8 +427,9 @@ void DTX::UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std:
                             page_table_node->page_table_items[i].last_access_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                         }
                         // erase会返回下一个元素的迭代器
-                        get_pagetable_request_list[node_off].erase(it);
+                        it = get_pagetable_request_list[node_off].erase(it);
                         is_find = true;
+                        break;
                     }
                 }
                 // not find
@@ -492,7 +496,7 @@ void DTX::UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std:
         }
         // release all latch and write back
         for (auto node_off : unlock_node_off_with_write){
-            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off]);
+            ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off], QPType::kPageTable);
             hold_node_off_latch.erase(node_off);
         }
         unlock_node_off_with_write.clear();
