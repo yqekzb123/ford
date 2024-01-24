@@ -75,7 +75,7 @@ void Handler::GenThreads(std::string bench_name) {
   connected_t_num = 0;  // Sync all threads' RDMA QP connections
   auto thread_arr = new std::thread[thread_num_per_machine];
 
-  auto* global_meta_man = new MetaManager();
+  auto* global_meta_man = new MetaManager(bench_name);
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
 
@@ -285,7 +285,7 @@ void Handler::GenThreadsForMICRO() {
   tx_id_generator = 0;  // Initial transaction id == 0
   connected_t_num = 0;  // Sync all threads' RDMA QP connections
   auto thread_arr = new std::thread[thread_num_per_machine];
-  auto* global_meta_man = new MetaManager();
+  auto* global_meta_man = new MetaManager("micro");
   auto* global_vcache = new VersionCache();
   auto* global_lcache = new LockCache();
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";

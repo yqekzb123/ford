@@ -52,6 +52,10 @@ PageAddress DTX::GetFreePageSlot(){
                 if (rc != SUCC) {
                     RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                 }
+                rc = qp->poll_till_completion(wc, no_timeout);
+                if (rc != SUCC) {
+                    RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
+                }
 
                 if(*(int64_t*)faa_cnt_buf < BATCH_GET_FREE_PAGE_SIZE){
                     // buffer has not enough free page
@@ -64,6 +68,10 @@ PageAddress DTX::GetFreePageSlot(){
                         RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "GetFreePageThread";
                     }
                     ibv_wc wc{};
+                    rc = qp->poll_till_completion(wc, no_timeout);
+                    if (rc != SUCC) {
+                        RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
+                    }
                     rc = qp->poll_till_completion(wc, no_timeout);
                     if (rc != SUCC) {
                         RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
@@ -92,6 +100,30 @@ PageAddress DTX::GetFreePageSlot(){
                         if (rc != SUCC) {
                             RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
                         }
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
+                        }
+
+                        // 写回unvalid标志位
+                        char* write_free_page = thread_rdma_buffer_alloc->Alloc(sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE);
+                        memset(write_free_page, 0, sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE);
+                        rc = qp->post_send(IBV_WR_RDMA_WRITE, write_free_page, read_size_1, read_off_1, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post write fail. rc=" << rc << "GetFreePageThread";
+                        }
+                        rc = qp->post_send(IBV_WR_RDMA_WRITE, write_free_page + read_size_1, read_size_2, read_off_2, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post write fail. rc=" << rc << "GetFreePageThread";
+                        }
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll write fail. rc=" << rc << "GetFreePageThread";
+                        }
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll write fail. rc=" << rc << "GetFreePageThread";
+                        }
                     }
                     else{
                         offset_t read_off = ring_buffer_base_off + (*(uint64_t*)faa_tail_buf % MAX_FREE_LIST_BUFFER_SIZE) * sizeof(RingBufferItem);
@@ -104,6 +136,19 @@ PageAddress DTX::GetFreePageSlot(){
                         rc = qp->poll_till_completion(wc, no_timeout);
                         if (rc != SUCC) {
                             RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "GetFreePageThread";
+                        }
+                        
+                        // 写回unvalid标志位
+                        char* write_free_page = thread_rdma_buffer_alloc->Alloc(sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE);
+                        memset(write_free_page, 0, sizeof(RingBufferItem) * BATCH_GET_FREE_PAGE_SIZE);
+                        
+                        rc = qp->post_send(IBV_WR_RDMA_WRITE, write_free_page, read_size, read_off, IBV_SEND_SIGNALED);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: post write fail. rc=" << rc << "GetFreePageThread";
+                        }
+                        rc = qp->poll_till_completion(wc, no_timeout);
+                        if (rc != SUCC) {
+                            RDMA_LOG(ERROR) << "client: poll write fail. rc=" << rc << "GetFreePageThread";
                         }
                     }
                     for(int i=0; i<BATCH_GET_FREE_PAGE_SIZE; i++){

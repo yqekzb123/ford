@@ -13,8 +13,8 @@ DTX::DTX(MetaManager* meta_man,
          RDMABufferAllocator* rdma_buffer_allocator,
          LogOffsetAllocator* remote_log_offset_allocator,
          AddrCache* addr_buf,
-         std::list<PageAddress>* free_page_list, 
-         std::mutex* free_page_list_mutex) {
+         std::list<PageAddress>* _free_page_list, 
+         std::mutex* _free_page_list_mutex) {
   // Transaction setup
   tx_id = 0;
   t_id = tid;
@@ -27,8 +27,8 @@ DTX::DTX(MetaManager* meta_man,
   thread_rdma_buffer_alloc = rdma_buffer_allocator;
   tx_status = TXStatus::TX_INIT;
 
-  free_page_list = free_page_list;
-  free_page_list_mutex = free_page_list_mutex;
+  free_page_list = _free_page_list;
+  free_page_list_mutex = _free_page_list_mutex;
 
   select_backup = 0;
   // thread_remote_log_offset_alloc = remote_log_offset_allocator;

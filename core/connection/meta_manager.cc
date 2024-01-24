@@ -5,7 +5,45 @@
 
 #include "util/json_config.h"
 
-MetaManager::MetaManager() {
+MetaManager::MetaManager(std::string bench_name) {
+  // init table name and table id map
+  if (bench_name == "tatp") {
+    table_name_map[0] = "TATP_subscriber";
+    table_name_map[1] = "TATP_sec_subcriber";
+    table_name_map[2] = "TATP_special_facility";
+    table_name_map[3] = "TATP_access_info";
+    table_name_map[4] = "TATP_call_forwarding";
+
+    // TODO
+  } else if (bench_name == "smallbank") {
+    table_name_map[0] = "SmallBank_savings";
+    table_name_map[1] = "SmallBank_checking";
+
+    TableMeta meta;
+    meta.record_size_ = sizeof(DataItem);
+    meta.num_records_per_page_ = (8 * (PAGE_SIZE - 1 - 20) + 1) / (1 + (meta.record_size_ + sizeof(itemkey_t)) * 8);
+    meta.bitmap_size_ = (meta.num_records_per_page_ + 8 - 1) / 8;
+    
+    table_meta_map[0] = meta;
+    table_meta_map[1] = meta;
+  } else if (bench_name == "tpcc") {
+    table_name_map[0] = "TPCC_warehouse";
+    table_name_map[1] = "TPCC_district";
+    table_name_map[2] = "TPCC_customer";
+    table_name_map[3] = "TPCC_history";
+    table_name_map[4] = "TPCC_new_order";
+    table_name_map[5] = "TPCC_order";
+    table_name_map[6] = "TPCC_order_line";
+    table_name_map[7] = "TPCC_item";
+    table_name_map[8] = "TPCC_stock";
+    table_name_map[9] = "TPCC_customer_index";
+    table_name_map[10] = "TPCC_order_index";
+    // TODO
+  } else if (bench_name == "micro"){
+    table_name_map[0] = "MICRO_micro";
+    // TODO
+  }
+
   // Read config json file
   std::string config_filepath = "../../../config/compute_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);

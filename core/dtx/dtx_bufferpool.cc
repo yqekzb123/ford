@@ -62,7 +62,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
             brpc::ChannelOptions options;
             brpc::Channel channel;
             
-            options.use_rdma = true;
+            options.use_rdma = false;
             options.protocol = FLAGS_protocol;
             options.connection_type = FLAGS_connection_type;
             options.timeout_ms = FLAGS_timeout_ms;
@@ -76,7 +76,8 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
             storage_service::GetPageResponse response;
             brpc::Controller cntl;
 
-            request.mutable_page_id()->set_table_name(global_meta_man->GetTableName(page_ids[i].table_id));
+            std::string table_name = global_meta_man->GetTableName(page_ids[i].table_id);
+            request.mutable_page_id()->set_table_name(table_name);
             request.mutable_page_id()->set_page_no(page_ids[i].page_no);
 
             request.set_require_batch_id(request_batch_id);
@@ -85,7 +86,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
 
             const char *constPage = response.data().c_str();
             char *page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
-            std::strcpy(page, constPage);
+            memcpy(page, constPage, PAGE_SIZE);
             pages.emplace(page_ids[i], page);
         }
         else if(now_valid[page_ids[i]] == true){
@@ -147,8 +148,8 @@ bool DTX::UnpinPage(coro_yield_t &yield, std::unordered_map<PageId, UnpinPageArg
 DataItemPtr DTX::GetDataItemFromPage(table_id_t table_id, char* data, Rid rid){
     char *bitmap = data + sizeof(RmPageHdr) + OFFSET_PAGE_HDR;
     char *slots = bitmap + global_meta_man->GetTableMeta(table_id).bitmap_size_;
-    char* tuple = slots + rid.slot_no_ * sizeof(DataItem);
-    DataItemPtr itemPtr((DataItem*)tuple);
+    char* tuple = slots + rid.slot_no_ * (sizeof(DataItem) + + sizeof(itemkey_t));
+    DataItemPtr itemPtr((DataItem*)(tuple + sizeof(itemkey_t)));
     return itemPtr;
 }
 

@@ -137,8 +137,8 @@ void PageTableStore::BuildConnectWithRingBuffer(){
   // ! 这里的local_mr 疑似被析构了? 
   MemoryAttr local_mr = global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
   //! 这里create_rc_idx(0, 0)存疑 
-  connect_local_ring_qp = global_rdma_ctrl->create_rc_qp(create_rc_idx(0, 0), opened_rnic, &local_mr);
-  connect_local_page_table_qp = global_rdma_ctrl->create_rc_qp(create_rc_idx(0, 1), opened_rnic, &local_mr);
+  connect_local_ring_qp = global_rdma_ctrl->create_rc_qp(create_rc_idx(local_machine_id, 10085), opened_rnic, &local_mr);
+  connect_local_page_table_qp = global_rdma_ctrl->create_rc_qp(create_rc_idx(local_machine_id, 10086), opened_rnic, &local_mr);
   assert(connect_local_ring_qp != nullptr);
   assert(connect_local_page_table_qp != nullptr);
   ConnStatus rc;
@@ -262,6 +262,7 @@ void PageTableStore::VictimPageThread(){
     if (rc != SUCC) {
       RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
     }
+
     rc = connect_local_ring_qp->post_faa(faa_head_buf, ring_buffer_head_off, 1, IBV_SEND_SIGNALED);
     if (rc != SUCC) {
       RDMA_LOG(ERROR) << "client: post faa fail. rc=" << rc << "VictimPageThread";
@@ -298,8 +299,12 @@ void PageTableStore::VictimPageThread(){
       // 从free list中取一个元素放入环形缓冲区
       free_list_mutex_.lock();
       uint64_t head = (*(uint64_t*)faa_head_buf) % MAX_FREE_LIST_BUFFER_SIZE;
+      while (ring_free_frame_buffer_.free_list_buffer_[head].valid == true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
       auto free_page = free_list_.front();
       ring_free_frame_buffer_.free_list_buffer_[head] = {free_page.first, free_page.second, true};
+      std::cout << "free page: " << free_page.first << " " << free_page.second << "in head: " << head << std::endl;
       free_list_.pop_front();
 
       if(free_list_.size() < MAX_FREE_LIST_VICTIM_SIZE){

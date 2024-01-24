@@ -37,7 +37,7 @@ struct RemoteNode {
 // 感觉是用来和内存层交互的？
 class MetaManager {
  public:
-  MetaManager();
+  MetaManager(std::string bench_name);
 
   node_id_t GetRemoteDataStoreMeta(std::string& remote_ip, int remote_port);
 
