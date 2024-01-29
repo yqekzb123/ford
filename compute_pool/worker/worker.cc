@@ -95,7 +95,7 @@ __thread uint64_t* thread_local_commit_times;
 
 void BatchExec(coro_yield_t& yield) {
   while (true) {
-    printf("worker.cc:97, batch exe\n");
+    // printf("worker.cc:97, batch exe\n");
     local_batch_store.ExeBatch(yield);
     coro_sched->YieldBatch(yield, BATCH_TXN_ID);
   }
@@ -302,7 +302,14 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
 
 void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
   // Each coroutine has a dtx: Each coroutine is a coordinator
-  DTX* dtx = new DTX(meta_man,
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
+  int execute_cnt = 0;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
                      qp_man,
                      status,
                      lock_table,
@@ -314,12 +321,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      addr_cache,
                      free_page_list,
                      free_page_list_mutex);
-  struct timespec tx_start_time, tx_end_time;
-  bool tx_committed = false;
-  int execute_cnt = 0;
-  // Running transactions
-  clock_gettime(CLOCK_REALTIME, &msr_start);
-  while (true) {
+
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
     stat_attempted_tx_total++;
@@ -340,31 +342,31 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       case SmallBankTxType::kBalance: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalBalance(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kDepositChecking: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalDepositChecking(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kSendPayment: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalSendPayment(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kTransactSaving: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalTransactSaving(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kWriteCheck: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalWriteCheck(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       default:
@@ -396,7 +398,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     }
     /********************************** Stat end *****************************************/
   }
-  delete dtx;
+  // delete dtx;
 }
 
 void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
@@ -800,6 +802,8 @@ void run_thread(thread_params* params,
   stop_run = true;
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
+
+  printf("Finish, Tps: %ld", commit_times);
 
   // Clean
   delete[] timer;

@@ -5,6 +5,7 @@
 
 #include <memory>
 
+#include "worker/global.h"
 #include "dtx/dtx.h"
 // #include "local_exec/local_data.h"
 #include "bench_dtx.h"
@@ -108,5 +109,8 @@ public:
         default:
             break;
         }
+    }
+    bool StatCommit() {
+        // thread_local_commit_times[uint64_t(type)]++;
     }
 };

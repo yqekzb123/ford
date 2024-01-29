@@ -28,9 +28,5 @@ class StoragePoolImpl : public StorageService{
   private:
     LogManager* log_manager_;
     DiskManager* disk_manager_;
-
   };
-
-
-
 }

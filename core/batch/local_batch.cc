@@ -8,7 +8,6 @@
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   // 先随便整个dtx结构出来
-  printf("local_batch.cc:11\n");
   bool res = true;
   BenchDTX* first_bdtx = txn_list.front();
   DTX* first_dtx = first_bdtx->dtx;
@@ -16,7 +15,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   //! 0.统计只读和读写的操作列表
   std::vector<table_id_t> readonly_tableid;
   std::vector<itemkey_t> readonly_keyid;
+  int i = 0;
   for (auto& dtx : txn_list) {
+    i++;
+    if(dtx->dtx->read_only_set.empty()) continue;
     for (auto& item : dtx->dtx->read_only_set) {
       auto it = item.item_ptr;
       readonly_tableid.push_back(it->table_id);
@@ -25,7 +27,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   }
   std::vector<table_id_t> readwrite_tableid;
   std::vector<itemkey_t> readwrite_keyid;
+  i=0;
   for (auto& dtx : txn_list) {
+    i++;
+    if(dtx->dtx->read_write_set.empty()) continue;
     for (auto& item : dtx->dtx->read_write_set) {
       auto it = item.item_ptr;
       readonly_tableid.push_back(it->table_id);
@@ -65,9 +70,11 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   //! 3. 读取数据项
   auto data_list = ReadData(yield, first_dtx,index);
   //! 4. 从页中取出数据，将数据存入local，还没想好存到哪
-  for (auto& item : data_list) {
+  for (auto item : data_list) {
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
-    data_item->SetFirstVersion(item.get());
+    // printf("local_batch.cc:70, set the first value of local data table %ld key %ld ptr %p\n",item->table_id, item->key, data_item);
+    data_item->SetFirstVersion(item);
+    // printf("local_batch.cc:72, local data table %ld key %ld ptr %p\n",item->table_id, item->key, data_item);
   }
 
   //! 5. 根据数据项进行本地计算
@@ -76,11 +83,16 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     res = dtx->TxReCaculate(yield);
   }
 
-  std::vector<DataItemPtr> new_data_list;
-
+  // std::vector<DataItemPtr> new_data_list;
   //! 6. 将确定的数据，利用RDMA刷入页中
   FlushWrite(yield, first_dtx,data_list,index);
 
+  StatCommit();
+  for (auto& dtx : txn_list) {
+    // !清理事务
+    delete dtx;
+  }
+  // std::fill(data_list.begin(), data_list.end(), nullptr);
   return res;
 }
 
@@ -102,21 +114,33 @@ std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dt
   return data_list;
 }
 
-bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr> data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index) {
+bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>& index) {
   std::vector<Rid> id_list;
   std::vector<table_id_t> tid_list;
-  // std::vector<DataItemPtr> data_list;
+  std::vector<DataItemPtr> new_data_list;
 
   std::vector<DTX::FetchPageType> fetch_type;
   std::vector<PageAddress> page_address;
 
-  for (auto& item : data_list) {
+  for (auto item : data_list) {
     tid_list.push_back(item->table_id);
     id_list.push_back(index[item->table_id][item->key]);
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
     LVersion* v = data_item->GetTailVersion();
-    data_list.push_back(v->value);
+    DataItemPtr itemPtr((DataItem*)(v->value));
+    new_data_list.push_back(itemPtr);
   }
-  first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, data_list,batch_id, page_address);
+  // first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id, page_address);
+  tid_list.clear();
+  id_list.clear();
+  new_data_list.clear();
+
   return true;
+}
+
+bool LocalBatch::StatCommit() {
+  commit_times += txn_list.size();
+  // for (auto& dtx : txn_list) {
+  //   dtx->StatCommit();
+  // }
 }

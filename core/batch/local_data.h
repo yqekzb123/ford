@@ -46,14 +46,15 @@ public:
         LVersion *newv = (LVersion*)malloc(sizeof(LVersion));
         newv->next = nullptr;
         newv->has_value = false;
-        newv->SetVersionDTX(txn);
+        newv->SetVersionDTX(txn,txn->tx_id);
         if (versions == nullptr) {
             versions = newv;
             tail_version = newv;
         } else {
             tail_version->next = newv;
             tail_version = newv;
-        }     
+            assert(versions->next != nullptr);
+        }
     }
 
     LVersion * GetDTXVersion(DTX *txn) {
@@ -68,8 +69,9 @@ public:
     LVersion * GetDTXVersionWithDataItem(DTX *txn) {
         LVersion* ptr = versions->next;
         LVersion* last = versions;
+        assert(ptr != nullptr);
         while(true) {
-            if (ptr->txn == txn) {
+            if (ptr->tx_id == txn->tx_id) {
                 last->CopyDataItemToNext();
                 return ptr;
             }
@@ -84,7 +86,7 @@ public:
     }
 
     // 设置头部version的值，然后事务重新计算
-    bool SetFirstVersion(DataItem* data) {
+    bool SetFirstVersion(DataItemPtr data) {
         versions->SetDataItem(data);
     }
 };
@@ -98,16 +100,15 @@ public:
     
     LocalData* GetData(table_id_t table_id, itemkey_t key) {
         LocalData* data = nullptr;
-        // printf("local_data.h:112\n");
         LocalDataTable table = local_store[table_id];
-        // printf("local_data.h:114\n");
-        data = table[key];
-        // printf("local_data.h:116\n");
+        // printf("local_data.h:104, find table id %ld ptr %p\n", table_id, table);
+        data = table[key]; 
         if (data == nullptr) {
             // 如果data不存在，则自动创建一个临时的
             data = new LocalData();
             // (LocalData*)malloc(sizeof(LocalData));
-            table.insert(std::make_pair(key,data));
+            local_store[table_id].insert(std::make_pair(key,data));
+            printf("local_data.h:113, create non-exist key %ld data %p\n", key, data);
         }
         // printf("local_data.h:122\n");
         return data;

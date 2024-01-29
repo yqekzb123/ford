@@ -148,8 +148,9 @@ bool DTX::UnpinPage(coro_yield_t &yield, std::unordered_map<PageId, UnpinPageArg
 DataItemPtr DTX::GetDataItemFromPage(table_id_t table_id, char* data, Rid rid){
     char *bitmap = data + sizeof(RmPageHdr) + OFFSET_PAGE_HDR;
     char *slots = bitmap + global_meta_man->GetTableMeta(table_id).bitmap_size_;
-    char* tuple = slots + rid.slot_no_ * (sizeof(DataItem) + + sizeof(itemkey_t));
-    DataItemPtr itemPtr((DataItem*)(tuple + sizeof(itemkey_t)));
+    char* tuple = slots + rid.slot_no_ * (sizeof(DataItem) + sizeof(itemkey_t));
+    DataItemPtr itemPtr = std::make_shared<DataItem>(*reinterpret_cast<DataItem*>(tuple + sizeof(itemkey_t)));
+    // DataItemPtr itemPtr((DataItem*)(tuple + sizeof(itemkey_t)));
     return itemPtr;
 }
 

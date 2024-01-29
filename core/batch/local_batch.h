@@ -53,8 +53,8 @@ public:
     }
     bool ExeBatchRW(coro_yield_t& yield);
     std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
-    bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr> data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
-
+    bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>& index);
+    bool StatCommit();
     LocalDataStore local_data_store;
 private:
 };
@@ -84,10 +84,12 @@ public:
     }
 
     LocalBatch* GetBatchById(batch_id_t id) {
+        if (now_exec!=nullptr && now_exec->batch_id == id) return now_exec;
         for (auto it = local_store.rbegin(); it != local_store.rend(); ++it) {
             auto batch = *it;
             if (batch->batch_id == id) return batch;
         }
+        
         assert(false);
     }
 
@@ -109,6 +111,7 @@ public:
         batch_id_t batch_id = GenerateBatchID();
         LocalBatch* batch = new LocalBatch(batch_id);
         local_store.push_back(batch);
+        printf("local_batch.h:112, create new batch, batch id %ld\n",batch_id);
         pthread_mutex_unlock(&latch);
     }
 
@@ -118,6 +121,7 @@ public:
             if (now_exec == nullptr) {
                 return;
             }
+            printf("local_batch.h:121, exe batch %ld\n", now_exec->batch_id);
         }
         now_exec->ExeBatchRW(yield);
     }

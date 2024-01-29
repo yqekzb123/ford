@@ -35,41 +35,6 @@ enum ValStatus : int {
 
 // Following are stuctures for maintaining coroutine's state, similar to context switch
 class DTX;
-struct LVersion{
-    // VersionType type; 
-    // void* txn; //实际上是DTX结构
-    DTX *txn; // 标记是哪个事务写的
-    LVersion* next;
-    DataItemPtr value; // 实际的值，可以是空
-    bool has_value;
-
-    LVersion() {
-        next = nullptr;
-        value = nullptr;
-        has_value = false;
-    }
-
-    void SetVersionDTX(DTX *t) {
-        txn = t;
-    }
-
-    void SetDataItem(DataItem* data) {
-        std::shared_ptr<DataItem> p(new DataItem());
-        value = p;
-        memcpy(p.get(), data, sizeof(DataItem));
-        // value.reset(data);
-        has_value = true;
-    }
-
-    void CopyDataItemToNext(){
-        assert(next != nullptr);
-        assert(value != nullptr);
-        std::shared_ptr<DataItem> p(new DataItem());
-        next->value = p;
-        memcpy(p.get(), value.get(), sizeof(DataItem));
-    }
-};
-using LVersionPtr = std::shared_ptr<LVersion>;
 
 struct DataSetItem {
   DataSetItem(DataItemPtr item) {

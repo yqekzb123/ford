@@ -6,3 +6,6 @@
 
 extern LocalLockStore local_lock_store;
 extern LocalBatchStore local_batch_store;
+
+// Stat the commit rate
+extern uint64_t commit_times;

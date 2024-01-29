@@ -39,8 +39,9 @@ struct LVersion{
     // VersionType type; 
     // void* txn; //实际上是DTX结构
     DTX *txn; // 标记是哪个事务写的
+    tx_id_t tx_id;  //标记事务号
     LVersion* next;
-    DataItemPtr value; // 实际的值，可以是空
+    DataItem* value; // 实际的值，可以是空
     bool has_value;
 
     LVersion() {
@@ -49,24 +50,23 @@ struct LVersion{
         has_value = false;
     }
 
-    void SetVersionDTX(DTX *t) {
+    void SetVersionDTX(DTX *t, tx_id_t tid) {
         txn = t;
+        tx_id = tid;
     }
 
-    void SetDataItem(DataItem* data) {
-        std::shared_ptr<DataItem> p(new DataItem());
-        value = p;
-        memcpy(p.get(), data, sizeof(DataItem));
-        // value.reset(data);
+    void SetDataItem(DataItemPtr data) {
+        value = new DataItem();
+        memcpy(value, data.get(), sizeof(DataItem));
         has_value = true;
     }
 
     void CopyDataItemToNext(){
         assert(next != nullptr);
         assert(value != nullptr);
-        std::shared_ptr<DataItem> p(new DataItem());
-        next->value = p;
-        memcpy(p.get(), value.get(), sizeof(DataItem));
+        // std::shared_ptr<DataItem> p(new DataItem());
+        next->value = new DataItem();
+        memcpy(next->value, value, sizeof(DataItem));
     }
 };
 using LVersionPtr = std::shared_ptr<LVersion>;

@@ -6,3 +6,5 @@
 
 LocalLockStore local_lock_store;
 LocalBatchStore local_batch_store;
+
+uint64_t commit_times = 0;

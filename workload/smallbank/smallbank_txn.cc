@@ -8,6 +8,7 @@
 bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeAmalgamate;
   /* Transaction parameters */
   uint64_t acct_id_0, acct_id_1;
   smallbank_client->get_two_accounts(seed, &acct_id_0, &acct_id_1);
@@ -15,8 +16,6 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
   /* Read from savings and checking tables for acct_id_0 */
   smallbank_savings_key_t sav_key_0;
   sav_key_0.acct_id = acct_id_0;
-  // a1.sav_obj_0 = std::make_shared<LVersion>();
-  // a1.sav_obj_0->value = std::make_shared<DataItem>((table_id_t)
   a1.sav_obj_0 = std::make_shared<DataItem>((table_id_t)
   SmallBankTableType::kSavingsTable, sav_key_0.item_key);
   dtx->AddToReadWriteSet(a1.sav_obj_0);
@@ -24,16 +23,12 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
   smallbank_checking_key_t chk_key_0;
   chk_key_0.acct_id = acct_id_0;
   a1.chk_obj_0 = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kCheckingTable, chk_key_0.item_key);
-  //  = std::make_shared<LVersion>();
-  // a1.chk_obj_0->value 
   dtx->AddToReadWriteSet(a1.chk_obj_0);
 
   /* Read from checking account for acct_id_1 */
   smallbank_checking_key_t chk_key_1;
   chk_key_1.acct_id = acct_id_1;
   a1.chk_obj_1 = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kCheckingTable, chk_key_1.item_key);
-  // = std::make_shared<LVersion>();
-  // a1.chk_obj_1->value
   dtx->AddToReadWriteSet(a1.chk_obj_1);
 
   if (!dtx->TxLocalExe(yield)) return false;
@@ -79,6 +74,7 @@ bool SmallBankDTX::TxReCaculateAmalgamate(coro_yield_t& yield) {
 bool SmallBankDTX::TxLocalBalance(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeBalance;
   /* Transaction parameters */
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
@@ -119,6 +115,7 @@ bool SmallBankDTX::TxReCaculateBalance(coro_yield_t& yield) {
 bool SmallBankDTX::TxLocalDepositChecking(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeDepositChecking;
   /* Transaction parameters */
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
@@ -155,6 +152,7 @@ bool SmallBankDTX::TxReCaculateDepositChecking(coro_yield_t& yield) {
 bool SmallBankDTX::TxLocalSendPayment(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeSendPayment;
   /* Transaction parameters: send money from acct_id_0 to acct_id_1 */
   uint64_t acct_id_0, acct_id_1;
   smallbank_client->get_two_accounts(seed, &acct_id_0, &acct_id_1);
@@ -208,6 +206,7 @@ bool SmallBankDTX::TxReCaculateSendPayment(coro_yield_t& yield) {
 bool SmallBankDTX::TxLocalTransactSaving(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeTransactSaving;
   /* Transaction parameters */
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
@@ -244,6 +243,7 @@ bool SmallBankDTX::TxReCaculateTransactSaving(coro_yield_t& yield) {
 bool SmallBankDTX::TxLocalWriteCheck(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
+  type = TypeWriteCheck;
   /* Transaction parameters */
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
