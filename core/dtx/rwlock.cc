@@ -105,7 +105,6 @@ std::vector<NodeOffset> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType q
     for(auto node_off: pending_hash_node_latch_offs) {
         std::shared_ptr<ExclusiveLock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveLock_SharedMutex_Batch>();
         doorbell->SetLockReq(cas_bufs[node_off], node_off.offset);
-        // TODO: 统一IndexNode和其他Node的size大小
         doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
         if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
@@ -190,7 +189,7 @@ void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_bac
     std::shared_ptr<ExclusiveUnlock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveUnlock_SharedMutex_Batch>();
 
     // 不写lock，写入后面所有字节
-    doorbell->SetWriteReq(write_back_data, node_off.offset + sizeof(lock_t), sizeof(IndexNode)-sizeof(lock_t));  // Read a hash index bucket
+    doorbell->SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
     // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
     doorbell->SetUnLockReq(faa_buf, node_off.offset);
 

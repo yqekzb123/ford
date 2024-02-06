@@ -10,7 +10,7 @@
  * @param {Context*} context
  * @return {unique_ptr<RmRecord>} rid对应的记录对象指针
  */
-std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, BatchTxn* txn) const {
+std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, BatchTxnLog* txn) const {
     // Todo:
     // 1. 获取指定记录所在的page handle
     // 2. 初始化一个指向RmRecord的指针（赋值其内部的data和size）
@@ -44,7 +44,7 @@ std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, BatchTxn* txn
  * @param {Context*} context
  * @return {Rid} 插入的记录的记录号（位置）
  */
-Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
+Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxnLog* txn) {
     // Todo:
     // 1. 获取当前未满的page handle
     // 2. 在page handle中找到空闲slot位置
@@ -101,7 +101,7 @@ Rid RmFileHandle::insert_record(itemkey_t key, char* buf, BatchTxn* txn) {
  * @param {Rid&} rid 要删除的记录的记录号（位置）
  * @param {Context*} context
  */
-void RmFileHandle::delete_record(const Rid& rid, BatchTxn* txn) {
+void RmFileHandle::delete_record(const Rid& rid, BatchTxnLog* txn) {
     // Todo:
     // 1. 获取指定记录所在的page handle
     // 2. 更新page_handle.page_hdr中的数据结构
@@ -147,7 +147,7 @@ void RmFileHandle::delete_record(const Rid& rid, BatchTxn* txn) {
  * @param {char*} buf 新记录的数据
  * @param {Context*} context
  */
-void RmFileHandle::update_record(const Rid& rid, char* buf, BatchTxn* txn) {
+void RmFileHandle::update_record(const Rid& rid, char* buf, BatchTxnLog* txn) {
     // Todo:
     // 1. 获取指定记录所在的page handle
     // 2. 更新记录
@@ -202,7 +202,7 @@ RmPageHandle RmFileHandle::fetch_page_handle(page_id_t page_no) const {
  * @description: 创建一个新的页面并返回该页面的句柄
  * @return {RmPageHandle} 新页面的句柄
  */
-RmPageHandle RmFileHandle::create_new_page_handle(BatchTxn* txn) {
+RmPageHandle RmFileHandle::create_new_page_handle(BatchTxnLog* txn) {
     // Todo:
     // 1.使用缓冲池来创建一个新page
     // 2.更新page handle中的相关信息
@@ -244,7 +244,7 @@ RmPageHandle RmFileHandle::create_new_page_handle(BatchTxn* txn) {
  * @description: 找到一个有空闲空间的页面，返回该页面的句柄
  * @return {RmPageHandle} 有空闲空间页面的句柄
  */
-RmPageHandle RmFileHandle::create_page_handle(BatchTxn* txn) {
+RmPageHandle RmFileHandle::create_page_handle(BatchTxnLog* txn) {
     // Todo:
     // 1. 判断file_hdr_中是否还有空闲页
     //     1.1 没有空闲页：使用缓冲池来创建一个新page；可直接调用create_new_page_handle()

@@ -41,16 +41,16 @@ DTX::DTX(MetaManager* meta_man,
 void DTX::Abort() {
   // When failures occur, transactions need to be aborted.
   // In general, the transaction will not abort during committing replicas if no hardware failure occurs
-  char* unlock_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-  *((lock_t*)unlock_buf) = 0;
-  for (auto& index : locked_rw_set) {
-    auto& it = read_write_set[index].item_ptr;
-    node_id_t primary_node_id = global_meta_man->GetPrimaryNodeID(it->table_id);
-    RCQP* primary_qp = thread_qp_man->GetRemoteDataQPWithNodeID(primary_node_id);
-    auto rc = primary_qp->post_send(IBV_WR_RDMA_WRITE, unlock_buf, sizeof(lock_t), it->GetRemoteLockAddr(), 0);
-    if (rc != SUCC) {
-      RDMA_LOG(FATAL) << "Thread " << t_id << " , Coroutine " << coro_id << " unlock fails during abortion";
-    }
-  }
+  // char* unlock_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+  // *((lock_t*)unlock_buf) = 0;
+  // for (auto& index : locked_rw_set) {
+  //   auto& it = read_write_set[index].item_ptr;
+  //   node_id_t primary_node_id = global_meta_man->GetPrimaryNodeID(it->table_id);
+  //   RCQP* primary_qp = thread_qp_man->GetRemoteDataQPWithNodeID(primary_node_id);
+  //   auto rc = primary_qp->post_send(IBV_WR_RDMA_WRITE, unlock_buf, sizeof(lock_t), it->GetRemoteLockAddr(), 0);
+  //   if (rc != SUCC) {
+  //     RDMA_LOG(FATAL) << "Thread " << t_id << " , Coroutine " << coro_id << " unlock fails during abortion";
+  //   }
+  // }
   tx_status = TXStatus::TX_ABORT;
 }

@@ -69,17 +69,17 @@ class RmFileHandle {
         return Bitmap::is_set(page_handle.bitmap, rid.slot_no_ );  // page的slot_no位置上是否有record
     }
 
-    std::unique_ptr<RmRecord> get_record(const Rid &rid, BatchTxn* txn) const;
+    std::unique_ptr<RmRecord> get_record(const Rid &rid, BatchTxnLog* txn) const;
 
-    Rid insert_record(itemkey_t key, char *buf, BatchTxn* txn);
+    Rid insert_record(itemkey_t key, char *buf, BatchTxnLog* txn);
 
     void insert_record(const Rid &rid, char *buf);
 
-    void delete_record(const Rid &rid, BatchTxn* txn);
+    void delete_record(const Rid &rid, BatchTxnLog* txn);
 
-    void update_record(const Rid &rid, char *buf, BatchTxn* txn);
+    void update_record(const Rid &rid, char *buf, BatchTxnLog* txn);
 
-    RmPageHandle create_new_page_handle(BatchTxn* txn);
+    RmPageHandle create_new_page_handle(BatchTxnLog* txn);
 
     RmPageHandle fetch_page_handle(page_id_t page_no) const;
 
@@ -89,7 +89,7 @@ class RmFileHandle {
     RmFileHdr file_hdr_;    // 文件头，维护当前表文件的元数据
 
    private:
-    RmPageHandle create_page_handle(BatchTxn* txn);
+    RmPageHandle create_page_handle(BatchTxnLog* txn);
 
     void release_page_handle(RmPageHandle &page_handle);
 };

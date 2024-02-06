@@ -290,6 +290,7 @@ class MetaManager {
 
   std::unordered_map<node_id_t, offset_t> data_off;
 
+ public:
   node_id_t local_machine_id;
 
  public:

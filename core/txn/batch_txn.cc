@@ -1,6 +1,6 @@
 #include "batch_txn.h"
 
-std::string BatchTxn::get_log_string() {
+std::string BatchTxnLog::get_log_string() {
     std::string log_string = "";
     for(auto log: logs) {
         char* temp_log_char = new char[log->log_tot_len_];

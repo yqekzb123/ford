@@ -39,8 +39,10 @@ namespace storage_service{
         char data[PAGE_SIZE + 1];
 
         // TODO
-        while(log_replay->get_persist_batch_id() < request_batch_id) {
+        while(log_replay->get_persist_batch_id()+1 < request_batch_id) {
             // wait
+            RDMA_LOG(INFO) << "the batch_id requirement is not satisfied...." << "  persist id: "<<
+                log_replay->get_persist_batch_id() << "  request id: " << request_batch_id;
             usleep(10);
         }
 

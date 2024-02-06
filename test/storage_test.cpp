@@ -95,7 +95,7 @@ void* generate_redo_logs(void* arg) {
     storage_service::LogWriteResponse response;
     brpc::Controller cntl;
 
-    BatchTxn* txn1 = new BatchTxn(1);
+    BatchTxnLog* txn1 = new BatchTxnLog(1);
 
     itemkey_t key1 = 1;
     char* value1 = new char[8];
@@ -134,7 +134,7 @@ void* generate_redo_logs(void* arg) {
     buffer_mgr->flush_all_pages(table_file->fd_);
     // 写完了txn1的log，并把txn1的修改写入了磁盘，写入了table_mem文件，log_replay的数据写入table文件（log里面的table_name默认为table）
 
-    BatchTxn* txn2 = new BatchTxn(2);
+    BatchTxnLog* txn2 = new BatchTxnLog(2);
     itemkey_t key3 = 3;
     char* value3 = new char[8];
     std::string name3 = "cccc";
@@ -172,7 +172,7 @@ void* generate_redo_logs(void* arg) {
     buffer_mgr->flush_all_pages(table_file->fd_);
     RDMA_LOG(INFO) << "finish flush_all_pages after executing txn1";
 
-    BatchTxn* txn3 = new BatchTxn(3);
+    BatchTxnLog* txn3 = new BatchTxnLog(3);
     itemkey_t key4 = 4;
     char* value4 = new char[8];
     std::string name4 = "eeee";

@@ -176,11 +176,17 @@ PageAddress DTX::InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, 
     }
 
     // find empty slot to insert
-    PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[last_node_off]);
+    PageTableNode* page_table_node = reinterpret_cast<PageTableNode*>(local_hash_nodes[node_off]);
     while (true) {
         // find lock item
         for(int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
             if (page_table_node->page_table_items[i].valid == false) {
+
+                // 在这里记录page table item的本地地址和远程地址
+                NodeOffset remote_off = {node_off.nodeId, node_off.offset + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem)};
+                page_table_item_localaddr_and_remote_offset[page_id] = std::make_pair(
+                    local_hash_nodes[node_off] + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem), remote_off);
+
                 page_table_node->page_table_items[i].valid = true;
                 page_table_node->page_table_items[i].page_id = page_id;
                 // TODO: 从BufferPoolManager中获取frame_id
@@ -287,15 +293,20 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                     if (page_table_node->page_table_items[i].page_id == it->first && page_table_node->page_table_items[i].valid == true) {
                         // find, 记录page_address
                         res[it->first] = page_table_node->page_table_items[i].page_address;
+                        // 在这里记录page table item的本地地址和远程地址
+                        NodeOffset remote_off = {node_off.nodeId, node_off.offset + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem)};
+                        page_table_item_localaddr_and_remote_offset[it->first] = std::make_pair(
+                            local_hash_nodes[node_off] + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem), remote_off);
+
                         need_fetch_from_disk[it->first] = false;
                         // this page is not valid, because other thread is fetch this page from disk and haven't write back
-                        if(page_table_node->page_table_items[i].valid == false){
+                        if(page_table_node->page_table_items[i].page_valid == false){
                             now_valid[it->first] = false;
                         }
                         // page is valid now
                         else if(it->second == true){
                             //is write & page is valid & wcount == 0
-                            if(page_table_node->page_table_items[i].rwcount & MASKED_SHARED_LOCKS != EXCLUSIVE_LOCKED){
+                            if((page_table_node->page_table_items[i].rwcount & MASKED_SHARED_LOCKS) != EXCLUSIVE_LOCKED){
                                 now_valid[it->first] = true;
                                 page_table_node->page_table_items[i].rwcount |= EXCLUSIVE_LOCKED;
                             }

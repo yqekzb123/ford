@@ -11,7 +11,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   bool res = true;
   BenchDTX* first_bdtx = txn_list.front();
   DTX* first_dtx = first_bdtx->dtx;
-  
+  printf("local_batch.cc:14 execute batch %ld\n", batch_id);
   //! 0.统计只读和读写的操作列表
   std::vector<table_id_t> readonly_tableid;
   std::vector<itemkey_t> readonly_keyid;
@@ -88,10 +88,22 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   FlushWrite(yield, first_dtx,data_list,index);
 
   StatCommit();
+
+  //! 7. Unpin pages
+  Unpin(yield, first_dtx, index);
+
+  //! 7. 写日志到存储层
+  first_dtx->SendLogToStoragePool();
+
+  //! 8. 释放锁
+  first_dtx->UnlockShared(yield, first_dtx->hold_shared_lock_data_id, first_dtx->hold_shared_lock_node_offs);
+  first_dtx->UnlockExclusive(yield, first_dtx->hold_exclusive_lock_data_id, first_dtx->hold_exclusive_lock_node_offs);
+
   for (auto& dtx : txn_list) {
     // !清理事务
     delete dtx;
   }
+  printf("local_batch.cc:95 execute batch %ld complete\n", batch_id);
   // std::fill(data_list.begin(), data_list.end(), nullptr);
   return res;
 }
@@ -100,18 +112,30 @@ std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dt
   // 遍历index，获取其中的页表地址
   std::vector<Rid> id_list;
   std::vector<table_id_t> tid_list;
-  std::vector<DTX::FetchPageType> fetch_type;
-  std::vector<PageAddress> page_address;
+  std::vector<FetchPageType> fetch_type;
   for (auto& rid_map : index) {
     table_id_t tid = rid_map.first;
     for (auto& rid : rid_map.second) {
       id_list.push_back(rid.second);
       tid_list.push_back(tid);
-      fetch_type.push_back(DTX::FetchPageType::kReadPage);
+      fetch_type.push_back(FetchPageType::kReadPage);
     }
   }
-  std::vector<DataItemPtr> data_list = first_dtx->FetchTuple(yield, tid_list, id_list, fetch_type, batch_id, page_address);
+  std::vector<DataItemPtr> data_list = first_dtx->FetchTuple(yield, tid_list, id_list, fetch_type, batch_id);
   return data_list;
+}
+
+void LocalBatch::Unpin(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index){
+  std::vector<PageId> page_ids;
+  std::vector<FetchPageType> types;
+  for (auto& rid_map : index) {
+    table_id_t tid = rid_map.first;
+    for (auto& rid : rid_map.second) {
+      page_ids.push_back({tid, rid.second.page_no_});
+      types.push_back(FetchPageType::kReadPage);
+    }
+  }
+  first_dtx->UnpinPage(yield, page_ids, types);
 }
 
 bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>& index) {
@@ -119,18 +143,21 @@ bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<Dat
   std::vector<table_id_t> tid_list;
   std::vector<DataItemPtr> new_data_list;
 
-  std::vector<DTX::FetchPageType> fetch_type;
-  std::vector<PageAddress> page_address;
+  std::vector<FetchPageType> fetch_type;
 
   for (auto item : data_list) {
     tid_list.push_back(item->table_id);
     id_list.push_back(index[item->table_id][item->key]);
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
     LVersion* v = data_item->GetTailVersion();
-    DataItemPtr itemPtr((DataItem*)(v->value));
-    new_data_list.push_back(itemPtr);
+    DataItem* data = new DataItem();
+    memcpy(data, v->value, sizeof(DataItem));
+    // DataItemPtr itemPtr(data);
+    // new_data_list.push_back(itemPtr);
+    fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
-  // first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id, page_address);
+  first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id);
+  printf("\n");
   tid_list.clear();
   id_list.clear();
   new_data_list.clear();

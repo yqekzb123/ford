@@ -14,6 +14,7 @@ set(DTX_SRC
         dtx/dtx_page_table.cc
         dtx/structs.cc
         dtx/rwlock.cc
+        dtx/dtx_log.cc
         )
 
 set(SCHEDULER_SRC

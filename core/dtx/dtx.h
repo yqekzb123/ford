@@ -35,6 +35,16 @@
 #include "util/hash.h"
 #include "util/json_config.h"
 #include "bench_dtx.h"
+#include "log/log_record.h"
+#include "txn/batch_txn.h"
+
+// for buffer pool fetch page
+enum class FetchPageType {
+  kReadPage,
+  kInsertRecord,
+  kDeleteRecord,
+  kUpdateRecord
+};
 
 /* One-sided RDMA-enabled distributed transaction processing */
 class DTX {
@@ -99,6 +109,10 @@ class DTX {
   // bool ExeBatchRW(coro_yield_t& yield);  // 批次在远程读取数据
   // bool BatchValidate(coro_yield_t& yield);  //读回数据后，本地验证和重新计算数据
   
+  // 发送日志到存储层
+  BatchTxnLog batch_txn_log;
+  void SendLogToStoragePool();
+  
  private:
   void Abort();
 
@@ -124,17 +138,10 @@ class DTX {
 
   bool LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool UnlockSharedLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
+  bool UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
-  bool UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id);
+  bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
-  // for buffer pool fetch page
-  enum class FetchPageType {
-    kReadPage,
-    kInsertRecord,
-    kDeleteRecord,
-    kUpdateRecord
-  };
   struct UnpinPageArgs{
     // 写回数据的地址
     PageAddress page_addr;
@@ -143,17 +150,19 @@ class DTX {
     int offset;
     int size;
   };
-  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
-  bool UnpinPage(coro_yield_t &yield, std::unordered_map<PageId, UnpinPageArgs> ids);
+  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id);
+  bool UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<FetchPageType> types);
   
-  std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
+  std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id);
 
-  std::vector<DataItemPtr> WriteTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, std::vector<DataItemPtr> data, batch_id_t request_batch_id, std::vector<PageAddress>& page_addr_vec);
+  bool WriteTuple(coro_yield_t &yield, std::vector<table_id_t> &table_id, std::vector<Rid> &rids, std::vector<FetchPageType> &types, std::vector<DataItemPtr> &data, batch_id_t request_batch_id);
 
  private:
   // 用来记录每次要批获取hash node latch的offset
   std::unordered_set<NodeOffset> pending_hash_node_latch_offs;
-  
+  std::unordered_map<PageId, std::pair<char*, NodeOffset>> page_table_item_localaddr_and_remote_offset;
+  std::unordered_map<PageId, std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
+
   // for page table
   PageAddress GetFreePageSlot();
   PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
@@ -168,10 +177,6 @@ class DTX {
   std::vector<LockDataId> LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
   std::vector<LockDataId> LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
-
-  bool UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
-
-  bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
   // for rwlatch in hash node
   enum class QPType {
@@ -258,6 +263,12 @@ class DTX {
 
   std::list<PageAddress>* free_page_list;
   std::mutex* free_page_list_mutex;
+
+  std::vector<LockDataId> hold_exclusive_lock_data_id;
+  std::vector<NodeOffset> hold_exclusive_lock_node_offs;
+  std::vector<LockDataId> hold_shared_lock_data_id;
+  std::vector<NodeOffset> hold_shared_lock_node_offs;
+
 };
 
 /*************************************************************

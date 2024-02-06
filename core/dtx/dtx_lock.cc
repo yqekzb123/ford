@@ -45,14 +45,14 @@ bool InsertSharedLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& loc
 
 // 辅助函数，给定一个哈希桶链的最后一个桶的偏移地址，用来在这个桶链的空闲位置插入一个排他锁
 bool InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-        LockDataId lockdataid, NodeOffset last_node_off, 
+        LockDataId lockdataid, NodeOffset last_node_off, offset_t expand_base_off,
          std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off){
 
     NodeOffset node_off = last_node_off;
     while(hold_latch_to_previouse_node_off.count(node_off) != 0){
         node_off = hold_latch_to_previouse_node_off.at(node_off);
     }
-    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[last_node_off]);
+    LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
     while (true) {
         // find lock item
         for(int i=0; i<MAX_RIDS_NUM_PER_NODE; i++){
@@ -69,6 +69,7 @@ bool InsertExclusiveLockIntoHashNodeList(std::unordered_map<NodeOffset, char*>& 
             RDMA_LOG(ERROR) <<  "LockTableStore::LockSharedOnTable: lock item bucket is full" ;
             return false;
         }
+        node_off.offset = expand_base_off + expand_node_id * sizeof(LockNode);
         lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
     }
     return true;
@@ -125,9 +126,13 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // not exclusive lock
-                        if(lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS == UNLOCKED){
+                        if((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) == UNLOCKED){
                             // lock shared lock
                             lock_node->lock_items[i].lock += 1;
+
+                            // ! 加入到DTX类的已经获取的锁的列表中
+                            hold_shared_lock_data_id.emplace_back(*it);
+                            hold_shared_lock_node_offs.emplace_back(node_off);
                         }
                         else{
                             // LockDataId already locked
@@ -168,6 +173,12 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                         if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, expand_base_off, hold_latch_to_previouse_node_off)){
                             // insert fail
                             ret_lock_fail_data_id.emplace_back(lock_data_id);
+                        }
+                        else{
+                            // insert success
+                            // ! 加入到DTX类的已经获取的锁的列表中
+                            hold_shared_lock_data_id.emplace_back(lock_data_id);
+                            hold_shared_lock_node_offs.emplace_back(node_off);
                         }
                     }
                     // after insert, release latch and write back
@@ -255,6 +266,10 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                         if(lock_node->lock_items[i].lock == UNLOCKED){
                             // lock EXCLUSIVE lock
                             lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
+                            
+                            // ! 加入到DTX类的已经获取的锁的列表中
+                            hold_exclusive_lock_data_id.emplace_back(*it);
+                            hold_exclusive_lock_node_offs.emplace_back(node_off);
                         }
                         else{
                             // LockDataId already locked
@@ -290,9 +305,15 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
                     for(auto lock_data_id : lock_request_list[node_off]){
-                        if(!InsertSharedLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, expand_base_off, hold_latch_to_previouse_node_off)){
+                        if(!InsertExclusiveLockIntoHashNodeList(local_hash_nodes, lock_data_id, node_off, expand_base_off, hold_latch_to_previouse_node_off)){
                             // insert fail
                             ret_lock_fail_data_id.emplace_back(lock_data_id);
+                        }
+                        else{
+                            // insert success
+                            // ! 加入到DTX类的已经获取的锁的列表中
+                            hold_exclusive_lock_data_id.emplace_back(lock_data_id);
+                            hold_exclusive_lock_node_offs.emplace_back(node_off);
                         }
                     }
                     // after insert, release latch and write back
@@ -334,7 +355,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
 
     std::unordered_map<NodeOffset, char*> local_hash_nodes;
     std::unordered_map<NodeOffset, char*> cas_bufs;
-    std::unordered_map<NodeOffset, std::list<LockDataId>> lock_request_list;
+    std::unordered_map<NodeOffset, std::list<LockDataId>> unlock_request_list;
 
     // init pending_hash_node_latch_offs
     for(int i=0; i<node_offs.size(); i++){
@@ -347,7 +368,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
             // Alloc latch cas Buffer
             cas_bufs[node_offs[i]] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
         }
-        lock_request_list[node_offs[i]].emplace_back(lock_data_id[i]);
+        unlock_request_list[node_offs[i]].emplace_back(lock_data_id[i]);
     }
 
     std::unordered_set<NodeOffset> unlock_node_off_with_write;
@@ -368,18 +389,18 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
+            for(auto it = unlock_request_list[node_off].begin(); it != unlock_request_list[node_off].end(); ){
                 // find lock item
                 bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // lock EXCLUSIVE lock
-                        assert(lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS != EXCLUSIVE_LOCKED);
+                        assert((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) != EXCLUSIVE_LOCKED);
                             
                         lock_node->lock_items[i].lock--;
 
                         // erase from lock_request_list
-                        it = lock_request_list[node_off].erase(it);
+                        it = unlock_request_list[node_off].erase(it);
                         is_find = true;
                         break;
                     }
@@ -389,7 +410,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
-            if(lock_request_list[node_off].size() == 0){
+            if(unlock_request_list[node_off].size() == 0){
                 // release latch and write back
                 auto release_node_off = node_off;
                 while(true){
@@ -399,36 +420,7 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
                 }
             }
             else{
-                // 存在未处理的请求, 保留latch
-                // if LockDataId not exist, find next bucket
-                node_id_t node_id = global_meta_man->GetLockTableNode(lock_request_list[node_off].front().table_id_);
-                auto expand_node_id = lock_node->next_expand_node_id[0];
-                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
-                offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(expand_node_id < 0){
-                    // find to the bucket end, here latch is already get but couldn't find it
-                    for(auto lock_data_id : lock_request_list[node_off]){
-                        RDMA_LOG(ERROR) <<  "LockTableStore::UnlockShared: lock item not exist" ;
-                    }
-                    // after insert, release latch and write back
-                    auto release_node_off = node_off;
-                    while(true){
-                        unlock_node_off_with_write.emplace(release_node_off);
-                        if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
-                        release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
-                    }
-                }
-                else{
-                    // alloc next node read buffer and cas buffer
-                    NodeOffset next_node_off{node_id, next_off};
-                    pending_hash_node_latch_offs.emplace(next_node_off);
-                    lock_request_list.emplace(next_node_off, lock_request_list.at(node_off));
-                    hold_latch_to_previouse_node_off.emplace(next_node_off, node_off);
-                    assert(local_hash_nodes.count(next_node_off) == 0);
-                    assert(cas_bufs.count(next_node_off) == 0);
-                    local_hash_nodes[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(LockNode));
-                    cas_bufs[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-                }
+                assert(false);
             }
         }
         // release all latch and write back
@@ -440,6 +432,10 @@ bool DTX::UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);
+
+    hold_shared_lock_data_id.clear();
+    hold_shared_lock_node_offs.clear();
+    
     return true;
 }
 
@@ -449,7 +445,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
 
     std::unordered_map<NodeOffset, char*> local_hash_nodes;
     std::unordered_map<NodeOffset, char*> cas_bufs;
-    std::unordered_map<NodeOffset, std::list<LockDataId>> lock_request_list;
+    std::unordered_map<NodeOffset, std::list<LockDataId>> unlock_request_list;
 
     // init pending_hash_node_latch_offs
     for(int i=0; i<node_offs.size(); i++){
@@ -462,7 +458,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
             // Alloc latch cas Buffer
             cas_bufs[node_offs[i]] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
         }
-        lock_request_list[node_offs[i]].emplace_back(lock_data_id[i]);
+        unlock_request_list[node_offs[i]].emplace_back(lock_data_id[i]);
     }
 
     std::unordered_set<NodeOffset> unlock_node_off_with_write;
@@ -483,18 +479,18 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes[node_off]);
             // 遍历这个node_off上的所有请求即所有的lock_data_id, 
             // 如果找到, 就从列表中移除
-            for(auto it = lock_request_list[node_off].begin(); it != lock_request_list[node_off].end(); ){
+            for(auto it = unlock_request_list[node_off].begin(); it != unlock_request_list[node_off].end(); ){
                 // find lock item
                 bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
                     if (lock_node->lock_items[i].key == *it && lock_node->lock_items[i].valid == true) {
                         // lock EXCLUSIVE lock
-                        assert(lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS == EXCLUSIVE_LOCKED);
+                        assert((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) == EXCLUSIVE_LOCKED);
                             
                         lock_node->lock_items[i].lock = UNLOCKED;
 
                         // erase from lock_request_list
-                        it = lock_request_list[node_off].erase(it);
+                        it = unlock_request_list[node_off].erase(it);
                         is_find = true;
                         break;
                     }
@@ -504,7 +500,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
             }
 
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
-            if(lock_request_list[node_off].size() == 0){
+            if(unlock_request_list[node_off].size() == 0){
                 // release latch and write back
                 auto release_node_off = node_off;
                 while(true){
@@ -514,36 +510,7 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
                 }
             }
             else{
-                // 存在未处理的请求, 保留latch
-                // if LockDataId not exist, find next bucket
-                node_id_t node_id = global_meta_man->GetLockTableNode(lock_request_list[node_off].front().table_id_);
-                auto expand_node_id = lock_node->next_expand_node_id[0];
-                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(lock_request_list[node_off].front().table_id_);
-                offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
-                if(expand_node_id < 0){
-                    // find to the bucket end, here latch is already get but couldn't find it
-                    for(auto lock_data_id : lock_request_list[node_off]){
-                        RDMA_LOG(ERROR) <<  "LockTableStore::UnlockElciusive: lock item not exist" ;
-                    }
-                    // after insert, release latch and write back
-                    auto release_node_off = node_off;
-                    while(true){
-                        unlock_node_off_with_write.emplace(release_node_off);
-                        if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
-                        release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
-                    }
-                }
-                else{
-                    // alloc next node read buffer and cas buffer
-                    NodeOffset next_node_off{node_id, next_off};
-                    pending_hash_node_latch_offs.emplace(next_node_off);
-                    lock_request_list.emplace(next_node_off, lock_request_list.at(node_off));
-                    hold_latch_to_previouse_node_off.emplace(next_node_off, node_off);
-                    assert(local_hash_nodes.count(next_node_off) == 0);
-                    assert(cas_bufs.count(next_node_off) == 0);
-                    local_hash_nodes[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(LockNode));
-                    cas_bufs[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-                }
+                assert(false);
             }
         }
         // release all latch and write back
@@ -555,6 +522,9 @@ bool DTX::UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data
     }
     // 这里所有的latch都已经释放了
     assert(hold_node_off_latch.size() == 0);
+
+    hold_exclusive_lock_data_id.clear();
+    hold_exclusive_lock_node_offs.clear();
     return true;
 }
 
@@ -742,44 +712,3 @@ bool DTX::LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> tabl
     return false;
 }
 
-// 解除排他锁
-bool DTX::UnlockExclusiveLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id){
-    std::vector<NodeOffset> batch_node_off;
-
-    for(int i=0; i<lock_data_id.size(); i++){
-        auto lock_table_meta = global_meta_man->GetLockTableMeta(lock_data_id[i].table_id_);
-        auto remote_node_id = global_meta_man->GetLockTableNode(lock_data_id[i].table_id_);
-
-        auto hash = MurmurHash64A(lock_data_id[i].Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
-
-        batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
-    }
-
-    if(UnlockExclusive(yield, lock_data_id, batch_node_off)){
-        return true;
-    }
-    return false;
-}
-
-// 解除共享锁
-bool DTX::UnlockSharedLockDataID(coro_yield_t& yield, std::vector<LockDataId> lock_data_id){
-    std::vector<NodeOffset> batch_node_off;
-
-    for(int i=0; i<lock_data_id.size(); i++){
-        auto lock_table_meta = global_meta_man->GetLockTableMeta(lock_data_id[i].table_id_);
-        auto remote_node_id = global_meta_man->GetLockTableNode(lock_data_id[i].table_id_);
-
-        auto hash = MurmurHash64A(lock_data_id[i].Get(), 0xdeadbeef) % lock_table_meta.bucket_num;
-
-        offset_t node_off = lock_table_meta.base_off + hash * sizeof(LockNode);
-
-        batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
-    }
-    
-    if(UnlockShared(yield, lock_data_id, batch_node_off)){
-        return true;
-    }
-    return false;
-}

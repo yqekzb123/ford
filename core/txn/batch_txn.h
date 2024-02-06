@@ -6,10 +6,10 @@
 #include "log/log_record.h"
 #include "util/debug.h"
 
-class BatchTxn {
+class BatchTxnLog {
 public:
-    BatchTxn(){}
-    BatchTxn(batch_id_t batch_id) {
+    BatchTxnLog(){}
+    BatchTxnLog(batch_id_t batch_id) {
         batch_id_ = batch_id;
     }
     batch_id_t batch_id_;
