@@ -131,7 +131,10 @@ void LocalBatch::Unpin(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<t
   for (auto& rid_map : index) {
     table_id_t tid = rid_map.first;
     for (auto& rid : rid_map.second) {
-      page_ids.push_back({tid, rid.second.page_no_});
+      PageId page_id;
+      page_id.table_id = tid;
+      page_id.page_no = rid.second.page_no_;
+      page_ids.push_back(page_id);
       types.push_back(FetchPageType::kReadPage);
     }
   }
@@ -152,8 +155,8 @@ bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<Dat
     LVersion* v = data_item->GetTailVersion();
     DataItem* data = new DataItem();
     memcpy(data, v->value, sizeof(DataItem));
-    // DataItemPtr itemPtr(data);
-    // new_data_list.push_back(itemPtr);
+    DataItemPtr itemPtr(data);
+    new_data_list.push_back(itemPtr);
     fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
   first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id);

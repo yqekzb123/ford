@@ -183,9 +183,9 @@ PageAddress DTX::InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, 
             if (page_table_node->page_table_items[i].valid == false) {
 
                 // 在这里记录page table item的本地地址和远程地址
-                NodeOffset remote_off = {node_off.nodeId, node_off.offset + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem)};
+                NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                 page_table_item_localaddr_and_remote_offset[page_id] = std::make_pair(
-                    local_hash_nodes[node_off] + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem), remote_off);
+                    local_hash_nodes[node_off] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
 
                 page_table_node->page_table_items[i].valid = true;
                 page_table_node->page_table_items[i].page_id = page_id;
@@ -293,10 +293,11 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                     if (page_table_node->page_table_items[i].page_id == it->first && page_table_node->page_table_items[i].valid == true) {
                         // find, 记录page_address
                         res[it->first] = page_table_node->page_table_items[i].page_address;
+                        std::cout << "find page_id: " << it->first.toString() << " in frame id:" << page_table_node->page_table_items[i].page_address.frame_id << std::endl;
                         // 在这里记录page table item的本地地址和远程地址
-                        NodeOffset remote_off = {node_off.nodeId, node_off.offset + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem)};
+                        NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                         page_table_item_localaddr_and_remote_offset[it->first] = std::make_pair(
-                            local_hash_nodes[node_off] + PAGE_TABLE_ITEM_START_OFFSET + i * sizeof(PageTableItem), remote_off);
+                            local_hash_nodes[node_off] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
 
                         need_fetch_from_disk[it->first] = false;
                         // this page is not valid, because other thread is fetch this page from disk and haven't write back
@@ -369,6 +370,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                             }
                             else{
                                 res[pagetable_request.first] = insert_page_addr;
+                                std::cout << "insert page_id: " << pagetable_request.first.toString() << " in frame id:" << insert_page_addr.frame_id << std::endl;
                                 need_fetch_from_disk[pagetable_request.first] = true;
                                 now_valid[pagetable_request.first] = false;
                             }
@@ -410,8 +412,8 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
     assert(hold_node_off_latch.size() == 0);
     // 转化成vector
     std::vector<PageAddress> res_vec;
-    for(auto it : res){
-        res_vec.push_back(it.second);
+    for(auto id : page_ids){
+        res_vec.push_back(res[id]);
     }
     return res_vec;
 }

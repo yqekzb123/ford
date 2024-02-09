@@ -237,9 +237,9 @@ class MetaManager {
   }
 
   const offset_t GetDataOff(const node_id_t node_id) const {
-    auto search = data_off.find(node_id);
-    assert(search != data_off.end());
-    return search->second;
+    auto search = data_metas.find(node_id);
+    assert(search != data_metas.end());
+    return search->second.base_off;
   }
   
  private:
@@ -278,7 +278,7 @@ class MetaManager {
 
   std::vector<node_id_t> data_nodes;
   std::unordered_map<node_id_t, DataStoreMeta> data_metas;
-  std::unordered_map<node_id_t, offset_t> data_base_off;
+  // std::unordered_map<node_id_t, offset_t> data_base_off;
 
   // std::unordered_map<node_id_t, offset_t> free_ring_base_off;
   // std::unordered_map<node_id_t, offset_t> free_ring_head_off;

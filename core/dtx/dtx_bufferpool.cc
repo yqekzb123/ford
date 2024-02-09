@@ -44,11 +44,11 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
         if(id.second == FetchPageType::kReadPage || id.second == FetchPageType::kUpdateRecord){
             // 这两种类型的操作，无页面粒度的写入冲突，因此不需要检查wlatch的状态
             // 如果不在页表，则顺便将该页面加入页表，并将valid状态置为false，wlatch状态置为false, rcount+1
-            is_write.push_back(true);
+            is_write.push_back(false);
         }
         else if(id.second == FetchPageType::kInsertRecord || id.second == FetchPageType::kDeleteRecord ){
             // 如果不在页表，则顺便将该页面加入页表，并将valid状态置为false，wlatch状态置为true, wcount+1
-            is_write.push_back(false);
+            is_write.push_back(true);
         }
         else{
             assert(false);
@@ -58,6 +58,12 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
     std::vector<PageAddress> page_addr_vec;
     while(true){
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
+        // for debug
+        for(int i=0; i<page_addr_vec.size(); i++){
+            std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
+                << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
+                << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
+        }
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
         for(int i=0; i<need_fetch_from_disk.size(); i++) {
@@ -88,20 +94,33 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 
                 stub.GetPage(&cntl, &request, &response, NULL);
 
-                // 在这里将对应的页表的item的now valid置为true
-                char* local_item = page_table_item_localaddr_and_remote_offset[page_ids[i]].first;
-                NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[page_ids[i]].second;
-                PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
-                item->page_valid = true;
-                RCQP* qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
-                coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem));
-
                 const char *constPage = response.data().c_str();
                 char *page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
                 memcpy(page, constPage, PAGE_SIZE);
                 pages.emplace(page_ids[i], page);
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
+
+                // 在这里先将数据页写入共享内存池，以便并行访问
+                auto remote_node_id = page_addr_vec[i].node_id;
+                auto frame_id = page_addr_vec[i].frame_id;
+                auto remote_offset = global_meta_man->GetDataOff(remote_node_id);
+                RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
+                if(!coro_sched->RDMAWrite(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
+                    assert(false);
+                }
+                std::cout << "FlushPage: " << page_ids[i].table_id << " " << page_ids[i].page_no << " into frame id: " 
+                    << frame_id << std::endl;
+                                
+                // 在这里将对应的页表的item的now valid置为true
+                char* local_item = page_table_item_localaddr_and_remote_offset[page_ids[i]].first;
+                NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[page_ids[i]].second;
+                PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
+                item->page_valid = true;
+                qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
+                if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
+                    assert(false);
+                };
             }
             else if(now_valid[page_ids[i]] == true){
                 // 从共享内存池中读取数据页
@@ -112,9 +131,11 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
                 
                 char* page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
-                if(!coro_sched->RDMARead(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
+                if(!coro_sched->RDMAReadInv(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
                     assert(false);
                 }
+                std::cout << "ReadPageFromBuffer: " << page_ids[i].table_id << " " << page_ids[i].page_no << " from frame id: " 
+                    << frame_id << std::endl;
                 pages.emplace(page_ids[i], page);
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
@@ -160,13 +181,13 @@ bool DTX::UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<F
         if(id.second == FetchPageType::kReadPage || id.second == FetchPageType::kUpdateRecord){
             // rwcount - 1
             char* faa_cnt = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + PAGE_TABLE_ITEM_RWCOUNT_START_OFFSET, SHARED_UNLOCK_TO_BE_ADDED))
+            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->rwcount) - (offset_t)item, SHARED_UNLOCK_TO_BE_ADDED))
                 assert(false);
         }
         else if(id.second == FetchPageType::kInsertRecord || id.second == FetchPageType::kDeleteRecord){
             // 插入/删除数据页
             char* faa_cnt = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + PAGE_TABLE_ITEM_RWCOUNT_START_OFFSET, EXCLUSIVE_UNLOCK_TO_BE_ADDED))
+            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->rwcount) - (offset_t)item, EXCLUSIVE_UNLOCK_TO_BE_ADDED))
                 assert(false);
         }
         else{
@@ -243,7 +264,7 @@ bool DTX::WriteTuple(coro_yield_t &yield, std::vector<table_id_t> &table_id, std
             
             if(!coro_sched->RDMAWrite(coro_id, qp, page + hdr_size + rids[i].slot_no_ * (sizeof(DataItem) + sizeof(itemkey_t)), 
                     remote_offset + frame_id * PAGE_SIZE + hdr_size + rids[i].slot_no_ * (sizeof(DataItem) + sizeof(itemkey_t)),
-                    sizeof(DataItem))+sizeof(itemkey_t)){
+                    sizeof(DataItem)+sizeof(itemkey_t)) ){
                 assert(false);
             }
         }

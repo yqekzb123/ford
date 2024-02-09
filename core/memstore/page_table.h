@@ -34,8 +34,6 @@ struct PageAddress
   frame_id_t frame_id;
 };
 
-const int PAGE_TABLE_ITEM_RWCOUNT_START_OFFSET = sizeof(PageId) + sizeof(PageAddress);
-
 struct PageTableItem {
   PageId page_id;
   PageAddress page_address;
@@ -110,7 +108,6 @@ struct RingFreeFrameBuffer{
 // 计算每个哈希桶节点可以存放多少个rids
 const int MAX_PAGETABLE_ITEM_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(PageTableItem) );
 
-const int PAGE_TABLE_ITEM_START_OFFSET = sizeof(page_id_t) + sizeof(lock_t);
 // A PageTableNode is a bucket
 // 这里注意：sizeof(PageTableNode)非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
 // 若后续持久化，应该持久化4K整页
