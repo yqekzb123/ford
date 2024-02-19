@@ -108,7 +108,7 @@ public:
             data = new LocalData();
             // (LocalData*)malloc(sizeof(LocalData));
             local_store[table_id].insert(std::make_pair(key,data));
-            printf("local_data.h:113, create non-exist key %ld data %p\n", key, data);
+            // printf("local_data.h:113, create non-exist key %ld data %p\n", key, data);
         }
         // printf("local_data.h:122\n");
         return data;

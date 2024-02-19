@@ -25,7 +25,7 @@ public:
             str += std::string(log_str, log->log_tot_len_);
             delete[] log_str;
         }
-        RDMA_LOG(INFO) << "transaction " << batch_id_ << "'s log: " << str;
+        // RDMA_LOG(INFO) << "transaction " << batch_id_ << "'s log: " << str;
         return str;
     }
 

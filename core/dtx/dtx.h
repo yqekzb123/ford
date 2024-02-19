@@ -111,6 +111,7 @@ class DTX {
   
   // 发送日志到存储层
   BatchTxnLog batch_txn_log;
+  
   void SendLogToStoragePool();
   
  private:
@@ -207,6 +208,8 @@ class DTX {
 
  public:
   // For statistics
+  struct timespec tx_start_time;
+
   std::vector<uint64_t> lock_durations;  // us
 
   std::vector<uint64_t> invisible_durations;  // us

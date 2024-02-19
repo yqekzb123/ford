@@ -42,7 +42,7 @@ extern std::vector<double> taillat_vec;
 extern std::vector<uint64_t> total_try_times;
 extern std::vector<uint64_t> total_commit_times;
 
-__thread size_t ATTEMPTED_NUM;
+
 __thread uint64_t seed;                        // Thread-global random seed
 __thread FastRandom* random_generator = NULL;  // Per coroutine random generator
 __thread t_id_t thread_gid;
@@ -72,15 +72,6 @@ __thread SmallBankTxType* smallbank_workgen_arr;
 
 __thread coro_id_t coro_num;
 __thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler
-__thread bool stop_run;
-
-// Performance measurement (thread granularity)
-__thread struct timespec msr_start, msr_end;
-__thread double* timer;
-__thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
-__thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
-const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
-// const coro_id_t BATCH_TXN_ID = 0;
 
 // For MICRO benchmark
 __thread ZipfGen* zipf_gen = nullptr;
@@ -89,33 +80,8 @@ __thread uint64_t data_set_size;
 __thread uint64_t num_keys_global;
 __thread uint64_t write_ratio;
 
-// Stat the commit rate
-__thread uint64_t* thread_local_try_times;
-__thread uint64_t* thread_local_commit_times;
+const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 
-void BatchExec(coro_yield_t& yield) {
-  while (true) {
-    // printf("worker.cc:97, batch exe\n");
-    local_batch_store.ExeBatch(yield);
-    coro_sched->YieldBatch(yield, BATCH_TXN_ID);
-  }
-}
-
-// Coroutine 0 in each thread does polling
-void PollCompletion(coro_yield_t& yield) {
-  while (true) {
-    coro_sched->PollCompletion();
-    Coroutine* next = coro_sched->coro_head->next_coro;
-    // if (next->coro_id == BATCH_TXN_ID) {
-    // BatchExec(yield);
-    // } else 
-    if (next->coro_id != POLL_ROUTINE_ID) {
-      // RDMA_LOG(DBG) << "Coro 0 yields to coro " << next->coro_id;
-      coro_sched->RunCoroutine(yield, next);
-    }
-    if (stop_run) break;
-  }
-}
 
 void RecordTpLat(double msr_sec) {
   double attemp_tput = (double)stat_attempted_tx_total / msr_sec;
@@ -138,6 +104,37 @@ void RecordTpLat(double msr_sec) {
   }
 
   mux.unlock();
+}
+
+void BatchExec(coro_yield_t& yield) {
+  while (thread_gid == 0) {
+    // printf("worker.cc:97, batch exe\n");
+    local_batch_store.ExeBatch(yield);
+    coro_sched->YieldBatch(yield, BATCH_TXN_ID);
+    if (stop_run) {
+      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
+      RecordTpLat(msr_sec);
+      printf("worker.cc:102, thread %ld try to stop\n", thread_gid);
+      break;
+    }
+  }
+}
+
+// Coroutine 0 in each thread does polling
+void PollCompletion(coro_yield_t& yield) {
+  while (true) {
+    // printf("worker.cc:108, thread %ld complete a round\n", thread_gid);
+    coro_sched->PollCompletion();
+    Coroutine* next = coro_sched->coro_head->next_coro;
+    if (next->coro_id != POLL_ROUTINE_ID) {
+      // RDMA_LOG(DBG) << "Coro 0 yields to coro " << next->coro_id;
+      coro_sched->RunCoroutine(yield, next);
+    }
+    if (stop_run) {
+      printf("worker.cc:119, thread %ld try to stop\n", thread_gid);
+      break;
+    }
+  }
 }
 
 // Run actual transactions
@@ -331,6 +328,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
 
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
+    dtx->tx_start_time = tx_start_time;
     // printf("worker.cc:326\n");
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
@@ -381,6 +379,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       continue;
     }
     // 此时只是本地执行完毕,batch还没做完，所以stats都得等等
+    // 下面的直接没执行
     /********************************** Stat begin *****************************************/
     // Stat after one transaction finishes
     if (tx_committed) {

@@ -66,7 +66,7 @@ bool DTX::ExeLocalRW(coro_yield_t& yield) {
 
     // !创建新版本
     localdata->CreateNewVersion(this);
-    printf("dtx_local.cc:69 txn %p tid %ld create new version for table %ld key %ld data %p in batch %ld\n", this, tx_id, read_write_set[i].item_ptr.get()->table_id, read_write_set[i].item_ptr.get()->key,localdata,batch_id);
+    // printf("dtx_local.cc:69 txn %p tid %ld create new version for table %ld key %ld data %p in batch %ld\n", this, tx_id, read_write_set[i].item_ptr.get()->table_id, read_write_set[i].item_ptr.get()->key,localdata,batch_id);
   }
   return true;
 }
@@ -81,7 +81,7 @@ bool DTX::LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   } else {
     ExeLocalRW(yield);
   }
-  printf("dtx_local.cc:77 insert dtx %ld into batch %ld \n", tx_id, batch_id);
+  // printf("dtx_local.cc:77 insert dtx %ld into batch %ld \n", tx_id, batch_id);
   batch->EndInsertTxn();
 
   //! 2.本地释放锁

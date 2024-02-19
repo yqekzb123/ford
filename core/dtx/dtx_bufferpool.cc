@@ -60,9 +60,9 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
         // for debug
         for(int i=0; i<page_addr_vec.size(); i++){
-            std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
-                << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
-                << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
+            // std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
+            //     << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
+            //     << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
         }
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
@@ -109,8 +109,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 if(!coro_sched->RDMAWrite(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
                     assert(false);
                 }
-                std::cout << "FlushPage: " << page_ids[i].table_id << " " << page_ids[i].page_no << " into frame id: " 
-                    << frame_id << std::endl;
+                // std::cout << "FlushPage: " << page_ids[i].table_id << " " << page_ids[i].page_no << " into frame id: " << frame_id << std::endl;
                                 
                 // 在这里将对应的页表的item的now valid置为true
                 char* local_item = page_table_item_localaddr_and_remote_offset[page_ids[i]].first;
@@ -134,8 +133,8 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 if(!coro_sched->RDMAReadInv(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
                     assert(false);
                 }
-                std::cout << "ReadPageFromBuffer: " << page_ids[i].table_id << " " << page_ids[i].page_no << " from frame id: " 
-                    << frame_id << std::endl;
+                // std::cout << "ReadPageFromBuffer: " << page_ids[i].table_id << " " << page_ids[i].page_no << " from frame id: " 
+                //     << frame_id << std::endl;
                 pages.emplace(page_ids[i], page);
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
