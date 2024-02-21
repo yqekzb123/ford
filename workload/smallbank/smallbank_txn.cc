@@ -33,7 +33,7 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
 
   if (!dtx->TxLocalExe(yield)) return false;
 
-  printf("smallbank_txn.cc:41\n");
+  // printf("smallbank_txn.cc:41\n");
   // 如果成功了，本地提交。
   // 只是将事务塞入batch中
   bool commit_status = dtx->TxLocalCommit(yield, this);

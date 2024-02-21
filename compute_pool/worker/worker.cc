@@ -114,7 +114,7 @@ void BatchExec(coro_yield_t& yield) {
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
       RecordTpLat(msr_sec);
-      printf("worker.cc:102, thread %ld try to stop\n", thread_gid);
+      printf("worker.cc:102, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       break;
     }
   }
@@ -133,7 +133,7 @@ void PollCompletion(coro_yield_t& yield) {
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
       RecordTpLat(msr_sec);
-      printf("worker.cc:119, thread %ld try to stop\n", thread_gid);
+      printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       break;
     }
   }
@@ -804,7 +804,7 @@ void run_thread(thread_params* params,
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
 
-  printf("thread %ld Finish, Tps: %ld", thread_gid,commit_times);
+  printf("thread %ld Finish, Tps: %ld\n", thread_gid,commit_times);
 
   // Clean
   delete[] timer;

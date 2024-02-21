@@ -16,7 +16,7 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   // Run our system
   if (read_write_set.empty()) {
     if (LockLocalRO(yield)) {
-      printf("dtx_local_exe_commit.cc:19\n");
+      // printf("dtx_local_exe_commit.cc:19\n");
       return true;
     }
     else {

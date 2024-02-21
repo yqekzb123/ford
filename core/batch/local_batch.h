@@ -117,13 +117,11 @@ public:
     }
 
     void ExeBatch(coro_yield_t& yield) {
-        // if (now_exec == nullptr) {
         now_exec = GetBatch();
         if (now_exec == nullptr) {
             return;
         }
         printf("local_batch.h:121, exe batch %ld\n", now_exec->batch_id);
-        // }
         now_exec->ExeBatchRW(yield);
     }
 private:

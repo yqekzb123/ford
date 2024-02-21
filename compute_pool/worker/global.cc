@@ -9,10 +9,13 @@ LocalBatchStore local_batch_store;
 
 uint64_t commit_times = 0;
 
+int WARMUP_BATCHCNT = 200;
+
 __thread size_t ATTEMPTED_NUM;
 bool stop_run = false;
 // Performance measurement (thread granularity)
-__thread struct timespec msr_start, msr_end;
+struct timespec msr_start;
+__thread struct timespec msr_end;
 __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
 __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number

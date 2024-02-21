@@ -10,10 +10,12 @@ extern LocalBatchStore local_batch_store;
 // Stat the commit rate
 extern uint64_t commit_times;
 
+extern int WARMUP_BATCHCNT;
 extern __thread size_t ATTEMPTED_NUM;
 extern bool stop_run;
 // Performance measurement (thread granularity)
-extern __thread struct timespec msr_start, msr_end;
+extern struct timespec msr_start;
+extern __thread struct timespec msr_end;
 extern __thread double* timer;
 extern __thread uint64_t stat_attempted_tx_total;  // Issued transaction number
 extern __thread uint64_t stat_committed_tx_total;  // Committed transaction number

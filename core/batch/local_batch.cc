@@ -7,6 +7,9 @@
 #include "base/page.h"
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
+  if (batch_id == WARMUP_BATCHCNT) {
+    clock_gettime(CLOCK_REALTIME, &msr_start);
+  }
   // 先随便整个dtx结构出来
   bool res = true;
   BenchDTX* first_bdtx = txn_list.front();
@@ -103,20 +106,20 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   struct timespec tx_end_time;
   clock_gettime(CLOCK_REALTIME, &tx_end_time);
   
-    
-  for (auto& dtx : txn_list) {
-    double tx_usec = (tx_end_time.tv_sec - dtx->dtx->tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - dtx->dtx->tx_start_time.tv_nsec) / 1000;
-    timer[stat_committed_tx_total++] = tx_usec;
-    // !清理事务
-    delete dtx;
-  }
-  if (stat_committed_tx_total >= ATTEMPTED_NUM) {
-    // A coroutine calculate the total execution time and exits
-    clock_gettime(CLOCK_REALTIME, &msr_end);
-    stop_run = true;
+  if (batch_id > WARMUP_BATCHCNT) {
+    for (auto& dtx : txn_list) {
+      double tx_usec = (tx_end_time.tv_sec - dtx->dtx->tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - dtx->dtx->tx_start_time.tv_nsec) / 1000;
+      timer[stat_committed_tx_total++] = tx_usec;
+      // !清理事务
+      delete dtx;
+    }
+    if (stat_committed_tx_total >= ATTEMPTED_NUM) {
+      // A coroutine calculate the total execution time and exits
+      clock_gettime(CLOCK_REALTIME, &msr_end);
+      stop_run = true;
+    }
   }
   printf("local_batch.cc:95 execute batch %ld complete\n", batch_id);
-  // std::fill(data_list.begin(), data_list.end(), nullptr);
   return res;
 }
 
