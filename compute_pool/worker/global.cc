@@ -10,7 +10,7 @@ LocalBatchStore local_batch_store;
 uint64_t commit_times = 0;
 
 __thread size_t ATTEMPTED_NUM;
-__thread bool stop_run;
+bool stop_run = false;
 // Performance measurement (thread granularity)
 __thread struct timespec msr_start, msr_end;
 __thread double* timer;

@@ -131,6 +131,8 @@ void PollCompletion(coro_yield_t& yield) {
       coro_sched->RunCoroutine(yield, next);
     }
     if (stop_run) {
+      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
+      RecordTpLat(msr_sec);
       printf("worker.cc:119, thread %ld try to stop\n", thread_gid);
       break;
     }
@@ -716,7 +718,7 @@ void run_thread(thread_params* params,
     assert(false);
   }
 
-  stop_run = false;
+  // stop_run = false;
   thread_gid = params->thread_global_id;
   thread_local_id = params->thread_local_id;
   thread_num = params->thread_num_per_machine;
@@ -798,11 +800,11 @@ void run_thread(thread_params* params,
   coro_sched->coro_array[0].func();
 
   // Stop running
-  stop_run = true;
+  // stop_run = true;
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
 
-  printf("Finish, Tps: %ld", commit_times);
+  printf("thread %ld Finish, Tps: %ld", thread_gid,commit_times);
 
   // Clean
   delete[] timer;

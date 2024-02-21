@@ -11,7 +11,7 @@ extern LocalBatchStore local_batch_store;
 extern uint64_t commit_times;
 
 extern __thread size_t ATTEMPTED_NUM;
-extern __thread bool stop_run;
+extern bool stop_run;
 // Performance measurement (thread granularity)
 extern __thread struct timespec msr_start, msr_end;
 extern __thread double* timer;

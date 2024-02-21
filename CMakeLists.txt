@@ -99,6 +99,7 @@ include_directories(
     workload
     thirdparty
     compute_pool
+    memory_pool
     test
 )
 
