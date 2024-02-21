@@ -58,12 +58,12 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
     std::vector<PageAddress> page_addr_vec;
     while(true){
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
-        // for debug
-        for(int i=0; i<page_addr_vec.size(); i++){
-            // std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
-            //     << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
-            //     << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
-        }
+        // // for debug
+        // for(int i=0; i<page_addr_vec.size(); i++){
+        //     std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
+        //         << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
+        //         << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
+        // }
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
         for(int i=0; i<need_fetch_from_disk.size(); i++) {

@@ -268,6 +268,7 @@ void PageTableStore::VictimPageThread(){
       RDMA_LOG(ERROR) << "client: post faa fail. rc=" << rc << "VictimPageThread";
     }
     rc = connect_local_ring_qp->poll_till_completion(wc, no_timeout);
+    // std::cout << "hcy debug: " << *(int64_t*)faa_cnt_buf << " " << *(int64_t*)faa_head_buf << std::endl; // 确定在这里faa值都已经返回了
     if (rc != SUCC) {
       RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "VictimPageThread";
     }
@@ -298,6 +299,7 @@ void PageTableStore::VictimPageThread(){
       // buffer is not full
       // 从free list中取一个元素放入环形缓冲区
       free_list_mutex_.lock();
+      // std::cout << "**** debug: " << *(int64_t*)faa_cnt_buf << " " << *(int64_t*)faa_head_buf << std::endl; // 确定在这里faa值都已经返回了
       uint64_t head = (*(uint64_t*)faa_head_buf) % MAX_FREE_LIST_BUFFER_SIZE;
       while (ring_free_frame_buffer_.free_list_buffer_[head].valid == true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

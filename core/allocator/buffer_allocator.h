@@ -21,6 +21,7 @@ class RDMABufferAllocator {
     // If anyone relies on a more reliable allocator, you can just re-implement this Alloc interface
     // using other standard allocators, e.g., ptmalloc/jemalloc/tcmalloc.
 
+    std::unique_lock<std::mutex> lock(latch);
     if (unlikely(start + cur_offset + size > end)) {
       cur_offset = 0;
     }
@@ -41,4 +42,7 @@ class RDMABufferAllocator {
   char* start;
   char* end;
   uint64_t cur_offset;
+
+  // hcy add latch for multi-thread
+  std::mutex latch;
 };

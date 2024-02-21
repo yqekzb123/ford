@@ -2,7 +2,7 @@
   "local_compute_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "thread_num_per_machine": 1,
+    "thread_num_per_machine": 2,
     "coroutine_num": 3,
     "local_port": 12347,
 "txn_system": 4,
