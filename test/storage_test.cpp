@@ -53,8 +53,9 @@ void* request_pages(void* arg) {
         
         // page_id.set_page_no(request_page_no);
         // page_id.set_table_name("table");
-        request.mutable_page_id()->set_table_name("table");
-        request.mutable_page_id()->set_page_no(request_page_no);
+        request.add_page_id();
+        request.mutable_page_id(0)->set_table_name("table");
+        request.mutable_page_id(0)->set_page_no(request_page_no);
 
         // request.set_allocated_page_id(&page_id);
         request.set_require_batch_id(request_batch_id);

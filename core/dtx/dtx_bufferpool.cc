@@ -54,74 +54,65 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
             assert(false);
         }
     }
-    
+    double pagetable_usec = 0;
+    double disk_fetch_usec = 0;
+    double mem_fetch_usec = 0;
     std::vector<PageAddress> page_addr_vec;
     while(true){
+        // 计时1
+        timespec msr_start;
+        clock_gettime(CLOCK_REALTIME, &msr_start);
+
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
         // // for debug
-        // for(int i=0; i<page_addr_vec.size(); i++){
-        //     std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
-        //         << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
-        //         << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
-        // }
+        for(int i=0; i<page_addr_vec.size(); i++){
+            std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
+                << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
+                << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
+        }
+
+        // 计时2
+        timespec msr_pagetable;
+        clock_gettime(CLOCK_REALTIME, &msr_pagetable);
+        pagetable_usec += (msr_pagetable.tv_sec - msr_start.tv_sec) * 1000000 + (double)(msr_pagetable.tv_nsec - msr_start.tv_nsec) / 1000;
+
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
+
+        // init brpc channel
+        brpc::ChannelOptions options;
+        brpc::Channel channel;
+        options.use_rdma = false;
+        options.protocol = FLAGS_protocol;
+        options.connection_type = FLAGS_connection_type;
+        options.timeout_ms = FLAGS_timeout_ms;
+        options.max_retry = FLAGS_max_retry;
+        if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
+            RDMA_LOG(FATAL) << "Fail to initialize channel";
+        }
+        storage_service::StorageService_Stub stub(&channel);
+        storage_service::GetPageRequest request;
+        storage_service::GetPageResponse response;
+        brpc::Controller cntl;
+        request.set_require_batch_id(request_batch_id);
+        std::vector<int> need_fetch_idx;
         for(int i=0; i<need_fetch_from_disk.size(); i++) {
             if (need_fetch_from_disk[page_ids[i]]) {
-                // 从磁盘中读取数据页
-                brpc::ChannelOptions options;
-                brpc::Channel channel;
-                
-                options.use_rdma = false;
-                options.protocol = FLAGS_protocol;
-                options.connection_type = FLAGS_connection_type;
-                options.timeout_ms = FLAGS_timeout_ms;
-                options.max_retry = FLAGS_max_retry;
-                if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
-                    RDMA_LOG(FATAL) << "Fail to initialize channel";
-                }
-                storage_service::StorageService_Stub stub(&channel);
+                // 构造request
+                // !这里有内存泄漏，暂时先懒得改
+                std::string* table_name = new std::string();
+                *table_name = global_meta_man->GetTableName(page_ids[i].table_id);
+                request.add_page_id();
+                request.mutable_page_id(need_fetch_idx.size())->set_allocated_table_name(table_name);
+                request.mutable_page_id(need_fetch_idx.size())->set_page_no(page_ids[i].page_no);
 
-                storage_service::GetPageRequest request;
-                storage_service::GetPageResponse response;
-                brpc::Controller cntl;
-
-                std::string table_name = global_meta_man->GetTableName(page_ids[i].table_id);
-                request.mutable_page_id()->set_table_name(table_name);
-                request.mutable_page_id()->set_page_no(page_ids[i].page_no);
-
-                request.set_require_batch_id(request_batch_id);
-                
-                stub.GetPage(&cntl, &request, &response, NULL);
-
-                const char *constPage = response.data().c_str();
-                char *page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
-                memcpy(page, constPage, PAGE_SIZE);
-                pages.emplace(page_ids[i], page);
-                // 记录page的地址和远程地址
-                page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
-
-                // 在这里先将数据页写入共享内存池，以便并行访问
-                auto remote_node_id = page_addr_vec[i].node_id;
-                auto frame_id = page_addr_vec[i].frame_id;
-                auto remote_offset = global_meta_man->GetDataOff(remote_node_id);
-                RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
-                if(!coro_sched->RDMAWrite(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
-                    assert(false);
-                }
-                // std::cout << "FlushPage: " << page_ids[i].table_id << " " << page_ids[i].page_no << " into frame id: " << frame_id << std::endl;
-                                
-                // 在这里将对应的页表的item的now valid置为true
-                char* local_item = page_table_item_localaddr_and_remote_offset[page_ids[i]].first;
-                NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[page_ids[i]].second;
-                PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
-                item->page_valid = true;
-                qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
-                if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
-                    assert(false);
-                };
+                need_fetch_idx.push_back(i);
             }
             else if(now_valid[page_ids[i]] == true){
+                // 计时
+                timespec msr_mem_fetch;
+                clock_gettime(CLOCK_REALTIME, &msr_mem_fetch);
+
                 // 从共享内存池中读取数据页
                 auto remote_node_id = page_addr_vec[i].node_id;
                 auto frame_id = page_addr_vec[i].frame_id;
@@ -138,6 +129,11 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 pages.emplace(page_ids[i], page);
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
+
+                // 计时
+                timespec msr_end;
+                clock_gettime(CLOCK_REALTIME, &msr_end);
+                mem_fetch_usec += (msr_end.tv_sec - msr_mem_fetch.tv_sec) * 1000000 + (double)(msr_end.tv_nsec - msr_mem_fetch.tv_nsec) / 1000;
             }
             else{
                 // 如果这里是false，需要反复调用FetchPage直到now_valid为true
@@ -145,15 +141,56 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
                 new_is_write.push_back(is_write[i]);
             }
         }
+        // 在这里从磁盘获取数据页
+        if(need_fetch_idx.size() > 0){
+            // 计时
+            timespec msr_disk_fetch;
+            clock_gettime(CLOCK_REALTIME, &msr_disk_fetch);
+
+            stub.GetPage(&cntl, &request, &response, NULL);
+            const char *constPage = response.data().c_str();
+            int j = 0;
+            for(auto i: need_fetch_idx){
+                char *page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
+                memcpy(page, constPage + (j++) * PAGE_SIZE, PAGE_SIZE);
+                pages.emplace(page_ids[i], page);
+                // 记录page的地址和远程地址
+                page_data_localaddr_and_remote_offset[page_ids[i]] = std::make_pair(page, page_addr_vec[i]);
+
+                // 在这里先将数据页写入共享内存池，以便并行访问
+                auto remote_node_id = page_addr_vec[i].node_id;
+                auto frame_id = page_addr_vec[i].frame_id;
+                auto remote_offset = global_meta_man->GetDataOff(remote_node_id);
+                RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
+                if(!coro_sched->RDMAWrite(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
+                    assert(false);
+                }
+
+                // 在这里将对应的页表的item的now valid置为true
+                char* local_item = page_table_item_localaddr_and_remote_offset[page_ids[i]].first;
+                NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[page_ids[i]].second;
+                PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
+                item->page_valid = true;
+                qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
+                if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
+                    assert(false);
+                };
+            }
+            // 计时
+            timespec msr_end;
+            clock_gettime(CLOCK_REALTIME, &msr_end);
+            disk_fetch_usec += (msr_end.tv_sec - msr_disk_fetch.tv_sec) * 1000000 + (double)(msr_end.tv_nsec - msr_disk_fetch.tv_nsec) / 1000;
+        }
         if(new_page_id.size() == 0){
             break;
         } else{
             page_ids = new_page_id;
             is_write = new_is_write;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(3)); // 1ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1ms
     }
 
+    printf("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
     coro_sched->Yield(yield, coro_id);
     assert(page_data_localaddr_and_remote_offset.size() == pages.size());
     return pages;

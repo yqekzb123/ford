@@ -67,6 +67,8 @@ void Handler::GenThreads(std::string bench_name) {
   g_machine_num = machine_num;
   g_machine_id = machine_id;
   t_id_t thread_num_per_machine = (t_id_t)client_conf.get("thread_num_per_machine").get_int64();
+  g_thread_cnt = thread_num_per_machine;
+  
   const int coro_num = (int)client_conf.get("coroutine_num").get_int64();
   //! notice: the local_cache_size
   const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
@@ -132,7 +134,7 @@ void Handler::GenThreads(std::string bench_name) {
     /* Pin thread i to hardware thread i */
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    CPU_SET(i, &cpuset);
+    CPU_SET((machine_id * thread_num_per_machine) + i, &cpuset);
     int rc = pthread_setaffinity_np(thread_arr[i].native_handle(), sizeof(cpu_set_t), &cpuset);
     if (rc != 0) {
       RDMA_LOG(WARNING) << "Error calling pthread_setaffinity_np: " << rc;

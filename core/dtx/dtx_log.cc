@@ -44,7 +44,7 @@ void DTX::SendLogToStoragePool(){
         LOG(ERROR) << "Fail to send log: " << cntl.ErrorText();
         return;
     }
-    LOG(INFO) << "Received response from " << cntl.remote_side()
-              << " to " << cntl.local_side()
-              << ": " << response.ShortDebugString();
+    // LOG(INFO) << "Received response from " << cntl.remote_side()
+    //           << " to " << cntl.local_side()
+    //           << ": " << response.ShortDebugString();
 }

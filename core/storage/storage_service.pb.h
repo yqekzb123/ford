@@ -59,6 +59,9 @@ extern GetPageResponseDefaultTypeInternal _GetPageResponse_default_instance_;
 class LogWriteRequest;
 struct LogWriteRequestDefaultTypeInternal;
 extern LogWriteRequestDefaultTypeInternal _LogWriteRequest_default_instance_;
+class LogWriteRequest_PageID;
+struct LogWriteRequest_PageIDDefaultTypeInternal;
+extern LogWriteRequest_PageIDDefaultTypeInternal _LogWriteRequest_PageID_default_instance_;
 class LogWriteResponse;
 struct LogWriteResponseDefaultTypeInternal;
 extern LogWriteResponseDefaultTypeInternal _LogWriteResponse_default_instance_;
@@ -68,11 +71,171 @@ template<> ::storage_service::GetPageRequest* Arena::CreateMaybeMessage<::storag
 template<> ::storage_service::GetPageRequest_PageID* Arena::CreateMaybeMessage<::storage_service::GetPageRequest_PageID>(Arena*);
 template<> ::storage_service::GetPageResponse* Arena::CreateMaybeMessage<::storage_service::GetPageResponse>(Arena*);
 template<> ::storage_service::LogWriteRequest* Arena::CreateMaybeMessage<::storage_service::LogWriteRequest>(Arena*);
+template<> ::storage_service::LogWriteRequest_PageID* Arena::CreateMaybeMessage<::storage_service::LogWriteRequest_PageID>(Arena*);
 template<> ::storage_service::LogWriteResponse* Arena::CreateMaybeMessage<::storage_service::LogWriteResponse>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace storage_service {
 
 // ===================================================================
+
+class LogWriteRequest_PageID final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:storage_service.LogWriteRequest.PageID) */ {
+ public:
+  inline LogWriteRequest_PageID() : LogWriteRequest_PageID(nullptr) {}
+  ~LogWriteRequest_PageID() override;
+  explicit PROTOBUF_CONSTEXPR LogWriteRequest_PageID(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  LogWriteRequest_PageID(const LogWriteRequest_PageID& from);
+  LogWriteRequest_PageID(LogWriteRequest_PageID&& from) noexcept
+    : LogWriteRequest_PageID() {
+    *this = ::std::move(from);
+  }
+
+  inline LogWriteRequest_PageID& operator=(const LogWriteRequest_PageID& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LogWriteRequest_PageID& operator=(LogWriteRequest_PageID&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const LogWriteRequest_PageID& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const LogWriteRequest_PageID* internal_default_instance() {
+    return reinterpret_cast<const LogWriteRequest_PageID*>(
+               &_LogWriteRequest_PageID_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(LogWriteRequest_PageID& a, LogWriteRequest_PageID& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(LogWriteRequest_PageID* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LogWriteRequest_PageID* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LogWriteRequest_PageID* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<LogWriteRequest_PageID>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const LogWriteRequest_PageID& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom(const LogWriteRequest_PageID& from);
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to, const ::PROTOBUF_NAMESPACE_ID::Message& from);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(LogWriteRequest_PageID* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "storage_service.LogWriteRequest.PageID";
+  }
+  protected:
+  explicit LogWriteRequest_PageID(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTableNameFieldNumber = 1,
+    kPageNoFieldNumber = 2,
+  };
+  // bytes table_name = 1;
+  void clear_table_name();
+  const std::string& table_name() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_table_name(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_table_name();
+  PROTOBUF_NODISCARD std::string* release_table_name();
+  void set_allocated_table_name(std::string* table_name);
+  private:
+  const std::string& _internal_table_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_table_name(const std::string& value);
+  std::string* _internal_mutable_table_name();
+  public:
+
+  // sint32 page_no = 2;
+  void clear_page_no();
+  int32_t page_no() const;
+  void set_page_no(int32_t value);
+  private:
+  int32_t _internal_page_no() const;
+  void _internal_set_page_no(int32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:storage_service.LogWriteRequest.PageID)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr table_name_;
+  int32_t page_no_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_storage_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
 
 class LogWriteRequest final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:storage_service.LogWriteRequest) */ {
@@ -122,7 +285,7 @@ class LogWriteRequest final :
                &_LogWriteRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(LogWriteRequest& a, LogWriteRequest& b) {
     a.Swap(&b);
@@ -190,11 +353,32 @@ class LogWriteRequest final :
 
   // nested types ----------------------------------------------------
 
+  typedef LogWriteRequest_PageID PageID;
+
   // accessors -------------------------------------------------------
 
   enum : int {
+    kPageIdFieldNumber = 2,
     kLogFieldNumber = 1,
   };
+  // repeated .storage_service.LogWriteRequest.PageID page_id = 2;
+  int page_id_size() const;
+  private:
+  int _internal_page_id_size() const;
+  public:
+  void clear_page_id();
+  ::storage_service::LogWriteRequest_PageID* mutable_page_id(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::LogWriteRequest_PageID >*
+      mutable_page_id();
+  private:
+  const ::storage_service::LogWriteRequest_PageID& _internal_page_id(int index) const;
+  ::storage_service::LogWriteRequest_PageID* _internal_add_page_id();
+  public:
+  const ::storage_service::LogWriteRequest_PageID& page_id(int index) const;
+  ::storage_service::LogWriteRequest_PageID* add_page_id();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::LogWriteRequest_PageID >&
+      page_id() const;
+
   // bytes log = 1;
   void clear_log();
   const std::string& log() const;
@@ -216,6 +400,7 @@ class LogWriteRequest final :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::LogWriteRequest_PageID > page_id_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr log_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_storage_5fservice_2eproto;
@@ -269,7 +454,7 @@ class LogWriteResponse final :
                &_LogWriteResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    2;
 
   friend void swap(LogWriteResponse& a, LogWriteResponse& b) {
     a.Swap(&b);
@@ -386,7 +571,7 @@ class GetPageRequest_PageID final :
                &_GetPageRequest_PageID_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(GetPageRequest_PageID& a, GetPageRequest_PageID& b) {
     a.Swap(&b);
@@ -460,7 +645,7 @@ class GetPageRequest_PageID final :
     kTableNameFieldNumber = 1,
     kPageNoFieldNumber = 2,
   };
-  // string table_name = 1;
+  // bytes table_name = 1;
   void clear_table_name();
   const std::string& table_name() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -545,7 +730,7 @@ class GetPageRequest final :
                &_GetPageRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    4;
 
   friend void swap(GetPageRequest& a, GetPageRequest& b) {
     a.Swap(&b);
@@ -621,23 +806,23 @@ class GetPageRequest final :
     kPageIdFieldNumber = 1,
     kRequireBatchIdFieldNumber = 2,
   };
-  // .storage_service.GetPageRequest.PageID page_id = 1;
-  bool has_page_id() const;
+  // repeated .storage_service.GetPageRequest.PageID page_id = 1;
+  int page_id_size() const;
   private:
-  bool _internal_has_page_id() const;
+  int _internal_page_id_size() const;
   public:
   void clear_page_id();
-  const ::storage_service::GetPageRequest_PageID& page_id() const;
-  PROTOBUF_NODISCARD ::storage_service::GetPageRequest_PageID* release_page_id();
-  ::storage_service::GetPageRequest_PageID* mutable_page_id();
-  void set_allocated_page_id(::storage_service::GetPageRequest_PageID* page_id);
+  ::storage_service::GetPageRequest_PageID* mutable_page_id(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::GetPageRequest_PageID >*
+      mutable_page_id();
   private:
-  const ::storage_service::GetPageRequest_PageID& _internal_page_id() const;
-  ::storage_service::GetPageRequest_PageID* _internal_mutable_page_id();
+  const ::storage_service::GetPageRequest_PageID& _internal_page_id(int index) const;
+  ::storage_service::GetPageRequest_PageID* _internal_add_page_id();
   public:
-  void unsafe_arena_set_allocated_page_id(
-      ::storage_service::GetPageRequest_PageID* page_id);
-  ::storage_service::GetPageRequest_PageID* unsafe_arena_release_page_id();
+  const ::storage_service::GetPageRequest_PageID& page_id(int index) const;
+  ::storage_service::GetPageRequest_PageID* add_page_id();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::GetPageRequest_PageID >&
+      page_id() const;
 
   // uint64 require_batch_id = 2;
   void clear_require_batch_id();
@@ -655,7 +840,7 @@ class GetPageRequest final :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::storage_service::GetPageRequest_PageID* page_id_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::GetPageRequest_PageID > page_id_;
   uint64_t require_batch_id_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_storage_5fservice_2eproto;
@@ -710,7 +895,7 @@ class GetPageResponse final :
                &_GetPageResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    5;
 
   friend void swap(GetPageResponse& a, GetPageResponse& b) {
     a.Swap(&b);
@@ -884,6 +1069,80 @@ class StorageService_Stub : public StorageService {
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// LogWriteRequest_PageID
+
+// bytes table_name = 1;
+inline void LogWriteRequest_PageID::clear_table_name() {
+  table_name_.ClearToEmpty();
+}
+inline const std::string& LogWriteRequest_PageID::table_name() const {
+  // @@protoc_insertion_point(field_get:storage_service.LogWriteRequest.PageID.table_name)
+  return _internal_table_name();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void LogWriteRequest_PageID::set_table_name(ArgT0&& arg0, ArgT... args) {
+ 
+ table_name_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:storage_service.LogWriteRequest.PageID.table_name)
+}
+inline std::string* LogWriteRequest_PageID::mutable_table_name() {
+  std::string* _s = _internal_mutable_table_name();
+  // @@protoc_insertion_point(field_mutable:storage_service.LogWriteRequest.PageID.table_name)
+  return _s;
+}
+inline const std::string& LogWriteRequest_PageID::_internal_table_name() const {
+  return table_name_.Get();
+}
+inline void LogWriteRequest_PageID::_internal_set_table_name(const std::string& value) {
+  
+  table_name_.Set(value, GetArenaForAllocation());
+}
+inline std::string* LogWriteRequest_PageID::_internal_mutable_table_name() {
+  
+  return table_name_.Mutable(GetArenaForAllocation());
+}
+inline std::string* LogWriteRequest_PageID::release_table_name() {
+  // @@protoc_insertion_point(field_release:storage_service.LogWriteRequest.PageID.table_name)
+  return table_name_.Release();
+}
+inline void LogWriteRequest_PageID::set_allocated_table_name(std::string* table_name) {
+  if (table_name != nullptr) {
+    
+  } else {
+    
+  }
+  table_name_.SetAllocated(table_name, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (table_name_.IsDefault()) {
+    table_name_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:storage_service.LogWriteRequest.PageID.table_name)
+}
+
+// sint32 page_no = 2;
+inline void LogWriteRequest_PageID::clear_page_no() {
+  page_no_ = 0;
+}
+inline int32_t LogWriteRequest_PageID::_internal_page_no() const {
+  return page_no_;
+}
+inline int32_t LogWriteRequest_PageID::page_no() const {
+  // @@protoc_insertion_point(field_get:storage_service.LogWriteRequest.PageID.page_no)
+  return _internal_page_no();
+}
+inline void LogWriteRequest_PageID::_internal_set_page_no(int32_t value) {
+  
+  page_no_ = value;
+}
+inline void LogWriteRequest_PageID::set_page_no(int32_t value) {
+  _internal_set_page_no(value);
+  // @@protoc_insertion_point(field_set:storage_service.LogWriteRequest.PageID.page_no)
+}
+
+// -------------------------------------------------------------------
+
 // LogWriteRequest
 
 // bytes log = 1;
@@ -936,6 +1195,46 @@ inline void LogWriteRequest::set_allocated_log(std::string* log) {
   // @@protoc_insertion_point(field_set_allocated:storage_service.LogWriteRequest.log)
 }
 
+// repeated .storage_service.LogWriteRequest.PageID page_id = 2;
+inline int LogWriteRequest::_internal_page_id_size() const {
+  return page_id_.size();
+}
+inline int LogWriteRequest::page_id_size() const {
+  return _internal_page_id_size();
+}
+inline void LogWriteRequest::clear_page_id() {
+  page_id_.Clear();
+}
+inline ::storage_service::LogWriteRequest_PageID* LogWriteRequest::mutable_page_id(int index) {
+  // @@protoc_insertion_point(field_mutable:storage_service.LogWriteRequest.page_id)
+  return page_id_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::LogWriteRequest_PageID >*
+LogWriteRequest::mutable_page_id() {
+  // @@protoc_insertion_point(field_mutable_list:storage_service.LogWriteRequest.page_id)
+  return &page_id_;
+}
+inline const ::storage_service::LogWriteRequest_PageID& LogWriteRequest::_internal_page_id(int index) const {
+  return page_id_.Get(index);
+}
+inline const ::storage_service::LogWriteRequest_PageID& LogWriteRequest::page_id(int index) const {
+  // @@protoc_insertion_point(field_get:storage_service.LogWriteRequest.page_id)
+  return _internal_page_id(index);
+}
+inline ::storage_service::LogWriteRequest_PageID* LogWriteRequest::_internal_add_page_id() {
+  return page_id_.Add();
+}
+inline ::storage_service::LogWriteRequest_PageID* LogWriteRequest::add_page_id() {
+  ::storage_service::LogWriteRequest_PageID* _add = _internal_add_page_id();
+  // @@protoc_insertion_point(field_add:storage_service.LogWriteRequest.page_id)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::LogWriteRequest_PageID >&
+LogWriteRequest::page_id() const {
+  // @@protoc_insertion_point(field_list:storage_service.LogWriteRequest.page_id)
+  return page_id_;
+}
+
 // -------------------------------------------------------------------
 
 // LogWriteResponse
@@ -944,7 +1243,7 @@ inline void LogWriteRequest::set_allocated_log(std::string* log) {
 
 // GetPageRequest_PageID
 
-// string table_name = 1;
+// bytes table_name = 1;
 inline void GetPageRequest_PageID::clear_table_name() {
   table_name_.ClearToEmpty();
 }
@@ -956,7 +1255,7 @@ template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
 void GetPageRequest_PageID::set_table_name(ArgT0&& arg0, ArgT... args) {
  
- table_name_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+ table_name_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
   // @@protoc_insertion_point(field_set:storage_service.GetPageRequest.PageID.table_name)
 }
 inline std::string* GetPageRequest_PageID::mutable_table_name() {
@@ -1018,94 +1317,44 @@ inline void GetPageRequest_PageID::set_page_no(int32_t value) {
 
 // GetPageRequest
 
-// .storage_service.GetPageRequest.PageID page_id = 1;
-inline bool GetPageRequest::_internal_has_page_id() const {
-  return this != internal_default_instance() && page_id_ != nullptr;
+// repeated .storage_service.GetPageRequest.PageID page_id = 1;
+inline int GetPageRequest::_internal_page_id_size() const {
+  return page_id_.size();
 }
-inline bool GetPageRequest::has_page_id() const {
-  return _internal_has_page_id();
+inline int GetPageRequest::page_id_size() const {
+  return _internal_page_id_size();
 }
 inline void GetPageRequest::clear_page_id() {
-  if (GetArenaForAllocation() == nullptr && page_id_ != nullptr) {
-    delete page_id_;
-  }
-  page_id_ = nullptr;
+  page_id_.Clear();
 }
-inline const ::storage_service::GetPageRequest_PageID& GetPageRequest::_internal_page_id() const {
-  const ::storage_service::GetPageRequest_PageID* p = page_id_;
-  return p != nullptr ? *p : reinterpret_cast<const ::storage_service::GetPageRequest_PageID&>(
-      ::storage_service::_GetPageRequest_PageID_default_instance_);
-}
-inline const ::storage_service::GetPageRequest_PageID& GetPageRequest::page_id() const {
-  // @@protoc_insertion_point(field_get:storage_service.GetPageRequest.page_id)
-  return _internal_page_id();
-}
-inline void GetPageRequest::unsafe_arena_set_allocated_page_id(
-    ::storage_service::GetPageRequest_PageID* page_id) {
-  if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(page_id_);
-  }
-  page_id_ = page_id;
-  if (page_id) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:storage_service.GetPageRequest.page_id)
-}
-inline ::storage_service::GetPageRequest_PageID* GetPageRequest::release_page_id() {
-  
-  ::storage_service::GetPageRequest_PageID* temp = page_id_;
-  page_id_ = nullptr;
-#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
-  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
-  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  if (GetArenaForAllocation() == nullptr) { delete old; }
-#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
-  if (GetArenaForAllocation() != nullptr) {
-    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  }
-#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
-  return temp;
-}
-inline ::storage_service::GetPageRequest_PageID* GetPageRequest::unsafe_arena_release_page_id() {
-  // @@protoc_insertion_point(field_release:storage_service.GetPageRequest.page_id)
-  
-  ::storage_service::GetPageRequest_PageID* temp = page_id_;
-  page_id_ = nullptr;
-  return temp;
-}
-inline ::storage_service::GetPageRequest_PageID* GetPageRequest::_internal_mutable_page_id() {
-  
-  if (page_id_ == nullptr) {
-    auto* p = CreateMaybeMessage<::storage_service::GetPageRequest_PageID>(GetArenaForAllocation());
-    page_id_ = p;
-  }
-  return page_id_;
-}
-inline ::storage_service::GetPageRequest_PageID* GetPageRequest::mutable_page_id() {
-  ::storage_service::GetPageRequest_PageID* _msg = _internal_mutable_page_id();
+inline ::storage_service::GetPageRequest_PageID* GetPageRequest::mutable_page_id(int index) {
   // @@protoc_insertion_point(field_mutable:storage_service.GetPageRequest.page_id)
-  return _msg;
+  return page_id_.Mutable(index);
 }
-inline void GetPageRequest::set_allocated_page_id(::storage_service::GetPageRequest_PageID* page_id) {
-  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  if (message_arena == nullptr) {
-    delete page_id_;
-  }
-  if (page_id) {
-    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(page_id);
-    if (message_arena != submessage_arena) {
-      page_id = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, page_id, submessage_arena);
-    }
-    
-  } else {
-    
-  }
-  page_id_ = page_id;
-  // @@protoc_insertion_point(field_set_allocated:storage_service.GetPageRequest.page_id)
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::GetPageRequest_PageID >*
+GetPageRequest::mutable_page_id() {
+  // @@protoc_insertion_point(field_mutable_list:storage_service.GetPageRequest.page_id)
+  return &page_id_;
+}
+inline const ::storage_service::GetPageRequest_PageID& GetPageRequest::_internal_page_id(int index) const {
+  return page_id_.Get(index);
+}
+inline const ::storage_service::GetPageRequest_PageID& GetPageRequest::page_id(int index) const {
+  // @@protoc_insertion_point(field_get:storage_service.GetPageRequest.page_id)
+  return _internal_page_id(index);
+}
+inline ::storage_service::GetPageRequest_PageID* GetPageRequest::_internal_add_page_id() {
+  return page_id_.Add();
+}
+inline ::storage_service::GetPageRequest_PageID* GetPageRequest::add_page_id() {
+  ::storage_service::GetPageRequest_PageID* _add = _internal_add_page_id();
+  // @@protoc_insertion_point(field_add:storage_service.GetPageRequest.page_id)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::storage_service::GetPageRequest_PageID >&
+GetPageRequest::page_id() const {
+  // @@protoc_insertion_point(field_list:storage_service.GetPageRequest.page_id)
+  return page_id_;
 }
 
 // uint64 require_batch_id = 2;
@@ -1185,6 +1434,8 @@ inline void GetPageResponse::set_allocated_data(std::string* data) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
