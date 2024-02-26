@@ -111,7 +111,7 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
       fetch_type.push_back(FetchPageType::kReadPage);
     }
   }
-  std::vector<DataItemPtr> data_list = FetchTuple(yield, tid_list, id_list, fetch_type, batch_id);
+  std::vector<DataItemPtr> data_list = FetchTuple(yield, tid_list, id_list, fetch_type, t_id);
   if (data_list.empty()) return false;
   // !接下来需要将数据项塞入读写集里
   for (auto fetch_item : data_list) {
@@ -162,7 +162,7 @@ bool DTX::WriteRemote(coro_yield_t& yield) {
     fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
 
-  WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, 0);
+  WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, t_id);
   tid_list.clear();
   id_list.clear();
   new_data_list.clear();
