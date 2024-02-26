@@ -5,3 +5,5 @@ build
 .vscode
 bench_results
 thirdparty
+perf.data
+perf.svg

@@ -107,7 +107,7 @@ void RecordTpLat(double msr_sec) {
 }
 
 void BatchExec(coro_yield_t& yield) {
-  while (thread_gid == 0) {
+  while (thread_gid % g_thread_cnt == 0) {
     // printf("worker.cc:97, batch exe\n");
     local_batch_store.ExeBatch(yield);
     coro_sched->YieldBatch(yield, BATCH_TXN_ID);

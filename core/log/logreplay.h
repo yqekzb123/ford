@@ -90,6 +90,7 @@ public:
         // std::lock_guard<std::mutex> latch(latch2_);
         return persist_batch_id_; 
     }
+    void pushLogintoHashTable(std::string s);
 
 private:
     int log_replay_fd_;             // 重放log文件fd，从头开始顺序读
@@ -108,4 +109,8 @@ private:
     bool replay_stop = false;
     std::thread replay_thread_;
     std::condition_variable cv_; // 条件变量
+
+public:
+    // 记录每个pageid上的log batch的数量
+    std::unordered_map<PageId, std::pair<std::mutex, int>> pageid_batch_count_;
 };

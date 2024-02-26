@@ -127,7 +127,7 @@ MetaManager::MetaManager(std::string bench_name) {
     remote_pagetable_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
     page_table_nodes.push_back(remote_machine_id);
   }
-  RDMA_LOG(INFO) << "All lock table meta received";
+  RDMA_LOG(INFO) << "All page table meta received";
 
   // RDMA setup
   int local_port = (int)local_node.get("local_port").get_int64();

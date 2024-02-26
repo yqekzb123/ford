@@ -172,7 +172,7 @@ void PageTableStore::FillFreeListThread() {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::unique_lock<std::mutex> lock(victim_mutex);
-    if(free_list_.size() > MAX_FREE_LIST_VICTIM_SIZE * 100){
+    if(free_list_.size() > MAX_FREE_LIST_VICTIM_SIZE){
       cv.wait(lock);
     }
 
@@ -219,6 +219,9 @@ void PageTableStore::FillFreeListThread() {
 
               // 将该页面从页表中删除
               node->page_table_items[j].valid = false;
+
+              // debug
+              std::cout << "+++remove from page table: " << node->page_table_items[j].page_address.node_id << " " << node->page_table_items[j].page_address.frame_id << std::endl;
             }
           }
         }
@@ -316,7 +319,6 @@ void PageTableStore::VictimPageThread(){
 
       free_list_mutex_.unlock();
     }
-    // std::this_thread::sleep_for(std::chrono::microseconds(50));
   }
 }
 

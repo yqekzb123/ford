@@ -5,3 +5,4 @@
 
 node_id_t g_machine_id;
 node_id_t g_machine_num;
+int g_thread_cnt;

@@ -8,6 +8,7 @@
 
 extern node_id_t g_machine_id;
 extern node_id_t g_machine_num;
+extern int g_thread_cnt;
 
 enum DTX_SYS : int {
   FaRM = 0,

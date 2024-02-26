@@ -52,6 +52,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   //            readwrite_keyid.begin(), readwrite_keyid.end(),
   //            all_keyid.begin());
   
+  // 打点计时1
+  struct timespec tx_start_time;
+  clock_gettime(CLOCK_REALTIME, &tx_start_time);
+
   //! 1. 对事务访问的数据项加锁
   // 只读加锁
   res = first_dtx->LockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
@@ -68,10 +72,25 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     // ExclusiveOnRecord(yield, readonly_tableid, readonly_keyid);
     return res;
   }
+  // 计时2
+  struct timespec tx_lock_time;
+  clock_gettime(CLOCK_REALTIME, &tx_lock_time);
+  double lock_usec = (tx_lock_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+
   //! 2. 获取数据项索引
   auto index = first_dtx->GetHashIndex(yield, all_tableid, all_keyid);
+  // 计时3
+  struct timespec tx_index_time;
+  clock_gettime(CLOCK_REALTIME, &tx_index_time);
+  double index_usec = (tx_index_time.tv_sec - tx_lock_time.tv_sec) * 1000000 + (double)(tx_index_time.tv_nsec - tx_lock_time.tv_nsec) / 1000;
+
   //! 3. 读取数据项
   auto data_list = ReadData(yield, first_dtx,index);
+  // 计时4
+  struct timespec tx_read_time;
+  clock_gettime(CLOCK_REALTIME, &tx_read_time);
+  double read_usec = (tx_read_time.tv_sec - tx_index_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_index_time.tv_nsec) / 1000;
+
   //! 4. 从页中取出数据，将数据存入local，还没想好存到哪
   for (auto item : data_list) {
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
@@ -85,6 +104,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     // !连续的本地计算,这里还需要增加tpcc等负载的运算内容 
     res = dtx->TxReCaculate(yield);
   }
+  // 计时5
+  struct timespec tx_recalculate_time;
+  clock_gettime(CLOCK_REALTIME, &tx_recalculate_time);
+  double recalculate_usec = (tx_recalculate_time.tv_sec - tx_read_time.tv_sec) * 1000000 + (double)(tx_recalculate_time.tv_nsec - tx_read_time.tv_nsec) / 1000;
 
   // std::vector<DataItemPtr> new_data_list;
   //! 6. 将确定的数据，利用RDMA刷入页中
@@ -92,15 +115,32 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
 
   StatCommit();
 
+  // 计时6
+  struct timespec tx_flush_time;
+  clock_gettime(CLOCK_REALTIME, &tx_flush_time);
+  double flush_usec = (tx_flush_time.tv_sec - tx_recalculate_time.tv_sec) * 1000000 + (double)(tx_flush_time.tv_nsec - tx_recalculate_time.tv_nsec) / 1000;
+
   //! 7. Unpin pages
   Unpin(yield, first_dtx, index);
+  // 计时7
+  struct timespec tx_unpin_time;
+  clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
+  double unpin_usec = (tx_unpin_time.tv_sec - tx_flush_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_flush_time.tv_nsec) / 1000;
 
-  //! 7. 写日志到存储层
+  //! 8. 写日志到存储层
   first_dtx->SendLogToStoragePool();
+  // 计时8
+  struct timespec tx_log_time;
+  clock_gettime(CLOCK_REALTIME, &tx_log_time);
+  double log_usec = (tx_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
 
   //! 8. 释放锁
   first_dtx->UnlockShared(yield, first_dtx->hold_shared_lock_data_id, first_dtx->hold_shared_lock_node_offs);
   first_dtx->UnlockExclusive(yield, first_dtx->hold_exclusive_lock_data_id, first_dtx->hold_exclusive_lock_node_offs);
+  // 计时9
+  struct timespec tx_unlock_time;
+  clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
+  double unlock_usec = (tx_unlock_time.tv_sec - tx_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_log_time.tv_nsec) / 1000;
 
   // 记录提交事务
   struct timespec tx_end_time;
@@ -119,6 +159,9 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       stop_run = true;
     }
   }
+
+  // 输出计时
+  printf("local_batch.cc:164 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
   printf("local_batch.cc:95 execute batch %ld complete\n", batch_id);
   return res;
 }

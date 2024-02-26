@@ -23,7 +23,7 @@
 #include "util/hash.h"
 #include "util/debug.h"
 
-#define MAX_FREE_LIST_VICTIM_SIZE 20000
+#define MAX_FREE_LIST_VICTIM_SIZE 50000
 
 // 实现页表 -- std::unordered_map<PageId, frame_id_t, PageIdHash> page_table_;
 // 页表的作用是：通过页号PageId找到对应的帧号frame_id_t
