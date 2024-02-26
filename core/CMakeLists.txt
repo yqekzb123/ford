@@ -11,6 +11,7 @@ set(DTX_SRC
         dtx/dtx_lock.cc
         dtx/dtx_local.cc
         dtx/dtx_local_exe_commit.cc
+        dtx/dtx_base_exe_commit.cc
         dtx/dtx_page_table.cc
         dtx/structs.cc
         dtx/rwlock.cc
@@ -28,7 +29,6 @@ set(STORAGE_SRC
         )
 
 set(BATCH_SRC
-        batch/batch_issue.cc
         batch/local_batch.cc)
         
 set(LOG_SRC

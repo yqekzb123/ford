@@ -175,7 +175,6 @@ bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<Dat
     fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
   first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id);
-  printf("\n");
   tid_list.clear();
   id_list.clear();
   new_data_list.clear();

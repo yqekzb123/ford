@@ -64,6 +64,12 @@ class DTX {
 
   bool TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);
 
+  bool TxExe(coro_yield_t& yield, bool fail_abort = true);
+
+  bool TxCommit(coro_yield_t& yield);
+
+  void TxAbort(coro_yield_t& yield);
+
   /*****************************************************/
 
  public:
@@ -94,6 +100,13 @@ class DTX {
   size_t GetAddrCacheSize() {
     return addr_cache->TotalAddrSize();
   }
+
+  bool LockRemoteRO(coro_yield_t& yield);  // 基线方法，对所有操作加锁
+  bool LockRemoteRW(coro_yield_t& yield);  // 基线方法，对所有操作加锁
+  bool ReadRemote(coro_yield_t& yield);  // 基线方法，读数据
+  bool WriteRemote(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
+  void Unpin(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
+
   bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
   bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
 
@@ -271,6 +284,8 @@ class DTX {
   std::vector<NodeOffset> hold_exclusive_lock_node_offs;
   std::vector<LockDataId> hold_shared_lock_data_id;
   std::vector<NodeOffset> hold_shared_lock_node_offs;
+
+  std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> temp_index;
 
 };
 

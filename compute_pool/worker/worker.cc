@@ -131,9 +131,11 @@ void PollCompletion(coro_yield_t& yield) {
       coro_sched->RunCoroutine(yield, next);
     }
     if (stop_run) {
-      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
-      RecordTpLat(msr_sec);
-      printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+      if (meta_man->txn_system == DTX_SYS::OUR) {
+        double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
+        RecordTpLat(msr_sec);
+        printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+      }
       break;
     }
   }
@@ -303,6 +305,100 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
   // Each coroutine has a dtx: Each coroutine is a coordinator
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
+                     qp_man,
+                     status,
+                     lock_table,
+                     thread_gid,
+                     coro_id,
+                     coro_sched,
+                     rdma_buffer_allocator,
+                     log_offset_allocator,
+                     addr_cache,
+                     free_page_list,
+                     free_page_list_mutex);
+
+    SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
+    uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
+    stat_attempted_tx_total++;
+
+    SmallBankDTX* bench_dtx = new SmallBankDTX();
+    bench_dtx->dtx = dtx;
+    // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
+
+    clock_gettime(CLOCK_REALTIME, &tx_start_time);
+    dtx->tx_start_time = tx_start_time;
+    printf("worker.cc:326\n");
+    switch (tx_type) {
+      case SmallBankTxType::kAmalgamate: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case SmallBankTxType::kBalance: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case SmallBankTxType::kDepositChecking: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case SmallBankTxType::kSendPayment: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case SmallBankTxType::kTransactSaving: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case SmallBankTxType::kWriteCheck: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      default:
+        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
+        abort();
+    }
+    /********************************** Stat begin *****************************************/
+    // Stat after one transaction finishes
+    printf("try %d transaction commit? %s\n", stat_attempted_tx_total, tx_committed?"true":"false");
+    if (tx_committed) {
+      clock_gettime(CLOCK_REALTIME, &tx_end_time);
+      double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+      timer[stat_committed_tx_total++] = tx_usec;
+    }
+    if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
+      // A coroutine calculate the total execution time and exits
+      clock_gettime(CLOCK_REALTIME, &msr_end);
+      // double msr_usec = (msr_end.tv_sec - msr_start.tv_sec) * 1000000 + (double) (msr_end.tv_nsec - msr_start.tv_nsec) / 1000;
+      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
+      RecordTpLat(msr_sec);
+      break;
+    }
+    /********************************** Stat end *****************************************/
+  }
+  // delete dtx;
+}
+
+void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
+  // Each coroutine has a dtx: Each coroutine is a coordinator
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
   int execute_cnt = 0;
   // Running transactions
   clock_gettime(CLOCK_REALTIME, &msr_start);
@@ -401,6 +497,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
   }
   // delete dtx;
 }
+
 
 void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
   // Each coroutine has a dtx: Each coroutine is a coordinator
@@ -718,7 +815,7 @@ void run_thread(thread_params* params,
     assert(false);
   }
 
-  // stop_run = false;
+  stop_run = false;
   thread_gid = params->thread_global_id;
   thread_local_id = params->thread_local_id;
   thread_num = params->thread_num_per_machine;
@@ -765,21 +862,39 @@ void run_thread(thread_params* params,
     random_generator[coro_i].SetSeed(coro_seed);
     coro_sched->coro_array[coro_i].coro_id = coro_i;
     // Bind workload to coroutine
-    if (coro_i == POLL_ROUTINE_ID) {
+    if (meta_man->txn_system == DTX_SYS::OUR) {
+      if (coro_i == POLL_ROUTINE_ID) {
       coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
-    } else if (coro_i == BATCH_TXN_ID) {
-      coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
+      } else if (coro_i == BATCH_TXN_ID ) {
+        // 只有batch的模式会需要batch协程
+        coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
+      } else {
+        if (bench_name == "tatp") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));
+        } else if (bench_name == "smallbank") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunLocalSmallBank, _1, coro_i));
+        } else if (bench_name == "tpcc") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTPCC, _1, coro_i));
+        } else if (bench_name == "micro") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunMICRO, _1, coro_i));
+        }
+      }
     } else {
-      if (bench_name == "tatp") {
-        coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));
-      } else if (bench_name == "smallbank") {
-        coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunSmallBank, _1, coro_i));
-      } else if (bench_name == "tpcc") {
-        coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTPCC, _1, coro_i));
-      } else if (bench_name == "micro") {
-        coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunMICRO, _1, coro_i));
+      if (coro_i == POLL_ROUTINE_ID) {
+        coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
+      } else {
+        if (bench_name == "tatp") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));
+        } else if (bench_name == "smallbank") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunSmallBank, _1, coro_i));
+        } else if (bench_name == "tpcc") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTPCC, _1, coro_i));
+        } else if (bench_name == "micro") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunMICRO, _1, coro_i));
+        }
       }
     }
+   
   }
 
   // Link all coroutines via pointers in a loop manner
@@ -800,7 +915,7 @@ void run_thread(thread_params* params,
   coro_sched->coro_array[0].func();
 
   // Stop running
-  // stop_run = true;
+  stop_run = true;
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
 
