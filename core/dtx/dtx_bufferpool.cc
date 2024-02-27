@@ -5,13 +5,7 @@
 #include "dtx/dtx.h"
 #include "storage/storage_service.pb.h"
 #include "log/record.h"
-
-DEFINE_string(protocol, "baidu_std", "Protocol type");
-DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
-DEFINE_string(server, "127.0.0.1:12348", "IP address of server");
-DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
-DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
-DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
+#include "worker/worker.h"
 
 // 在页表中添加数据项的基本逻辑：
 // 1. 如果Fetch的Page在页表中，则需要针对Fetch的类型进行判断是否可以读取，是否需要更改wlatch的状态
@@ -79,18 +73,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
 
-        // init brpc channel
-        brpc::ChannelOptions options;
-        brpc::Channel channel;
-        options.use_rdma = false;
-        options.protocol = FLAGS_protocol;
-        options.connection_type = FLAGS_connection_type;
-        options.timeout_ms = FLAGS_timeout_ms;
-        options.max_retry = FLAGS_max_retry;
-        if(channel.Init(FLAGS_server.c_str(), &options) != 0) {
-            RDMA_LOG(FATAL) << "Fail to initialize channel";
-        }
-        storage_service::StorageService_Stub stub(&channel);
+        storage_service::StorageService_Stub stub(storage_channel);
         storage_service::GetPageRequest request;
         storage_service::GetPageResponse response;
         brpc::Controller cntl;

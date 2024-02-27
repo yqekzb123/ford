@@ -9,6 +9,8 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <brpc/channel.h>
+#include "storage/storage_service.pb.h"
 
 #include "allocator/buffer_allocator.h"
 #include "allocator/log_allocator.h"
@@ -42,6 +44,12 @@ extern std::vector<double> taillat_vec;
 extern std::vector<uint64_t> total_try_times;
 extern std::vector<uint64_t> total_commit_times;
 
+DEFINE_string(protocol, "baidu_std", "Protocol type");
+DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
+DEFINE_string(server, "127.0.0.1:12348", "IP address of server");
+DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
+DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
+DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
 
 __thread uint64_t seed;                        // Thread-global random seed
 __thread FastRandom* random_generator = NULL;  // Per coroutine random generator
@@ -80,8 +88,9 @@ __thread uint64_t data_set_size;
 __thread uint64_t num_keys_global;
 __thread uint64_t write_ratio;
 
-const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
+__thread brpc::Channel* channel;
 
+const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 
 void RecordTpLat(double msr_sec) {
   double attemp_tput = (double)stat_attempted_tx_total / msr_sec;
@@ -320,7 +329,8 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      free_page_list,
-                     free_page_list_mutex);
+                     free_page_list_mutex,
+                     channel);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -415,7 +425,8 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      free_page_list,
-                     free_page_list_mutex);
+                     free_page_list_mutex,
+                     channel);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -896,7 +907,19 @@ void run_thread(thread_params* params,
     }
    
   }
-
+  channel = new brpc::Channel();
+  // Init Brpc channel
+  brpc::ChannelOptions options;
+  // brpc::Channel channel;
+  options.use_rdma = false;
+  options.protocol = FLAGS_protocol;
+  options.connection_type = FLAGS_connection_type;
+  options.timeout_ms = FLAGS_timeout_ms;
+  options.max_retry = FLAGS_max_retry;
+  if(channel->Init(FLAGS_server.c_str(), &options) != 0) {
+      RDMA_LOG(FATAL) << "Fail to initialize channel";
+  }
+  
   // Link all coroutines via pointers in a loop manner
   coro_sched->LoopLinkCoroutine(coro_num);
 

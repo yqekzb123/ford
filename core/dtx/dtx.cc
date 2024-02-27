@@ -14,7 +14,8 @@ DTX::DTX(MetaManager* meta_man,
          LogOffsetAllocator* remote_log_offset_allocator,
          AddrCache* addr_buf,
          std::list<PageAddress>* _free_page_list, 
-         std::mutex* _free_page_list_mutex) {
+         std::mutex* _free_page_list_mutex,
+         brpc::Channel* channel) {
   // Transaction setup
   tx_id = 0;
   t_id = tid;
@@ -36,6 +37,8 @@ DTX::DTX(MetaManager* meta_man,
 
   hit_local_cache_times = 0;
   miss_local_cache_times = 0;
+
+  storage_channel = channel;
 }
 
 void DTX::Abort() {
