@@ -125,7 +125,7 @@ class DTX {
   // 发送日志到存储层
   BatchTxnLog batch_txn_log;
   
-  void SendLogToStoragePool();
+  void SendLogToStoragePool(uint64_t bid);
   
  private:
   void Abort();

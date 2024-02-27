@@ -332,7 +332,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
 
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
     dtx->tx_start_time = tx_start_time;
-    printf("worker.cc:326\n");
+    // printf("worker.cc:326, start a new txn\n");
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
         thread_local_try_times[uint64_t(tx_type)]++;

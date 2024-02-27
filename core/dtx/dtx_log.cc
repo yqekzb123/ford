@@ -15,7 +15,7 @@ DEFINE_string(log_server, "127.0.0.1:12348", "IP address of server");
 // DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
 
 // 发送日志到存储层
-void DTX::SendLogToStoragePool(){
+void DTX::SendLogToStoragePool(uint64_t bid){
     brpc::Channel channel;
     brpc::ChannelOptions options;
     options.use_rdma = false;
@@ -32,9 +32,9 @@ void DTX::SendLogToStoragePool(){
     storage_service::LogWriteRequest request;
     storage_service::LogWriteResponse response;
 
-    batch_txn_log.batch_id_ = batch_id;
+    batch_txn_log.batch_id_ = bid;
 
-    BatchEndLogRecord* batch_end_log = new BatchEndLogRecord(batch_id, global_meta_man->local_machine_id, tx_id);
+    BatchEndLogRecord* batch_end_log = new BatchEndLogRecord(bid, global_meta_man->local_machine_id, tx_id);
     batch_txn_log.logs.push_back(batch_end_log);
 
     request.set_log(batch_txn_log.get_log_string());

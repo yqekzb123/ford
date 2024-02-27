@@ -128,7 +128,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   double unpin_usec = (tx_unpin_time.tv_sec - tx_flush_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_flush_time.tv_nsec) / 1000;
 
   //! 8. 写日志到存储层
-  first_dtx->SendLogToStoragePool();
+  first_dtx->SendLogToStoragePool(batch_id);
   // 计时8
   struct timespec tx_log_time;
   clock_gettime(CLOCK_REALTIME, &tx_log_time);

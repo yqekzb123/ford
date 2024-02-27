@@ -5,6 +5,8 @@
 #include "worker/global.h"
 // #include ""
 bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
+  printf("dtx_base_exe_commit.cc:8, exe a new txn %ld\n", tx_id);
+  batch_id = tx_id;
   // Start executing transaction
   tx_status = TXStatus::TX_EXE;
   // 锁机制不区分读集和写集
@@ -30,11 +32,6 @@ ABORT:
 }
 
 bool DTX::TxCommit(coro_yield_t& yield) {
-  // Only read one item
-  // printf("dtx_local_exe_commit.cc:39\n");
-  // if (read_write_set.empty() && read_only_set.size() == 1) {
-  //   return true;
-  // }
   /*!
     Baseline's commit protocol
     */
@@ -42,7 +39,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
     WriteRemote(yield);
   }
   Unpin(yield);
-  SendLogToStoragePool();
+  SendLogToStoragePool(tx_id);
   UnlockShared(yield, hold_shared_lock_data_id, hold_shared_lock_node_offs);
   UnlockExclusive(yield, hold_exclusive_lock_data_id, hold_exclusive_lock_node_offs);
 
@@ -111,7 +108,7 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
       fetch_type.push_back(FetchPageType::kReadPage);
     }
   }
-  std::vector<DataItemPtr> data_list = FetchTuple(yield, tid_list, id_list, fetch_type, t_id);
+  std::vector<DataItemPtr> data_list = FetchTuple(yield, tid_list, id_list, fetch_type, tx_id);
   if (data_list.empty()) return false;
   // !接下来需要将数据项塞入读写集里
   for (auto fetch_item : data_list) {
@@ -162,7 +159,7 @@ bool DTX::WriteRemote(coro_yield_t& yield) {
     fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
 
-  WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, t_id);
+  WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, tx_id);
   tid_list.clear();
   id_list.clear();
   new_data_list.clear();
