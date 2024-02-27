@@ -15,7 +15,7 @@ using namespace rdmaio;
 class CoroutineScheduler {
  public:
   // The coro_num includes all the coroutines
-  CoroutineScheduler(t_id_t thread_id, coro_id_t coro_num) {
+  CoroutineScheduler(t_id_t thread_id, coro_id_t coro_num, bool batch_model = false) {
     t_id = thread_id;
     _coro_num = coro_num;
     pending_counts = new int[coro_num];
@@ -25,6 +25,7 @@ class CoroutineScheduler {
       pending_log_counts[c] = 0;
     }
     coro_array = new Coroutine[coro_num];
+    batch_model_ = batch_model;
   }
   ~CoroutineScheduler() {
     if (pending_counts) delete[] pending_counts;
@@ -103,6 +104,8 @@ class CoroutineScheduler {
 
   // number of pending log qps (i.e., the ack has not received) per coroutine
   int* pending_log_counts;
+
+  bool batch_model_ = false;
 };
 
 ALWAYS_INLINE

@@ -838,7 +838,12 @@ void run_thread(thread_params* params,
   free_page_list_mutex = params->free_page_list_mutex;
 
   coro_num = (coro_id_t)params->coro_num;
-  coro_sched = new CoroutineScheduler(thread_gid, coro_num);
+
+  if(meta_man->txn_system == DTX_SYS::OUR) {
+    coro_sched = new CoroutineScheduler(thread_gid, coro_num, true);
+  }else{
+    coro_sched = new CoroutineScheduler(thread_gid, coro_num, false);
+  }
 
   auto alloc_rdma_region_range = params->global_rdma_region->GetThreadLocalRegion(thread_local_id);
   addr_cache = new AddrCache();
