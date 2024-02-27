@@ -112,6 +112,10 @@ void Handler::GenThreads(std::string bench_name) {
 
   RDMA_LOG(INFO) << "Spawn threads to execute...";
 
+  // init stat
+  shared_lock_abort_cnt = 0;
+  exlusive_lock_abort_cnt = 0;
+
   for (t_id_t i = 0; i < thread_num_per_machine; i++) {
     param_arr[i].thread_local_id = i;
     param_arr[i].thread_global_id = (machine_id * thread_num_per_machine) + i;

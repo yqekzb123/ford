@@ -45,12 +45,6 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   all_tableid.insert(all_tableid.end(),readwrite_tableid.begin(),readwrite_tableid.end());
   std::vector<itemkey_t> all_keyid(readonly_keyid);
   all_keyid.insert(all_keyid.end(),readwrite_keyid.begin(),readwrite_keyid.end());
-  // std::merge(readonly_tableid.begin(), readonly_tableid.end(),
-  //            readwrite_tableid.begin(), readwrite_tableid.end(),
-  //            all_tableid.begin());
-  // std::merge(readonly_keyid.begin(), readonly_keyid.end(),
-  //            readwrite_keyid.begin(), readwrite_keyid.end(),
-  //            all_keyid.begin());
   
   // 打点计时1
   struct timespec tx_start_time;
@@ -61,15 +55,12 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   res = first_dtx->LockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
   if (!res) {
     // !失败以后所有操作解锁
-    // first_dtx->UnlockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
     return res;
   }
   // 读写加锁
   res = first_dtx->LockExclusiveOnRecord(yield, readwrite_tableid, readwrite_keyid);
   if (!res) {
     // !失败以后所有操作解锁
-    // first_dtx->Unlock();
-    // ExclusiveOnRecord(yield, readonly_tableid, readonly_keyid);
     return res;
   }
   // 计时2

@@ -10,29 +10,50 @@ bool DTX::LockLocalRO(coro_yield_t& yield) {
   // Issue reads
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read ro";
   for (auto& item : read_only_set) {
-    if (item.is_fetched) continue;
+    if (item.is_local_locked) continue;
     auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
     // !对只读操作加锁
     bool success = localdata->LockShared();
-    if (!success) return false;
+    if (!success) {
+      shared_lock_abort_cnt ++;
+      // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      item.is_local_locked = true;
+    }
   }
   return true;
 }
 
 bool DTX::LockLocalRW(coro_yield_t& yield) {
   for (auto& item : read_only_set) {
-    if (item.is_fetched) continue;
+    if (item.is_local_locked) continue;
     auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
     // !对只读操作加锁
     bool success = localdata->LockShared();
-    if (!success) return false;
+    if (!success) {
+      shared_lock_abort_cnt ++;
+      // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      item.is_local_locked = true;
+    }
   }
   for (size_t i = 0; i < read_write_set.size(); i++) {
-    if (read_write_set[i].is_fetched) continue;
+    if (read_write_set[i].is_local_locked) continue;
     auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
     // !加锁
     bool success = localdata->LockExclusive();
-    if (!success) return false;
+    if (!success) {
+      exlusive_lock_abort_cnt ++;
+      // printf("txn %ld add exlusive lock on table %ld key %ld failed, the original lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+      read_write_set[i].is_local_locked = true;
+    }
   }
   return true;
 }
@@ -86,14 +107,35 @@ bool DTX::LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
 
   //! 2.本地释放锁
   for (auto& item : read_only_set) {
+    if (!item.is_local_locked) continue;
     auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
     localdata->UnlockShared();
+    // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
   }
   for (size_t i = 0; i < read_write_set.size(); i++) {
+    if (!read_write_set[i].is_local_locked) continue;
     auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
     localdata->UnlockExclusive();
+    // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
   }
   return res;
+}
+
+bool DTX::LocalAbort(coro_yield_t& yield) {
+  for (auto& item : read_only_set) {
+    if (!item.is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+    localdata->UnlockShared();
+    // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+  }
+  for (size_t i = 0; i < read_write_set.size(); i++) {
+    if (!read_write_set[i].is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
+    localdata->UnlockExclusive();
+    // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+  }
+  Abort();
+  return true;
 }
 
 bool DTX::ReExeLocalRO(coro_yield_t& yield) {

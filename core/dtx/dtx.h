@@ -64,6 +64,8 @@ class DTX {
 
   bool TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);
 
+  bool TxLocalAbort(coro_yield_t& yield);
+
   bool TxExe(coro_yield_t& yield, bool fail_abort = true);
 
   bool TxCommit(coro_yield_t& yield);
@@ -115,6 +117,8 @@ class DTX {
 
   bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
   bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
+  bool LocalAbort(coro_yield_t& yield);  //本地提交
+
   // batch操作完后，各个事务重新计算值，重新提交
   bool ReExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
   bool ReExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作

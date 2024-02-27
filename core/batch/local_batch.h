@@ -112,7 +112,7 @@ public:
         batch_id_t batch_id = GenerateBatchID();
         LocalBatch* batch = new LocalBatch(batch_id);
         local_store.push_back(batch);
-        printf("local_batch.h:112, create new batch, batch id %ld\n",batch_id);
+        // printf("local_batch.h:112, create new batch, batch id %ld\n",batch_id);
         pthread_mutex_unlock(&latch);
     }
 
