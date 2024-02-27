@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <brpc/channel.h>
 
 #include "allocator/buffer_allocator.h"
 #include "allocator/log_allocator.h"
@@ -93,7 +94,8 @@ class DTX {
       LogOffsetAllocator* log_offset_allocator,
       AddrCache* addr_buf,
       std::list<PageAddress>* free_page_list, 
-      std::mutex* free_page_list_mutex);
+      std::mutex* free_page_list_mutex,
+      brpc::Channel* channel);
   ~DTX() {
     Clean();
   }
@@ -128,6 +130,7 @@ class DTX {
   
   // 发送日志到存储层
   BatchTxnLog batch_txn_log;
+  brpc::Channel* storage_channel;
   
   void SendLogToStoragePool(uint64_t bid);
   

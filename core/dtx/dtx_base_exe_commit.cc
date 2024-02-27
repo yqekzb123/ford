@@ -103,6 +103,8 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
   for (auto& rid_map : temp_index) {
     table_id_t tid = rid_map.first;
     for (auto& rid : rid_map.second) {
+      // // for debug
+      // printf("dtx_base_exe_commit.cc:123, tid: %d, page_no: %d\n", tid, rid.second.page_no_);
       id_list.push_back(rid.second);
       tid_list.push_back(tid);
       fetch_type.push_back(FetchPageType::kReadPage);

@@ -35,10 +35,12 @@ void CoroutineScheduler::PollRegularCompletion() {
     }
     it = pending_qps.erase(it);
   }
-  for (int coro_id = 2; coro_id < _coro_num ; coro_id++) {
-    assert(_coro_num > 1);
-    if (pending_counts[coro_id] == 0)  {
-      AppendCoroutine(&coro_array[coro_id]);
+  if(batch_model_ == true){
+    for (int coro_id = 2; coro_id < _coro_num ; coro_id++) {
+      assert(_coro_num > 1);
+      if (pending_counts[coro_id] == 0)  {
+        AppendCoroutine(&coro_array[coro_id]);
+      }
     }
   }
 }

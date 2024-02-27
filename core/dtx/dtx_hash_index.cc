@@ -83,6 +83,11 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
             else{
                 // 存在未处理的请求, 保留latch
                 // if HashIndex not exist, find next bucket
+
+                // // for debug
+                // std::cout << "*** not find item: table:" << find_index_request_list[node_off].front().first << "item id: " 
+                //     << find_index_request_list[node_off].front().second << std::endl;
+
                 node_id_t node_id = global_meta_man->GetHashIndexNode(find_index_request_list[node_off].front().first);
                 auto expand_node_id = index_node->next_expand_node_id[0];
                 offset_t expand_base_off = global_meta_man->GetHashIndexExpandBase(find_index_request_list[node_off].front().first);
@@ -125,6 +130,7 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
     assert(hold_node_off_latch.size() == 0);
     // 检查请求的HashIndex是否都被处理了
     for(int i=0; i<table_id.size(); i++){
+        // std::cout << "/// table_id: " << table_id[i] << " item_key: " << item_key[i] << " rid: " << res[table_id[i]][item_key[i]].page_no_ << " " << res[table_id[i]][item_key[i]].slot_no_ << std::endl;
         assert(res[table_id[i]].count(item_key[i]) == 1); 
     }
     return res;
