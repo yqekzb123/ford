@@ -443,7 +443,7 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       case SmallBankTxType::kAmalgamate: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxLocalAmalgamate(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kBalance: {

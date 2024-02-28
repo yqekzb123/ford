@@ -24,3 +24,6 @@ extern __thread uint64_t stat_committed_tx_total;  // Committed transaction numb
 // Stat the commit rate
 extern __thread uint64_t* thread_local_try_times;
 extern __thread uint64_t* thread_local_commit_times;
+
+extern uint64_t shared_lock_abort_cnt;
+extern uint64_t exlusive_lock_abort_cnt;

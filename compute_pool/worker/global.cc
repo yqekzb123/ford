@@ -25,3 +25,7 @@ __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
 // Stat the commit rate
 __thread uint64_t* thread_local_try_times;
 __thread uint64_t* thread_local_commit_times;
+
+// Stat the abort
+uint64_t shared_lock_abort_cnt;
+uint64_t exlusive_lock_abort_cnt;

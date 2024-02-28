@@ -11,27 +11,39 @@ public:
     itemkey_t key;
     lock_t lock; // 读写锁
     LocalLock() {
+        lock = 0;
+    }
+
+    LocalLock(table_id_t tid, itemkey_t k) {
+        table_id = tid;
+        key = k;
+        lock = 0;
+        // printf("init lock of table %ld key %ld, now the lock %ld\n", table_id, key, lock);
     }
 
     bool LockShared() {
         lock_t oldlock = lock;
         lock_t newlock = oldlock + 1;
         
-        lock_t previousValue = ATOM_CAS(lock, oldlock, newlock);
-        return previousValue == oldlock;
+        bool result = ATOM_CAS(lock, oldlock, newlock);
+        // printf("try to add shared lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
+        return result;
     }
 
     bool LockExclusive() {
-        // lock_t old_lock = ;
-        return ATOM_CAS(lock, UNLOCKED, EXCLUSIVE_LOCKED);
+        bool result =  ATOM_CAS(lock, UNLOCKED, EXCLUSIVE_LOCKED);
+        // printf("try to add exclusive lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
+        return result;
     }
 
     bool UnlockShared() {
         ATOM_SUB_FETCH(lock,1);
+        // printf("try to release shared lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
     }
 
     bool UnlockExclusive() {
         lock = UNLOCKED;
+        // printf("try to release exclusive lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
     }
 };
 
@@ -44,15 +56,11 @@ public:
     
     LocalLock* GetLock(table_id_t table_id, itemkey_t key) {
         LocalLock* lock = nullptr;
-        // printf("local_data.h:112\n");
         LocalLockTable table = local_lock[table_id];
-        // printf("local_data.h:114\n");
         lock = table[key];
-        // printf("local_data.h:116\n");
         if (lock == nullptr) {
             // 如果data不存在，则自动创建一个临时的
-            lock = new LocalLock();
-            // (LocalData*)malloc(sizeof(LocalData));
+            lock = new LocalLock(table_id, key);
             table.insert(std::make_pair(key,lock));
         }
         // printf("local_data.h:122\n");

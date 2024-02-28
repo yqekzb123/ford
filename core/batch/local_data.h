@@ -12,34 +12,12 @@ public:
     LVersion *versions;
     LVersion *tail_version;
 
-    lock_t lock; // 读写锁
     LocalData() {
         versions = (LVersion*)malloc(sizeof(LVersion));
         tail_version = versions;
         versions->has_value = false;
         versions->txn = nullptr;
         versions->next = nullptr;
-    }
-
-    bool LockShared() {
-        lock_t oldlock = lock;
-        lock_t newlock = oldlock + 1;
-        
-        lock_t previousValue = ATOM_CAS(lock, oldlock, newlock);
-        return previousValue == oldlock;
-    }
-
-    bool LockExclusive() {
-        // lock_t old_lock = ;
-        return ATOM_CAS(lock, UNLOCKED, EXCLUSIVE_LOCKED);
-    }
-
-    bool UnlockShared() {
-        ATOM_SUB_FETCH(lock,1);
-    }
-
-    bool UnlockExclusive() {
-        lock = UNLOCKED;
     }
 
     bool CreateNewVersion(DTX *txn) {

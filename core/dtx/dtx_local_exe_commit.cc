@@ -16,7 +16,6 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   // Run our system
   if (read_write_set.empty()) {
     if (LockLocalRO(yield)) {
-      // printf("dtx_local_exe_commit.cc:19\n");
       return true;
     }
     else {
@@ -24,19 +23,16 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
     }
   } else {
     if (LockLocalRW(yield)){
-      // printf("dtx_local_exe_commit.cc:26\n");
       return true;
     } 
     else {
       goto ABORT;
     }
   }
-  // printf("dtx_local_exe_commit.cc:33\n");
   return true;
 
 ABORT:
-  // printf("dtx_local_exe_commit.cc:37\n");
-  if (fail_abort) Abort();
+  if (fail_abort) LocalAbort(yield);
   return false;
 }
 
@@ -61,6 +57,6 @@ bool DTX::TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   }
   return true;
 ABORT:
-  Abort();
+  LocalAbort(yield);
   return false;
 }

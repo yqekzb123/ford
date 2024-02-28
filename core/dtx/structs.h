@@ -80,12 +80,14 @@ struct DataSetItem {
     is_logged = false;
     read_which_node = -1;
     bkt_idx = -1;
+    is_local_locked = false;
   }
   DataSetItem(DataItemPtr item, LVersionPtr version) {
     item_ptr = std::move(item);
     version_ptr = std::move(version);
     is_fetched = false;
     is_logged = false;
+    is_local_locked = false;
     read_which_node = -1;
     bkt_idx = -1;
   }
@@ -93,6 +95,8 @@ struct DataSetItem {
   LVersionPtr version_ptr; // ! batch执行会用
   bool is_fetched;
   bool is_logged;
+
+  bool is_local_locked; // 仅本地加锁使用
   node_id_t read_which_node;  // From which node this data item is read. This is a node id, e.g., 0, 1, 2...
   int64_t bkt_idx; // The bkt idx of local lock table
  
