@@ -386,7 +386,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     }
     /********************************** Stat begin *****************************************/
     // Stat after one transaction finishes
-    printf("try %d transaction commit? %s\n", stat_attempted_tx_total, tx_committed?"true":"false");
+    // printf("try %d transaction commit? %s\n", stat_attempted_tx_total, tx_committed?"true":"false");
     if (tx_committed) {
       clock_gettime(CLOCK_REALTIME, &tx_end_time);
       double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;

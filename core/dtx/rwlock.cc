@@ -3,8 +3,7 @@
 
 #include "dtx/dtx.h"
 
-std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-            std::unordered_map<NodeOffset, char*>& faa_bufs){
+std::vector<int> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::vector<char*>& local_hash_nodes, std::vector<char*>& faa_bufs){
 
     RCQP*const* qp_arr = nullptr;
     switch (qptype){
@@ -21,11 +20,12 @@ std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptyp
             assert(false);
     }
 
-    for(auto node_off: pending_hash_node_latch_offs) {
+    for(int i=0; i<pending_hash_node_latch_idx.size(); i++) {
         std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
 
-        doorbell->SetFAAReq(faa_bufs[node_off], node_off.offset);
-        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
+        doorbell->SetFAAReq(faa_bufs[i], node_off.offset);
+        doorbell->SetReadReq(local_hash_nodes[i], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
         if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
@@ -35,28 +35,28 @@ std::vector<NodeOffset> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptyp
     // 切换到其他协程，等待其他协程释放锁
     coro_sched->Yield(yield, coro_id);
 
-    std::vector<NodeOffset> success_get_latch_off;
+    std::vector<int> success_get_latch_off_idx;
 
-    std::unordered_set<NodeOffset>::iterator it = pending_hash_node_latch_offs.begin();
-    while (it != pending_hash_node_latch_offs.end()) {
-        if ((*(lock_t*)faa_bufs[*it] & MASKED_SHARED_LOCKS) >> 56 == 0x00) {
-            success_get_latch_off.push_back(*it);
-            if(pending_hash_node_latch_offs.size() == 1){
-                pending_hash_node_latch_offs.clear();
+    for (int i=0; i<pending_hash_node_latch_idx.size(); ) {
+        if ((*(lock_t*)faa_bufs[i] & MASKED_SHARED_LOCKS) >> 56 == 0x00) {
+            success_get_latch_off_idx.push_back(pending_hash_node_latch_idx[i]);
+            if(pending_hash_node_latch_idx.size() == 1){
+                pending_hash_node_latch_idx.clear();
                 break;
             } else{
-                it = pending_hash_node_latch_offs.erase(it); // 擦除元素，并将迭代器更新为下一个元素
+                pending_hash_node_latch_idx.erase(pending_hash_node_latch_idx.begin() + i); // 擦除元素，并将迭代器更新为下一个元素
             }
         } else {
             // 探测性FAA失败，FAA(-1)
-            if (!coro_sched->RDMAFAA(coro_id, qp_arr[(*it).nodeId], faa_bufs[(*it)], (*it).offset, SHARED_UNLOCK_TO_BE_ADDED)){
+            auto node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
+            if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_bufs[i], node_off.offset, SHARED_UNLOCK_TO_BE_ADDED)){
                 assert(false);
             };
-            ++it; // 继续遍历下一个元素
+            i++; // 继续遍历下一个元素
         }
     }
 
-    return success_get_latch_off;
+    return success_get_latch_off_idx;
 }
 
 void DTX::ShardUnLockHashNode(NodeOffset node_off, QPType qptype){

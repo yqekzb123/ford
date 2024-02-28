@@ -181,6 +181,9 @@ class DTX {
  private:
   // 用来记录每次要批获取hash node latch的offset
   std::unordered_set<NodeOffset> pending_hash_node_latch_offs;
+
+  std::vector<NodeOffset> total_hash_node_offs_vec;
+  std::vector<int> pending_hash_node_latch_idx;
   std::unordered_map<PageId, std::pair<char*, NodeOffset>> page_table_item_localaddr_and_remote_offset;
   std::unordered_map<PageId, std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
 
@@ -206,8 +209,7 @@ class DTX {
     kHashIndex
   };
   
-  std::vector<NodeOffset> ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-            std::unordered_map<NodeOffset, char*>& faa_bufs);
+  std::vector<int> ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::vector<char*>& local_hash_nodes, std::vector<char*>& faa_bufs);
   void ShardUnLockHashNode(NodeOffset node_off, QPType qptype);
   // Exclusive lock hash node 是一个关键路径，因此需要切换到其他协程，也需要记录下来哪些桶已经上锁成功以及RDMA操作返回值在本机的地址
   std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
