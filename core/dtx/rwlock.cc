@@ -24,8 +24,8 @@ std::vector<int> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std:
         std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
 
         NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
-        doorbell->SetFAAReq(faa_bufs[i], node_off.offset);
-        doorbell->SetReadReq(local_hash_nodes[i], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell->SetFAAReq(faa_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
+        doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
         if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;

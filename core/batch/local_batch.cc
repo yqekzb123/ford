@@ -26,6 +26,8 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       auto it = item.item_ptr;
       readonly_tableid.push_back(it->table_id);
       readonly_keyid.push_back(it->key);
+      all_tableid.push_back(it->table_id);
+      all_keyid.push_back(it->key);
     }
   }
   std::vector<table_id_t> readwrite_tableid;
@@ -38,13 +40,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       auto it = item.item_ptr;
       readonly_tableid.push_back(it->table_id);
       readonly_keyid.push_back(it->key);
+      all_tableid.push_back(it->table_id);
+      all_keyid.push_back(it->key);
     }
   }
-  
-  std::vector<table_id_t> all_tableid(readonly_tableid);
-  all_tableid.insert(all_tableid.end(),readwrite_tableid.begin(),readwrite_tableid.end());
-  std::vector<itemkey_t> all_keyid(readonly_keyid);
-  all_keyid.insert(all_keyid.end(),readwrite_keyid.begin(),readwrite_keyid.end());
   
   // 打点计时1
   struct timespec tx_start_time;
@@ -69,14 +68,16 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   double lock_usec = (tx_lock_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
 
   //! 2. 获取数据项索引
-  auto index = first_dtx->GetHashIndex(yield, all_tableid, all_keyid);
+  all_rids = first_dtx->GetHashIndex(yield, all_tableid, all_keyid);
+  assert(!all_rids.empty());
+
   // 计时3
   struct timespec tx_index_time;
   clock_gettime(CLOCK_REALTIME, &tx_index_time);
   double index_usec = (tx_index_time.tv_sec - tx_lock_time.tv_sec) * 1000000 + (double)(tx_index_time.tv_nsec - tx_lock_time.tv_nsec) / 1000;
 
   //! 3. 读取数据项
-  auto data_list = ReadData(yield, first_dtx,index);
+  auto data_list = ReadData(yield, first_dtx);
   // 计时4
   struct timespec tx_read_time;
   clock_gettime(CLOCK_REALTIME, &tx_read_time);
@@ -102,7 +103,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
 
   // std::vector<DataItemPtr> new_data_list;
   //! 6. 将确定的数据，利用RDMA刷入页中
-  FlushWrite(yield, first_dtx,data_list,index);
+  FlushWrite(yield, first_dtx, data_list);
 
   StatCommit();
 
@@ -112,7 +113,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   double flush_usec = (tx_flush_time.tv_sec - tx_recalculate_time.tv_sec) * 1000000 + (double)(tx_flush_time.tv_nsec - tx_recalculate_time.tv_nsec) / 1000;
 
   //! 7. Unpin pages
-  Unpin(yield, first_dtx, index);
+  Unpin(yield, first_dtx);
   // 计时7
   struct timespec tx_unpin_time;
   clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
@@ -157,60 +158,37 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   return res;
 }
 
-std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index) {
-  // 遍历index，获取其中的页表地址
-  std::vector<Rid> id_list;
-  std::vector<table_id_t> tid_list;
-  std::vector<FetchPageType> fetch_type;
-  for (auto& rid_map : index) {
-    table_id_t tid = rid_map.first;
-    for (auto& rid : rid_map.second) {
-      id_list.push_back(rid.second);
-      tid_list.push_back(tid);
-      fetch_type.push_back(FetchPageType::kReadPage);
-    }
-  }
-  std::vector<DataItemPtr> data_list = first_dtx->FetchTuple(yield, tid_list, id_list, fetch_type, batch_id);
+std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dtx) {
+  std::vector<FetchPageType> fetch_type(all_rids.size(), FetchPageType::kReadPage);
+  std::vector<DataItemPtr> data_list = first_dtx->FetchTuple(yield, all_tableid, all_rids, fetch_type, batch_id);
   return data_list;
 }
 
-void LocalBatch::Unpin(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index){
+void LocalBatch::Unpin(coro_yield_t& yield, DTX* first_dtx){
   std::vector<PageId> page_ids;
-  std::vector<FetchPageType> types;
-  for (auto& rid_map : index) {
-    table_id_t tid = rid_map.first;
-    for (auto& rid : rid_map.second) {
-      PageId page_id;
-      page_id.table_id = tid;
-      page_id.page_no = rid.second.page_no_;
-      page_ids.push_back(page_id);
-      types.push_back(FetchPageType::kReadPage);
-    }
+  std::vector<FetchPageType> types(all_rids.size(), FetchPageType::kReadPage);
+  for(int i=0; i<all_keyid.size(); i++){
+    PageId page_id;
+    page_id.table_id = all_tableid[i];
+    page_id.page_no = all_rids[i].page_no_;
+    page_ids.push_back(page_id);
   }
   first_dtx->UnpinPage(yield, page_ids, types);
 }
 
-bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>& index) {
-  std::vector<Rid> id_list;
-  std::vector<table_id_t> tid_list;
+bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list) {
   std::vector<DataItemPtr> new_data_list;
-
-  std::vector<FetchPageType> fetch_type;
-
+  std::vector<FetchPageType> fetch_type(all_rids.size(), FetchPageType::kUpdateRecord);
   for (auto item : data_list) {
-    tid_list.push_back(item->table_id);
-    id_list.push_back(index[item->table_id][item->key]);
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
     LVersion* v = data_item->GetTailVersion();
     DataItem* data = new DataItem();
     memcpy(data, v->value, sizeof(DataItem));
     DataItemPtr itemPtr(data);
     new_data_list.push_back(itemPtr);
-    fetch_type.push_back(FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
   }
-  first_dtx->WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, batch_id);
-  tid_list.clear();
-  id_list.clear();
+
+  first_dtx->WriteTuple(yield, all_tableid, all_rids, fetch_type, new_data_list, batch_id);
   new_data_list.clear();
 
   return true;

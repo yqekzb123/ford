@@ -140,7 +140,7 @@ class DTX {
   void Clean();  // Clean data sets after commit/abort
  public:
   // for hash index
-  std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
+  std::vector<Rid> GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
 
   bool InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key, std::vector<Rid> rids);
 
@@ -294,8 +294,9 @@ class DTX {
   std::vector<LockDataId> hold_shared_lock_data_id;
   std::vector<NodeOffset> hold_shared_lock_node_offs;
 
-  std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> temp_index;
-
+  std::vector<table_id_t> all_tableid;
+  std::vector<itemkey_t> all_keyid;
+  std::vector<Rid> all_rids;
 };
 
 /*************************************************************

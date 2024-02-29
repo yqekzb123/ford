@@ -151,17 +151,13 @@ class MetaManager {
   /*** Hash Index Node id ***/
   ALWAYS_INLINE
   node_id_t GetHashIndexNode(const table_id_t table_id) const {
-    auto search = hash_index_nodes.find(table_id);
-    assert(search != hash_index_nodes.end());
-    return search->second;
+    return hash_index_nodes[table_id];
   }
 
   /*** Hash Index Meta ***/
   ALWAYS_INLINE
   const IndexMeta& GetHashIndexMeta(const table_id_t table_id) const {
-    auto search = hash_index_meta.find(table_id);
-    assert(search != hash_index_meta.end());
-    return search->second;
+    return hash_index_meta[table_id];
   }
 
   ALWAYS_INLINE
@@ -264,9 +260,8 @@ class MetaManager {
   std::unordered_map<node_id_t, MemoryAttr> remote_locktable_mrs;
   std::unordered_map<node_id_t, MemoryAttr> remote_hashindex_mrs;
 
-  std::unordered_map<table_id_t, IndexMeta> hash_index_meta;
-  std::unordered_map<table_id_t, node_id_t> hash_index_nodes;
-  // std::unordered_map<table_id_t, offset_t> hash_index_node_expanded_base_off;
+  IndexMeta hash_index_meta[MAX_DB_TABLE_NUM];
+  node_id_t hash_index_nodes[MAX_DB_TABLE_NUM];
 
   std::unordered_map<node_id_t, LockTableMeta> lock_table_meta;
   // std::unordered_map<table_id_t, node_id_t> lock_table_nodes;

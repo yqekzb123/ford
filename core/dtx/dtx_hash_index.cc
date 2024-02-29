@@ -3,14 +3,21 @@
 
 #include "dtx/dtx.h"
 
+struct index_request_list_item{
+    table_id_t table_id;
+    itemkey_t item_key;
+    int index;
+};
+
 // 如果出现初始桶中没有itemkey的情况，似乎无法使用桶尾部的多个指针
 // 并行加多个锁，因为可能会造成死锁, 无法保证按顺序加锁
-std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> 
-    DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key) {
+std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key) {
     
+    assert(pending_hash_node_latch_idx.size() == 0);
+
     total_hash_node_offs_vec.clear();
     assert(total_hash_node_offs_vec.size() == 0);
-    std::vector<std::vector<std::pair<table_id_t, itemkey_t>>> find_index_request_list_vec;
+    std::vector<std::vector<index_request_list_item>> find_index_request_list_vec;
     // 计算每个itemkey的hash值和对应的NodeOffset
     for(int i=0; i<table_id.size(); i++){
         auto hash_meta = global_meta_man->GetHashIndexMeta(table_id[i]);
@@ -23,16 +30,15 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
         if(index == total_hash_node_offs_vec.end()){
             // not find
             total_hash_node_offs_vec.push_back(node_off);
-            find_index_request_list_vec.push_back(std::vector<std::pair<table_id_t, itemkey_t>>(1, std::make_pair(table_id[i], item_key[i])));
+            find_index_request_list_vec.push_back(std::vector<index_request_list_item>(1, {table_id[i], item_key[i], i}));
         }else{
             // find
-            find_index_request_list_vec[index - total_hash_node_offs_vec.begin()].push_back(std::make_pair(table_id[i], item_key[i]));
+            find_index_request_list_vec[index - total_hash_node_offs_vec.begin()].push_back({table_id[i], item_key[i], i});
         }
     }
 
-    std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> res;
+    std::vector<Rid> res(table_id.size(), {INVALID_PAGE_ID, -1});
 
-    
     std::vector<char*> local_hash_nodes_vec = std::vector<char*>(total_hash_node_offs_vec.size(), nullptr);
     std::vector<char*> faa_bufs_vec = std::vector<char*>(total_hash_node_offs_vec.size(), nullptr);
 
@@ -45,17 +51,17 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
         pending_hash_node_latch_idx.push_back(i);
     }
 
-    std::unordered_set<NodeOffset> unlock_shared_node_off;
-    std::unordered_set<NodeOffset> hold_node_off_latch;
+    // std::vector<NodeOffset> unlock_shared_node_off;
+    // std::vector<NodeOffset> hold_node_off_latch;
     std::unordered_map<NodeOffset, NodeOffset> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
 
-    while (pending_hash_node_latch_offs.size()!=0) {
+    while (pending_hash_node_latch_idx.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ShardLockHashNode(yield, QPType::kHashIndex, local_hash_nodes_vec, faa_bufs_vec);
         // init hold_node_off_latch
-        for(auto idx : succ_node_off_idx ){
-            hold_node_off_latch.emplace(total_hash_node_offs_vec[idx]);
-        }
+        // for(auto idx : succ_node_off_idx ){
+        //     hold_node_off_latch.push_back(total_hash_node_offs_vec[idx]);
+        // }
 
         for(auto idx : succ_node_off_idx ){
             // read now
@@ -66,9 +72,9 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
                 // find hash index item
                 bool is_find = false;
                 for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
-                    if (index_node->index_items[i].key == (*it).second && index_node->index_items[i].valid == true) {
+                    if (index_node->index_items[i].key == (*it).item_key && index_node->index_items[i].valid == true) {
                         // find
-                        res[(*it).first][(*it).second] = index_node->index_items[i].rid;
+                        res[(*it).index] = index_node->index_items[i].rid;
                         find_index_request_list_vec[idx].erase(it);
                         is_find = true;
                         break;
@@ -81,9 +87,10 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
             // 如果这个node_off上的所有请求都被处理了, 可以释放这个node_off的latch以及之前所有的latch
             if(find_index_request_list_vec[idx].size() == 0){
                 // release latch and write back
-                auto release_node_off = node_off;
+                auto release_node_off = total_hash_node_offs_vec[idx];
                 while(true){
-                    unlock_shared_node_off.emplace(release_node_off);
+                    // unlock_shared_node_off.push_back(release_node_off);
+                    ShardUnLockHashNode(release_node_off, QPType::kHashIndex);
                     if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
                     release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
                 }
@@ -96,19 +103,20 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
                 // std::cout << "*** not find item: table:" << find_index_request_list[node_off].front().first << "item id: " 
                 //     << find_index_request_list[node_off].front().second << std::endl;
 
-                node_id_t node_id = global_meta_man->GetHashIndexNode(find_index_request_list[node_off].front().first);
+                node_id_t node_id = global_meta_man->GetHashIndexNode(find_index_request_list_vec[idx].front().table_id);
                 auto expand_node_id = index_node->next_expand_node_id[0];
-                offset_t expand_base_off = global_meta_man->GetHashIndexExpandBase(find_index_request_list[node_off].front().first);
+                offset_t expand_base_off = global_meta_man->GetHashIndexExpandBase(find_index_request_list_vec[idx].front().table_id);
                 offset_t next_off = expand_base_off + expand_node_id * sizeof(IndexNode);
                 if(expand_node_id < 0){
                     // find to the bucket end, here latch is already get and insert it
-                    for(auto index_request: find_index_request_list[node_off]){
+                    for(auto index_request: find_index_request_list_vec[idx]){
                         // not find
-                        res[index_request.first][index_request.second] = {INVALID_PAGE_ID, -1};
+                        res[index_request.index] = {INVALID_PAGE_ID, -1};
                     }
-                    auto release_node_off = node_off;
+                    auto release_node_off = total_hash_node_offs_vec[idx];
                     while(true){
-                        unlock_shared_node_off.emplace(release_node_off);
+                        // unlock_shared_node_off.push_back(release_node_off);
+                        ShardUnLockHashNode(release_node_off, QPType::kHashIndex);
                         if(hold_latch_to_previouse_node_off.count(release_node_off) == 0) break;
                         release_node_off = hold_latch_to_previouse_node_off.at(release_node_off);
                     }
@@ -116,30 +124,39 @@ std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>
                 else{
                     // alloc next node read buffer and cas buffer
                     NodeOffset next_node_off{node_id, next_off};
-                    pending_hash_node_latch_offs.emplace(next_node_off);
-                    find_index_request_list.emplace(next_node_off, find_index_request_list.at(node_off));
-                    hold_latch_to_previouse_node_off.emplace(next_node_off, node_off);
-                    assert(local_hash_nodes.count(next_node_off) == 0);
-                    assert(faa_bufs.count(next_node_off) == 0);
-                    local_hash_nodes[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(IndexNode));
-                    faa_bufs[next_node_off] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+                    total_hash_node_offs_vec.push_back(next_node_off);
+                    int new_idx = total_hash_node_offs_vec.size() - 1;
+                    pending_hash_node_latch_idx.push_back(new_idx);
+                    find_index_request_list_vec.push_back(find_index_request_list_vec[idx]);
+                    hold_latch_to_previouse_node_off.emplace(next_node_off, total_hash_node_offs_vec[idx]);
+                    assert(local_hash_nodes_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    assert(faa_bufs_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    local_hash_nodes_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(IndexNode)));
+                    faa_bufs_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(lock_t)));
                 }
             }
         }
-        // release all latch and write back
-        for (auto node_off : unlock_shared_node_off){
-            ShardUnLockHashNode(node_off, QPType::kHashIndex);
-            hold_node_off_latch.erase(node_off);
-        }
-        unlock_shared_node_off.clear();
+        // // release all latch and write back
+        // for (auto node_off : unlock_shared_node_off){
+        //     ShardUnLockHashNode(node_off, QPType::kHashIndex);
+        //     // hold_node_off_latch.erase(node_off);
+        // }
+        // unlock_shared_node_off.clear();
     }
     // 这里所有的latch都已经释放了
+    // for debug
+    // if(hold_node_off_latch.size() != 0){
+    //     for(auto node_off : hold_node_off_latch){
+    //         std::cout << "hold_node_off_latch: " << node_off.nodeId << " " << node_off.offset << std::endl;
+    //     }
+    // }
+
     assert(pending_hash_node_latch_offs.size() == 0);
-    assert(hold_node_off_latch.size() == 0);
+    // assert(hold_node_off_latch.size() == 0);
     // 检查请求的HashIndex是否都被处理了
     for(int i=0; i<table_id.size(); i++){
         // std::cout << "/// table_id: " << table_id[i] << " item_key: " << item_key[i] << " rid: " << res[table_id[i]][item_key[i]].page_no_ << " " << res[table_id[i]][item_key[i]].slot_no_ << std::endl;
-        assert(res[table_id[i]].count(item_key[i]) == 1); 
+        assert(res[i].page_no_ != INVALID_PAGE_ID); 
     }
     return res;
 }
