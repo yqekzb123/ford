@@ -52,12 +52,15 @@ public:
         return r1 && r2;
     }
     bool ExeBatchRW(coro_yield_t& yield);
-    std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
-    void Unpin(coro_yield_t& yield, DTX* first_dtx, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>> index);
-    bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list, std::unordered_map<table_id_t, std::unordered_map<itemkey_t, Rid>>& index);
+    std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx);
+    void Unpin(coro_yield_t& yield, DTX* first_dtx);
+    bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list);
     bool StatCommit();
     LocalDataStore local_data_store;
 private:
+    std::vector<table_id_t> all_tableid;
+    std::vector<itemkey_t> all_keyid;
+    std::vector<Rid> all_rids;
 };
 
 class LocalBatchStore{ 

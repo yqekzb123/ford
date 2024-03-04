@@ -7,4 +7,4 @@
 
 add_subdirectory(smallbank)
 
-# add_subdirectory(micro)
+add_subdirectory(micro)

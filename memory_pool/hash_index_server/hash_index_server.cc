@@ -55,7 +55,7 @@ void HashIndexServer::LoadIndex(node_id_t machine_id,
     tpcc_server = new TPCC();
     // tpcc_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   } else if (workload == "MICRO") {
-    micro_server = new MICRO();
+    micro_server = new MICRO(nullptr);
     // micro_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   }
   RDMA_LOG(INFO) << "Loading table successfully!";

@@ -344,6 +344,8 @@ bool SmallBankDTX::TxAmalgamate(SmallBank* smallbank_client, uint64_t* seed, cor
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+
+  // return true;
 }
 
 /* Calculate the sum of saving and checking kBalance */
@@ -381,6 +383,8 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+
+  // return true;
 }
 
 /* Add $1.3 to acct_id's checking account */
@@ -411,6 +415,7 @@ bool SmallBankDTX::TxDepositChecking(SmallBank* smallbank_client, uint64_t* seed
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+  // return true;
 }
 
 /* Send $5 from acct_id_0's checking account to acct_id_1's checking account */
@@ -458,6 +463,8 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+
+  // return true;
 }
 
 /* Add $20 to acct_id's saving's account */
@@ -487,6 +494,7 @@ bool SmallBankDTX::TxTransactSaving(SmallBank* smallbank_client, uint64_t* seed,
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+  // return true;
 }
 
 /* Read saving and checking kBalance + update checking kBalance unconditionally */
@@ -531,6 +539,7 @@ bool SmallBankDTX::TxWriteCheck(SmallBank* smallbank_client, uint64_t* seed, cor
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
+  // return true;
 }
 
 /******************** The business logic (Transaction) end ********************/
