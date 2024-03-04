@@ -3,6 +3,7 @@
 
 #include <brpc/channel.h>
 #include "dtx/dtx.h"
+#include "worker/global.h"
 #include "storage/storage_service.pb.h"
 #include "log/record.h"
 #include "worker/worker.h"
@@ -121,23 +122,26 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
     request.set_require_batch_id(request_batch_id);
 
     while(true){
+        #if OPEN_TIME
         // 计时1
         timespec msr_start;
         clock_gettime(CLOCK_REALTIME, &msr_start);
+        #endif
 
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, is_write, need_fetch_from_disk, now_valid, pending_map_all_index);
         // // for debug
         // for(int i=0; i<page_addr_vec.size(); i++){
-        //     std::cout << "*-* FetchPage: table_id:" << pending_read_all_page_ids[i].table_id << " page_no: " << pending_read_all_page_ids[i].page_no 
+        //     std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
         //         << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
-        //         << " now_valid: " <<  now_valid[i] 
-        //         << " need_fetch_from_disk: " << need_fetch_from_disk[i] << std::endl;
+        //         << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
         // }
 
+        #if OPEN_TIME
         // 计时2
         timespec msr_pagetable;
         clock_gettime(CLOCK_REALTIME, &msr_pagetable);
         pagetable_usec += (msr_pagetable.tv_sec - msr_start.tv_sec) * 1000000 + (double)(msr_pagetable.tv_nsec - msr_start.tv_nsec) / 1000;
+        #endif
 
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
@@ -156,9 +160,10 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 need_fetch_idx.push_back(i);
             }
             else if(now_valid[i] == true){
-                // 计时
+                #if OPEN_TIME
                 timespec msr_mem_fetch;
                 clock_gettime(CLOCK_REALTIME, &msr_mem_fetch);
+                #endif
 
                 // 从共享内存池中读取数据页
                 auto remote_node_id = page_addr_vec[i].node_id;
@@ -181,10 +186,11 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[pending_map_all_index[i]] = std::make_pair(page, page_addr_vec[i]);
 
-                // 计时
+                #if OPEN_TIME
                 timespec msr_end;
                 clock_gettime(CLOCK_REALTIME, &msr_end);
                 mem_fetch_usec += (msr_end.tv_sec - msr_mem_fetch.tv_sec) * 1000000 + (double)(msr_end.tv_nsec - msr_mem_fetch.tv_nsec) / 1000;
+                #endif
             }
             else{
                 // 如果这里是false，需要反复调用FetchPage直到now_valid为true
@@ -195,9 +201,10 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         }
         // 在这里从磁盘获取数据页
         if(need_fetch_idx.size() > 0){
-            // 计时
+            #if OPEN_TIME
             timespec msr_disk_fetch;
             clock_gettime(CLOCK_REALTIME, &msr_disk_fetch);
+            #endif
 
             // stub.GetPage(cntl, &request, response, brpc::NewCallback(DataOnRPCDone, 
             //     response, cntl, this, &pages, &need_fetch_idx, &page_addr_vec));
@@ -232,10 +239,12 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                     assert(false);
                 };
             }
-            // 计时
+            
+            #if OPEN_TIME
             timespec msr_end;
             clock_gettime(CLOCK_REALTIME, &msr_end);
             disk_fetch_usec += (msr_end.tv_sec - msr_disk_fetch.tv_sec) * 1000000 + (double)(msr_end.tv_nsec - msr_disk_fetch.tv_nsec) / 1000;
+            #endif
         }
         if(new_page_id.size() == 0){
             break;
@@ -249,7 +258,7 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1ms
     }
 
-    printf("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
+    DEBUG_TIME("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
     coro_sched->Yield(yield, coro_id);
 
     // 在这里同步

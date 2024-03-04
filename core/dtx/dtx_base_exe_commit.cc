@@ -5,7 +5,7 @@
 #include "worker/global.h"
 // #include ""
 bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
-  printf("dtx_base_exe_commit.cc:8, exe a new txn %ld\n", tx_id);
+  DEBUG_TIME("dtx_base_exe_commit.cc:8, exe a new txn %ld\n", tx_id);
   batch_id = tx_id;
   // Start executing transaction
   tx_status = TXStatus::TX_EXE;
@@ -25,35 +25,47 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   }
 
   assert(global_meta_man->txn_system != DTX_SYS::OUR);
+  #if OPEN_TIME
   // Run our system
   // 计时
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
+  #endif
 
   if (!LockRemoteRO(yield)) {
     TxAbort(yield);
     return false;
   } 
+
+  #if OPEN_TIME
   struct timespec tx_lock_ro_time;
   clock_gettime(CLOCK_REALTIME, &tx_lock_ro_time);
   double lock_ro_usec = (tx_lock_ro_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_ro_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  #endif
 
   if (!LockRemoteRW(yield)) {
     TxAbort(yield);
     return false;
   }
+
+  #if OPEN_TIME
   struct timespec tx_lock_rw_time;
   clock_gettime(CLOCK_REALTIME, &tx_lock_rw_time);
   double lock_rw_usec = (tx_lock_rw_time.tv_sec - tx_lock_ro_time.tv_sec) * 1000000 + (double)(tx_lock_rw_time.tv_nsec - tx_lock_ro_time.tv_nsec) / 1000;
+  #endif
 
   if (!ReadRemote(yield)) {
     TxAbort(yield);
     return false;
   }
+
+  #if OPEN_TIME
   struct timespec tx_read_time;
   clock_gettime(CLOCK_REALTIME, &tx_read_time);
   double read_usec = (tx_read_time.tv_sec - tx_lock_rw_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_lock_rw_time.tv_nsec) / 1000;
-  printf("dtx_base_exe_commit.cc:46, exe a new txn %ld, lock_ro_usec: %lf, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, lock_ro_usec, lock_rw_usec, read_usec);
+  DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, lock_ro_usec: %lf, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, lock_ro_usec, lock_rw_usec, read_usec);
+  #endif
+
   return true;
 ABORT:
   if (fail_abort) TxAbort(yield);
@@ -64,38 +76,50 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   /*!
     Baseline's commit protocol
     */
+  #if OPEN_TIME
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
+  #endif
+
   if (!read_write_set.empty()) {
     WriteRemote(yield);
   }
+
+  #if OPEN_TIME
   struct timespec tx_write_time;
   clock_gettime(CLOCK_REALTIME, &tx_write_time);
   double write_usec = (tx_write_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_write_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  #endif
 
   Unpin(yield);
+
+  #if OPEN_TIME
   struct timespec tx_unpin_time;
   clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
   double unpin_usec = (tx_unpin_time.tv_sec - tx_write_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_write_time.tv_nsec) / 1000;
+  #endif
 
   brpc::CallId cid;
   SendLogToStoragePool(tx_id, &cid);
-  
+
+  #if OPEN_TIME
   struct timespec tx_send_log_time;
   clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
   double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
+  #endif
   
-
   UnlockShared(yield);
   UnlockExclusive(yield);
+
+  #if OPEN_TIME
   struct timespec tx_unlock_time;
   clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
   double unlock_usec = (tx_unlock_time.tv_sec - tx_send_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_send_log_time.tv_nsec) / 1000;
-  
+  DEBUG_TIME("dtx_base_exe_commit.cc:80, exe a new txn %ld, write_usec: %lf, unpin_usec: %lf, send_log_usec: %lf, unlock_usec: %lf\n", tx_id, write_usec, unpin_usec, send_log_usec, unlock_usec);
+  #endif
+
   //!! brpc同步
   brpc::Join(cid);
-  
-  printf("dtx_base_exe_commit.cc:80, exe a new txn %ld, write_usec: %lf, unpin_usec: %lf, send_log_usec: %lf, unlock_usec: %lf\n", tx_id, write_usec, unpin_usec, send_log_usec, unlock_usec);
   return true;
 }
 
@@ -176,7 +200,7 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
     }
   }
 
-  printf("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
+  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
   return true;
 }
 
