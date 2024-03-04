@@ -178,10 +178,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 }
                 // std::cout << "ReadPageFromBuffer: " << page_ids[i].table_id << " " << page_ids[i].page_no << " from frame id: " 
                 //     << frame_id << std::endl;
-                if(pending_read_all_page_ids[i].table_id == 0 && pending_read_all_page_ids[i].page_no == 56){
-                    std::cout << "ReadPageFromBuffer: " << pending_read_all_page_ids[i].table_id << " " << pending_read_all_page_ids[i].page_no << " from frame id: " 
-                        << frame_id << std::endl;
-                }
                 pages[pending_map_all_index[i]] = page;
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[pending_map_all_index[i]] = std::make_pair(page, page_addr_vec[i]);
