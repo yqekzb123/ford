@@ -76,9 +76,9 @@ class DTX {
   /*****************************************************/
 
  public:
-  void TxAbortReadOnly();
+  void TxAbortReadOnly(coro_yield_t& yield);
 
-  void TxAbortReadWrite();
+  void TxAbortReadWrite(coro_yield_t& yield);
 
   void RemoveLastROItem();
 
@@ -95,7 +95,8 @@ class DTX {
       AddrCache* addr_buf,
       std::list<PageAddress>* free_page_list, 
       std::mutex* free_page_list_mutex,
-      brpc::Channel* channel);
+      brpc::Channel* data_channel,
+      brpc::Channel* log_channel);
   ~DTX() {
     Clean();
   }
@@ -130,9 +131,10 @@ class DTX {
   
   // 发送日志到存储层
   BatchTxnLog batch_txn_log;
-  brpc::Channel* storage_channel;
+  brpc::Channel* storage_data_channel;
+  brpc::Channel* storage_log_channel;
   
-  void SendLogToStoragePool(uint64_t bid);
+  void SendLogToStoragePool(uint64_t bid, brpc::CallId* cid);
   
  private:
   void Abort();
@@ -159,9 +161,13 @@ class DTX {
 
   bool LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> key);
 
-  bool UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
+  bool UnlockShared(coro_yield_t& yield);
 
-  bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
+  bool UnlockExclusive(coro_yield_t& yield);
+
+  // not use any more
+  // bool UnlockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
+  // bool UnlockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
 
   struct UnpinPageArgs{
     // 写回数据的地址
@@ -171,12 +177,13 @@ class DTX {
     int offset;
     int size;
   };
-  std::unordered_map<PageId, char*> FetchPage(coro_yield_t &yield, std::unordered_map<PageId, FetchPageType> ids, batch_id_t request_batch_id);
+  std::vector<char*> FetchPage(coro_yield_t &yield, batch_id_t request_batch_id);
   bool UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<FetchPageType> types);
   
   std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id);
 
-  bool WriteTuple(coro_yield_t &yield, std::vector<table_id_t> &table_id, std::vector<Rid> &rids, std::vector<FetchPageType> &types, std::vector<DataItemPtr> &data, batch_id_t request_batch_id);
+  bool WriteTuple(coro_yield_t &yield, std::vector<table_id_t> &table_id, std::vector<Rid> &rids, 
+    std::vector<int>& rid_map_pageid_idx, std::vector<FetchPageType> &types, std::vector<DataItemPtr> &data, batch_id_t request_batch_id);
 
  private:
   // 用来记录每次要批获取hash node latch的offset
@@ -184,17 +191,18 @@ class DTX {
 
   std::vector<NodeOffset> total_hash_node_offs_vec;
   std::vector<int> pending_hash_node_latch_idx;
-  std::unordered_map<PageId, std::pair<char*, NodeOffset>> page_table_item_localaddr_and_remote_offset;
-  std::unordered_map<PageId, std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
+ public:
 
   // for page table
   PageAddress GetFreePageSlot();
-  PageAddress InsertPageTableIntoHashNodeList(std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
-        PageId page_id, bool is_write, NodeOffset last_node_off, 
-         std::unordered_map<NodeOffset, NodeOffset>& hold_latch_to_previouse_node_off);
-         
-  std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, 
-      std::unordered_map<PageId,bool>& need_fetch_from_disk, std::unordered_map<PageId,bool>& now_valid, std::vector<bool> is_write);
+  PageAddress InsertPageTableIntoHashNodeList(std::vector<char*>& local_hash_nodes_vec, 
+        PageId page_id, bool is_write, int last_idx, int all_page_id_idx,
+        std::unordered_map<int, int>& hold_latch_to_previouse_node_off);
+
+  std::vector<PageAddress> GetPageAddrOrAddIntoPageTable(coro_yield_t& yield, std::vector<bool> is_write, 
+        std::vector<bool>& need_fetch_from_disk, std::vector<bool>& now_valid, std::vector<int>& pending_map_all_index); 
+        //pengding_map_all_index是记录获取rid的全局地址
+
   void UnpinPageTable(coro_yield_t& yield, std::vector<PageId> page_ids, std::vector<bool> is_write);
 
   // for private function for LockManager, 实际执行批量加锁的函数
@@ -209,11 +217,19 @@ class DTX {
     kHashIndex
   };
   
+  bool InsertSharedLockIntoHashNodeList(std::vector<char*>& local_hash_nodes_vec, 
+        LockDataId lockdataid, int last_idx, offset_t expand_base_off,
+        std::unordered_map<int, int>& hold_latch_to_previouse_node_off);
+  bool InsertExclusiveLockIntoHashNodeList(std::vector<char*>& local_hash_nodes_vec, 
+        LockDataId lockdataid, int last_idx, offset_t expand_base_off,
+        std::unordered_map<int, int>& hold_latch_to_previouse_node_off);
   std::vector<int> ShardLockHashNode(coro_yield_t& yield, QPType qptype, std::vector<char*>& local_hash_nodes, std::vector<char*>& faa_bufs);
   void ShardUnLockHashNode(NodeOffset node_off, QPType qptype);
   // Exclusive lock hash node 是一个关键路径，因此需要切换到其他协程，也需要记录下来哪些桶已经上锁成功以及RDMA操作返回值在本机的地址
   std::vector<NodeOffset> ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::unordered_map<NodeOffset, char*>& local_hash_nodes, 
             std::unordered_map<NodeOffset, char*>& cas_bufs);
+  std::vector<int> ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::vector<char*>& local_hash_nodes, 
+            std::vector<char*>& cas_bufs);
   void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype);
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype);
 
@@ -289,14 +305,27 @@ class DTX {
   std::list<PageAddress>* free_page_list;
   std::mutex* free_page_list_mutex;
 
-  std::vector<LockDataId> hold_exclusive_lock_data_id;
-  std::vector<NodeOffset> hold_exclusive_lock_node_offs;
-  std::vector<LockDataId> hold_shared_lock_data_id;
-  std::vector<NodeOffset> hold_shared_lock_node_offs;
+  // std::vector<LockDataId> hold_exclusive_lock_data_id;
+  // std::vector<NodeOffset> hold_exclusive_lock_node_offs;
+  // std::vector<LockDataId> hold_shared_lock_data_id;
+  // std::vector<NodeOffset> hold_shared_lock_node_offs;
 
+  // only used for baseline
   std::vector<table_id_t> all_tableid;
   std::vector<itemkey_t> all_keyid;
   std::vector<Rid> all_rids;
+
+  // use for both baseline and batch
+  std::vector<PageId> all_page_ids; // 固定的
+  std::vector<PageId> pending_read_all_page_ids; // 动态变化的
+  std::vector<FetchPageType> all_types; // 固定的
+  // 索引，记录每一个要访问的数据所在的all_page_ids的位置
+  std::vector<int> rid_map_pageid_idx;
+  // 与all_page_ids一一对应
+  std::vector<std::pair<char*, NodeOffset>> page_table_item_localaddr_and_remote_offset;
+  std::vector<std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
+  std::vector<std::pair<char*, NodeOffset>> shared_lock_item_localaddr_and_remote_offset;
+  std::vector<std::pair<char*, NodeOffset>> exclusive_lock_item_localaddr_and_remote_offset;
 };
 
 /*************************************************************
@@ -341,15 +370,19 @@ void DTX::AddToReadWriteSet(DataItemPtr item, LVersionPtr version) {
 }
 
 ALWAYS_INLINE
-void DTX::TxAbortReadOnly() {
+void DTX::TxAbortReadOnly(coro_yield_t& yield) {
   // Application actively aborts the tx
   // User abort tx in the middle time of tx exe
   assert(read_write_set.empty());
+  TxAbort(yield);
   read_only_set.clear();
 }
 
 ALWAYS_INLINE
-void DTX::TxAbortReadWrite() { Abort(); }
+void DTX::TxAbortReadWrite(coro_yield_t& yield) { 
+  TxAbort(yield);
+  Abort(); 
+}
 
 ALWAYS_INLINE
 void DTX::RemoveLastROItem() { read_only_set.pop_back(); }

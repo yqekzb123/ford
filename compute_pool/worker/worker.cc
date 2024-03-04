@@ -88,7 +88,8 @@ __thread uint64_t data_set_size;
 __thread uint64_t num_keys_global;
 __thread uint64_t write_ratio;
 
-__thread brpc::Channel* channel;
+__thread brpc::Channel* data_channel;
+__thread brpc::Channel* log_channel;
 
 const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 
@@ -330,7 +331,8 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      addr_cache,
                      free_page_list,
                      free_page_list_mutex,
-                     channel);
+                     data_channel,
+                     log_channel);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -426,7 +428,8 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      addr_cache,
                      free_page_list,
                      free_page_list_mutex,
-                     channel);
+                     data_channel,
+                     log_channel);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -912,7 +915,8 @@ void run_thread(thread_params* params,
     }
    
   }
-  channel = new brpc::Channel();
+  data_channel = new brpc::Channel();
+  log_channel = new brpc::Channel();
   // Init Brpc channel
   brpc::ChannelOptions options;
   // brpc::Channel channel;
@@ -921,7 +925,10 @@ void run_thread(thread_params* params,
   options.connection_type = FLAGS_connection_type;
   options.timeout_ms = FLAGS_timeout_ms;
   options.max_retry = FLAGS_max_retry;
-  if(channel->Init(FLAGS_server.c_str(), &options) != 0) {
+  if(data_channel->Init(FLAGS_server.c_str(), &options) != 0) {
+      RDMA_LOG(FATAL) << "Fail to initialize channel";
+  }
+  if(log_channel->Init(FLAGS_server.c_str(), &options) != 0) {
       RDMA_LOG(FATAL) << "Fail to initialize channel";
   }
   

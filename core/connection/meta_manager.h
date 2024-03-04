@@ -198,9 +198,7 @@ class MetaManager {
   /*** Page Table Meta ***/
   ALWAYS_INLINE
   const PageTableMeta& GetPageTableMeta(const node_id_t node_id) const {
-    auto search = page_table_meta.find(node_id);
-    assert(search != page_table_meta.end());
-    return search->second;
+    return page_table_meta[node_id];
   }
   /*** Page Table Meta ***/
   const offset_t GetPageTableExpandBase(const node_id_t node_id) const {
@@ -267,18 +265,12 @@ class MetaManager {
   // std::unordered_map<table_id_t, node_id_t> lock_table_nodes;
   // std::unordered_map<node_id_t, offset_t> lock_node_expanded_base_off;
 
+  PageTableMeta page_table_meta[MAX_REMOTE_NODE_NUM];
   std::vector<node_id_t> page_table_nodes;
-  std::unordered_map<node_id_t, PageTableMeta> page_table_meta;
-  // std::unordered_map<node_id_t, offset_t> page_table_node_expanded_base_off;
 
   std::vector<node_id_t> data_nodes;
   std::unordered_map<node_id_t, DataStoreMeta> data_metas;
   // std::unordered_map<node_id_t, offset_t> data_base_off;
-
-  // std::unordered_map<node_id_t, offset_t> free_ring_base_off;
-  // std::unordered_map<node_id_t, offset_t> free_ring_head_off;
-  // std::unordered_map<node_id_t, offset_t> free_ring_tail_off;
-  // std::unordered_map<node_id_t, offset_t> free_ring_cnt_off;
 
   std::unordered_map<table_id_t, std::string> table_name_map;
   std::unordered_map<table_id_t, TableMeta> table_meta_map;

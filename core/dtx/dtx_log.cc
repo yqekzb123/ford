@@ -7,30 +7,33 @@
 #include "log/record.h"
 #include "txn/batch_txn.h"
 
-DEFINE_string(log_protocol, "baidu_std", "Protocol type");
-DEFINE_string(log_connection_type, "", "Connection type. Available values: single, pooled, short");
-DEFINE_string(log_server, "127.0.0.1:12348", "IP address of server");
+// DEFINE_string(log_protocol, "baidu_std", "Protocol type");
+// DEFINE_string(log_connection_type, "", "Connection type. Available values: single, pooled, short");
+// DEFINE_string(log_server, "127.0.0.1:12348", "IP address of server");
 // DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
 // DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
 // DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
 
-// 发送日志到存储层
-void DTX::SendLogToStoragePool(uint64_t bid){
-    brpc::Channel channel;
-    brpc::ChannelOptions options;
-    options.use_rdma = false;
-    options.protocol = FLAGS_log_protocol;
-    options.connection_type = FLAGS_log_connection_type;
-    options.timeout_ms = 0x7fffffff;
-    options.max_retry = 3;
-    if (channel.Init(FLAGS_log_server.c_str(), &options) != 0) {
-        LOG(ERROR) << "Fail to initialize channel";
-        return;
+static void LogOnRPCDone(storage_service::LogWriteResponse* response, brpc::Controller* cntl) {
+    // unique_ptr会帮助我们在return时自动删掉response/cntl，防止忘记。gcc 3.4下的unique_ptr是模拟版本。
+    std::unique_ptr<storage_service::LogWriteResponse> response_guard(response);
+    std::unique_ptr<brpc::Controller> cntl_guard(cntl);
+    if (cntl->Failed()) {
+        // RPC失败了. response里的值是未定义的，勿用。
+        LOG(ERROR) << "Fail to send log: " << cntl->ErrorText();
+    } else {
+        // RPC成功了，response里有我们想要的数据。开始RPC的后续处理。
     }
-    storage_service::StorageService_Stub stub(&channel);
-    brpc::Controller cntl;
+    // NewCallback产生的Closure会在Run结束后删除自己，不用我们做。
+}
+ 
+
+// 发送日志到存储层
+void DTX::SendLogToStoragePool(uint64_t bid, brpc::CallId* cid){
+    storage_service::StorageService_Stub stub(storage_log_channel);
+    brpc::Controller* cntl = new brpc::Controller();
     storage_service::LogWriteRequest request;
-    storage_service::LogWriteResponse response;
+    storage_service::LogWriteResponse* response = new storage_service::LogWriteResponse();
 
     batch_txn_log.batch_id_ = bid;
 
@@ -39,12 +42,10 @@ void DTX::SendLogToStoragePool(uint64_t bid){
 
     request.set_log(batch_txn_log.get_log_string());
 
-    stub.LogWrite(&cntl, &request, &response, nullptr);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to send log: " << cntl.ErrorText();
-        return;
-    }
-    // LOG(INFO) << "Received response from " << cntl.remote_side()
-    //           << " to " << cntl.local_side()
-    //           << ": " << response.ShortDebugString();
+    // 在这里改成异步发送
+    *cid = cntl->call_id();
+
+    stub.LogWrite(cntl, &request, response, brpc::NewCallback(LogOnRPCDone, response, cntl));
+
+    // ! 在程序外部同步
 }

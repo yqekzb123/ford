@@ -78,24 +78,30 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
   double unpin_usec = (tx_unpin_time.tv_sec - tx_write_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_write_time.tv_nsec) / 1000;
 
-  SendLogToStoragePool(tx_id);
+  brpc::CallId cid;
+  SendLogToStoragePool(tx_id, &cid);
+  
   struct timespec tx_send_log_time;
   clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
   double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
   
-  UnlockShared(yield, hold_shared_lock_data_id, hold_shared_lock_node_offs);
-  UnlockExclusive(yield, hold_exclusive_lock_data_id, hold_exclusive_lock_node_offs);
+
+  UnlockShared(yield);
+  UnlockExclusive(yield);
   struct timespec tx_unlock_time;
   clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
   double unlock_usec = (tx_unlock_time.tv_sec - tx_send_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_send_log_time.tv_nsec) / 1000;
+  
+  //!! brpc同步
+  brpc::Join(cid);
   
   printf("dtx_base_exe_commit.cc:80, exe a new txn %ld, write_usec: %lf, unpin_usec: %lf, send_log_usec: %lf, unlock_usec: %lf\n", tx_id, write_usec, unpin_usec, send_log_usec, unlock_usec);
   return true;
 }
 
 void DTX::TxAbort(coro_yield_t& yield) {
-  UnlockShared(yield, hold_shared_lock_data_id, hold_shared_lock_node_offs);
-  UnlockExclusive(yield, hold_exclusive_lock_data_id, hold_exclusive_lock_node_offs);
+  UnlockShared(yield);
+  UnlockExclusive(yield);
   Abort();
 }
 
@@ -113,7 +119,7 @@ bool DTX::LockRemoteRW(coro_yield_t& yield) {
   if(read_write_set.empty()) return true;
   std::vector<table_id_t> readwrite_tableid(all_tableid.begin() + read_only_set.size(), all_tableid.end());
   std::vector<itemkey_t> readwrite_keyid(all_keyid.begin() + read_only_set.size(), all_keyid.end());
-  bool res = LockSharedOnRecord(yield, readwrite_tableid, readwrite_keyid);
+  bool res = LockExclusiveOnRecord(yield, readwrite_tableid, readwrite_keyid);
   return res;
 }
 
@@ -184,7 +190,8 @@ bool DTX::WriteRemote(coro_yield_t& yield) {
   std::vector<Rid> id_list(all_rids.begin() + read_only_set.size(), all_rids.end());
   std::vector<FetchPageType> fetch_type(read_write_set.size(), FetchPageType::kUpdateRecord); // 目前只是简单的更新，之后考虑插入和删除
 
-  WriteTuple(yield, tid_list, id_list, fetch_type, new_data_list, tx_id);
+  std::vector<int> rw_rid_map_pageid_idx(rid_map_pageid_idx.begin() + read_only_set.size(), rid_map_pageid_idx.end());
+  WriteTuple(yield, tid_list, id_list, rw_rid_map_pageid_idx, fetch_type, new_data_list, tx_id);
   tid_list.clear();
   id_list.clear();
   new_data_list.clear();
@@ -193,13 +200,14 @@ bool DTX::WriteRemote(coro_yield_t& yield) {
 }
 
 void DTX::Unpin(coro_yield_t& yield){
-  std::vector<PageId> page_ids;
-  std::vector<FetchPageType> types(all_tableid.size(), FetchPageType::kReadPage);
-  for(int i = 0; i < all_tableid.size(); i++){
-    PageId page_id;
-    page_id.table_id = all_tableid[i];
-    page_id.page_no = all_rids[i].page_no_;
-    page_ids.push_back(page_id);
-  }
-  UnpinPage(yield, page_ids, types);
+  // std::vector<PageId> page_ids;
+  // std::vector<FetchPageType> types(all_tableid.size(), FetchPageType::kReadPage);
+  // for(int i = 0; i < all_tableid.size(); i++){
+  //   PageId page_id;
+  //   page_id.table_id = all_tableid[i];
+  //   page_id.page_no = all_rids[i].page_no_;
+  //   page_ids.push_back(page_id);
+  // }
+
+  UnpinPage(yield, all_page_ids, all_types);
 }

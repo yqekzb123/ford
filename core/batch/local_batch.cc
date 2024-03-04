@@ -120,15 +120,20 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   double unpin_usec = (tx_unpin_time.tv_sec - tx_flush_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_flush_time.tv_nsec) / 1000;
 
   //! 8. 写日志到存储层
-  first_dtx->SendLogToStoragePool(batch_id);
+  brpc::CallId cid;
+  first_dtx->SendLogToStoragePool(batch_id, &cid);
   // 计时8
   struct timespec tx_log_time;
   clock_gettime(CLOCK_REALTIME, &tx_log_time);
   double log_usec = (tx_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
 
   //! 8. 释放锁
-  first_dtx->UnlockShared(yield, first_dtx->hold_shared_lock_data_id, first_dtx->hold_shared_lock_node_offs);
-  first_dtx->UnlockExclusive(yield, first_dtx->hold_exclusive_lock_data_id, first_dtx->hold_exclusive_lock_node_offs);
+  first_dtx->UnlockShared(yield);
+  first_dtx->UnlockExclusive(yield);
+
+  //!! brpc同步
+  brpc::Join(cid);
+
   // 计时9
   struct timespec tx_unlock_time;
   clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
@@ -165,18 +170,11 @@ std::vector<DataItemPtr> LocalBatch::ReadData(coro_yield_t& yield, DTX* first_dt
 }
 
 void LocalBatch::Unpin(coro_yield_t& yield, DTX* first_dtx){
-  std::vector<PageId> page_ids;
-  std::vector<FetchPageType> types(all_rids.size(), FetchPageType::kReadPage);
-  for(int i=0; i<all_keyid.size(); i++){
-    PageId page_id;
-    page_id.table_id = all_tableid[i];
-    page_id.page_no = all_rids[i].page_no_;
-    page_ids.push_back(page_id);
-  }
-  first_dtx->UnpinPage(yield, page_ids, types);
+  first_dtx->UnpinPage(yield, first_dtx->all_page_ids, first_dtx->all_types);
 }
 
 bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list) {
+  // !note 获取需要区分rw事务和ro事务
   std::vector<DataItemPtr> new_data_list;
   std::vector<FetchPageType> fetch_type(all_rids.size(), FetchPageType::kUpdateRecord);
   for (auto item : data_list) {
@@ -188,7 +186,7 @@ bool LocalBatch::FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<Dat
     new_data_list.push_back(itemPtr);
   }
 
-  first_dtx->WriteTuple(yield, all_tableid, all_rids, fetch_type, new_data_list, batch_id);
+  first_dtx->WriteTuple(yield, all_tableid, all_rids, first_dtx->rid_map_pageid_idx, fetch_type, new_data_list, batch_id);
   new_data_list.clear();
 
   return true;

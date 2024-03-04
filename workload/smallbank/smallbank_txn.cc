@@ -193,7 +193,7 @@ bool SmallBankDTX::TxReCaculateSendPayment(coro_yield_t& yield) {
   // assert(chk_val_1->magic == smallbank_checking_magic);
 
   if (chk_val_0->bal < amount) {
-    dtx->TxAbortReadWrite();
+    dtx->TxAbortReadWrite(yield);
     return false;
   }
 
@@ -454,7 +454,7 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
   // assert(chk_val_1->magic == smallbank_checking_magic);
 
   if (chk_val_0->bal < amount) {
-    dtx->TxAbortReadWrite();
+    dtx->TxAbortReadWrite(yield);
     return false;
   }
 
