@@ -3,6 +3,7 @@
 
 #include <brpc/channel.h>
 #include "dtx/dtx.h"
+#include "worker/global.h"
 #include "storage/storage_service.pb.h"
 #include "log/record.h"
 #include "worker/worker.h"
@@ -59,11 +60,11 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
 
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, page_ids, need_fetch_from_disk, now_valid, is_write);
         // // for debug
-        for(int i=0; i<page_addr_vec.size(); i++){
-            std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
-                << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
-                << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
-        }
+        // for(int i=0; i<page_addr_vec.size(); i++){
+        //     std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
+        //         << "into page_addr_vec: frame id" << page_addr_vec[i].frame_id 
+        //         << " now_valid: " <<  now_valid[page_ids[i]] << " need_fetch_from_disk: " << need_fetch_from_disk[page_ids[i]] << std::endl;
+        // }
 
         // 计时2
         timespec msr_pagetable;
@@ -173,7 +174,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
         std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1ms
     }
 
-    printf("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
+    DEBUG_TIME("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
     coro_sched->Yield(yield, coro_id);
     assert(page_data_localaddr_and_remote_offset.size() == pages.size());
     return pages;

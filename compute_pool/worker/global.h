@@ -4,6 +4,14 @@
 #include "local_exec/local_lock.h"
 #include "batch/local_batch.h"
 
+#define OPEN_TIME false
+
+#define DEBUG_TIME(...) \
+  if(OPEN_TIME) { \
+    fprintf(stdout,__VA_ARGS__); \
+    fflush(stdout); \
+  }
+
 extern LocalLockStore local_lock_store;
 extern LocalBatchStore local_batch_store;
 
