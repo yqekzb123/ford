@@ -61,7 +61,6 @@ __thread t_id_t thread_num;
 __thread SmallBank* smallbank_client = nullptr;
 // __thread TPCC* tpcc_client = nullptr;
 
-__thread MetaManager* meta_man;
 __thread QPManager* qp_man;
 
 __thread VersionCache* status;
@@ -116,9 +115,10 @@ void RecordTpLat(double msr_sec) {
 }
 
 void BatchExec(coro_yield_t& yield) {
-  while (thread_gid % g_thread_cnt == 0) {
+  while (true) {
+  // while (thread_gid % g_thread_cnt == 0) {
     // printf("worker.cc:97, batch exe\n");
-    local_batch_store.ExeBatch(yield);
+    local_batch_store->ExeBatch(yield);
     coro_sched->YieldBatch(yield, BATCH_TXN_ID);
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
@@ -804,7 +804,7 @@ void run_thread(thread_params* params,
   auto json_config = JsonConfig::load_file(config_filepath);
   auto conf = json_config.get(bench_name);
   ATTEMPTED_NUM = conf.get("attempted_num").get_uint64();
-
+  local_batch_store = new LocalBatchStore();
   if (bench_name == "tatp") {
     // tatp_client = tatp_cli;
     // tatp_workgen_arr = tatp_client->CreateWorkgenArray();

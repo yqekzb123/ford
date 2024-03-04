@@ -2,6 +2,7 @@
 // Copyright (c) 2022
 
 #include "scheduler/corotine_scheduler.h"
+#include "worker/global.h"
 
 #include <cassert>
 

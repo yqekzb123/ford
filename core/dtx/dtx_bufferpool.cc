@@ -173,7 +173,7 @@ std::unordered_map<PageId, char*> DTX::FetchPage(coro_yield_t &yield, std::unord
         std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1ms
     }
 
-    printf("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
+    // printf("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
     coro_sched->Yield(yield, coro_id);
     assert(page_data_localaddr_and_remote_offset.size() == pages.size());
     return pages;

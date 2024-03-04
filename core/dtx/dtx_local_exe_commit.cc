@@ -11,7 +11,7 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
   if (read_write_set.empty() && read_only_set.empty()) {
     return true;
   }
-
+  // return true;
   assert(global_meta_man->txn_system == DTX_SYS::OUR);
   // Run our system
   if (read_write_set.empty()) {

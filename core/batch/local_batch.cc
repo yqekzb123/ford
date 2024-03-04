@@ -14,7 +14,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   bool res = true;
   BenchDTX* first_bdtx = txn_list.front();
   DTX* first_dtx = first_bdtx->dtx;
-  printf("local_batch.cc:14 execute batch %ld\n", batch_id);
+  // printf("local_batch.cc:14 execute batch %ld\n", batch_id);
   //! 0.统计只读和读写的操作列表
   std::vector<table_id_t> readonly_tableid;
   std::vector<itemkey_t> readonly_keyid;
@@ -152,8 +152,8 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   }
 
   // 输出计时
-  printf("local_batch.cc:164 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
-  printf("local_batch.cc:95 execute batch %ld complete\n", batch_id);
+  // printf("local_batch.cc:164 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
+  // printf("local_batch.cc:95 execute batch %ld complete\n", batch_id);
   return res;
 }
 

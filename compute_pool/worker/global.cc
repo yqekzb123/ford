@@ -5,7 +5,7 @@
 #include "batch/local_batch.h"
 
 LocalLockStore local_lock_store;
-LocalBatchStore local_batch_store;
+__thread LocalBatchStore *local_batch_store;
 
 uint64_t commit_times = 0;
 
@@ -20,6 +20,7 @@ __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
 __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
 
+__thread MetaManager* meta_man;
 // const coro_id_t BATCH_TXN_ID = 0;
 
 // Stat the commit rate

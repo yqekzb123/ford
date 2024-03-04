@@ -60,7 +60,7 @@ bool DTX::LockLocalRW(coro_yield_t& yield) {
 
 bool DTX::ExeLocalRO(coro_yield_t& yield) {
   std::vector<DirectRead> pending_direct_ro;
-  auto batch = local_batch_store.GetBatchById(batch_id);
+  auto batch = local_batch_store->GetBatchById(batch_id);
   // Issue reads
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read ro";
   for (auto& item : read_only_set) {
@@ -74,7 +74,7 @@ bool DTX::ExeLocalRO(coro_yield_t& yield) {
 }
 
 bool DTX::ExeLocalRW(coro_yield_t& yield) {
-  auto batch = local_batch_store.GetBatchById(batch_id);
+  auto batch = local_batch_store->GetBatchById(batch_id);
   for (auto& item : read_only_set) {
     if (item.is_fetched) continue;
     auto localdata = batch->local_data_store.GetData(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
@@ -95,7 +95,7 @@ bool DTX::ExeLocalRW(coro_yield_t& yield) {
 bool DTX::LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   bool res = true;
   //! 1.将生成好的读写集，塞到batch中
-  auto batch = local_batch_store.InsertTxn(dtx_with_bench);
+  auto batch = local_batch_store->InsertTxn(dtx_with_bench);
   batch_id = batch->batch_id;
   if (read_write_set.empty()) {
     ExeLocalRO(yield);
@@ -139,7 +139,7 @@ bool DTX::LocalAbort(coro_yield_t& yield) {
 }
 
 bool DTX::ReExeLocalRO(coro_yield_t& yield) {
-  auto batch = local_batch_store.GetBatchById(batch_id);
+  auto batch = local_batch_store->GetBatchById(batch_id);
   for (auto& item : read_only_set) {
     if (item.is_fetched) continue;
     auto localdata = batch->local_data_store.GetData(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
@@ -157,7 +157,7 @@ bool DTX::ReExeLocalRO(coro_yield_t& yield) {
 }
 
 bool DTX::ReExeLocalRW(coro_yield_t& yield) {
-  auto batch = local_batch_store.GetBatchById(batch_id);
+  auto batch = local_batch_store->GetBatchById(batch_id);
   for (auto& item : read_only_set) {
     if (item.is_fetched) continue;
     auto localdata = batch->local_data_store.GetData(item.item_ptr.get()->table_id,item.item_ptr.get()->key);

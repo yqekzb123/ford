@@ -62,9 +62,10 @@ private:
 
 class LocalBatchStore{ 
 public:  
-    LocalBatchStore(){
+    LocalBatchStore() {
         batch_id_count = 0;
         pthread_mutex_init(&latch, nullptr);
+        now_exec = nullptr;
     }
 
     batch_id_t GenerateBatchID() {
@@ -93,7 +94,6 @@ public:
         
         assert(false);
     }
-
 
     LocalBatch* InsertTxn(BenchDTX* txn) {
         LocalBatch *batch = nullptr;
@@ -128,6 +128,5 @@ private:
     pthread_mutex_t latch;
     std::vector<LocalBatch*> local_store;
     batch_id_t batch_id_count;
-
     LocalBatch* now_exec;
 };
