@@ -120,6 +120,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
 
   //!! brpc同步
   brpc::Join(cid);
+  // printf("txn: %ld, commit\n", tx_id);
   return true;
 }
 
@@ -134,7 +135,7 @@ bool DTX::LockRemoteRO(coro_yield_t& yield) {
   if(read_only_set.empty()) return true;
   std::vector<table_id_t> readonly_tableid(all_tableid.begin(), all_tableid.begin() + read_only_set.size());
   std::vector<itemkey_t> readonly_keyid(all_keyid.begin(), all_keyid.begin() + read_only_set.size());
-  bool res = LockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
+  bool res = LockSharedOnRecord(yield, std::move(readonly_tableid), std::move(readonly_keyid));
   return res;
 }
 
@@ -143,31 +144,37 @@ bool DTX::LockRemoteRW(coro_yield_t& yield) {
   if(read_write_set.empty()) return true;
   std::vector<table_id_t> readwrite_tableid(all_tableid.begin() + read_only_set.size(), all_tableid.end());
   std::vector<itemkey_t> readwrite_keyid(all_keyid.begin() + read_only_set.size(), all_keyid.end());
-  bool res = LockExclusiveOnRecord(yield, readwrite_tableid, readwrite_keyid);
+  bool res = LockExclusiveOnRecord(yield, std::move(readwrite_tableid), std::move(readwrite_keyid));
   return res;
 }
 
 bool DTX::ReadRemote(coro_yield_t& yield) {
-  // 计时
+  #if OPEN_TIME
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
+  #endif
 
   // 获取索引
   all_rids = GetHashIndex(yield, all_tableid, all_keyid);
   if (all_rids.empty()) return false;
 
+  #if OPEN_TIME
   struct timespec tx_get_index_time;
   clock_gettime(CLOCK_REALTIME, &tx_get_index_time);
   double get_index_usec = (tx_get_index_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_get_index_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
-  
+  #endif
+
   // 获取数据项
   std::vector<FetchPageType> fetch_type(all_tableid.size(), FetchPageType::kReadPage);
   std::vector<DataItemPtr> data_list = FetchTuple(yield, all_tableid, all_rids, fetch_type, tx_id);
   
+  #if OPEN_TIME
   struct timespec tx_fetch_time;
   clock_gettime(CLOCK_REALTIME, &tx_fetch_time);
   double fetch_usec = (tx_fetch_time.tv_sec - tx_get_index_time.tv_sec) * 1000000 + (double)(tx_fetch_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
-
+  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
+  #endif
+  
   if (data_list.empty()) return false;
   // !接下来需要将数据项塞入读写集里
   for (auto fetch_item : data_list) {
@@ -200,7 +207,6 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
     }
   }
 
-  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
   return true;
 }
 

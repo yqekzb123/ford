@@ -173,7 +173,7 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
                 
                 char* page = thread_rdma_buffer_alloc->Alloc(PAGE_SIZE);
-                if(!coro_sched->RDMAReadInv(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
+                if(!coro_sched->RDMARead(coro_id, qp, page, remote_offset + frame_id * PAGE_SIZE, PAGE_SIZE)){
                     assert(false);
                 }
                 // std::cout << "ReadPageFromBuffer: " << page_ids[i].table_id << " " << page_ids[i].page_no << " from frame id: " 
@@ -245,6 +245,9 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         if(new_page_id.size() == 0){
             break;
         } else{
+            for(int i=0; i<new_page_id.size(); i++){
+                std::cout << "txn: " << tx_id << "want to get page: " << new_page_id[i].table_id << " " << new_page_id[i].page_no << "but not valid now" <<std::endl;
+            }
             pending_read_all_page_ids = new_page_id;
             is_write = new_is_write;
             pending_map_all_index = new_map;
@@ -326,10 +329,9 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
     rid_map_pageid_idx.resize(rids.size());
 
     // 在这里先resize all_types和all_page_ids
-    all_types.resize(types.size());
-    all_page_ids.resize(rids.size());
-    pending_read_all_page_ids.resize(rids.size());
-    int j = 0;
+    all_types.reserve(types.size());
+    all_page_ids.reserve(rids.size());
+    pending_read_all_page_ids.reserve(rids.size());
     for(int i=0; i<rids.size(); i++){
         PageId page_id;
         page_id.table_id = table_id[i];
@@ -339,19 +341,15 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
         auto it = std::find(pending_read_all_page_ids.begin(), pending_read_all_page_ids.end(), page_id);
         if(it == pending_read_all_page_ids.end()){
             // ! 这里，把想获取的数据页都桉顺序存到这里了，也去重完成了
-            all_page_ids[j] = page_id;
-            pending_read_all_page_ids[j] = page_id;
-            all_types[j] = types[i];
-            rid_map_pageid_idx[i] = j;
-            j++;
+            all_page_ids.push_back(page_id);
+            pending_read_all_page_ids.push_back(page_id);
+            all_types.push_back(types[i]);
+            rid_map_pageid_idx[i] = all_page_ids.size() - 1;
         } else{
             rid_map_pageid_idx[i] = it - pending_read_all_page_ids.begin();
             continue;
         }
     }
-    all_types.resize(j);
-    all_page_ids.resize(j);
-    pending_read_all_page_ids.resize(j);
 
     // 2. 根据page_id获取对应的page
     std::vector<char*> get_pages = FetchPage(yield, request_batch_id);

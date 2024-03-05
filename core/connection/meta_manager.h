@@ -178,9 +178,7 @@ class MetaManager {
   const LockTableMeta& GetLockTableMeta(const table_id_t table_id) const {
     // 这里的逻辑需要修正， 首先根据table_id找到node_id，然后根据node_id找到meta
     node_id_t node_id = GetLockTableNode(table_id);
-    auto search = lock_table_meta.find(node_id);
-    assert(search != lock_table_meta.end());
-    return search->second;
+    return lock_table_meta[node_id];
   }
 
   ALWAYS_INLINE
@@ -261,7 +259,7 @@ class MetaManager {
   IndexMeta hash_index_meta[MAX_DB_TABLE_NUM];
   node_id_t hash_index_nodes[MAX_DB_TABLE_NUM];
 
-  std::unordered_map<node_id_t, LockTableMeta> lock_table_meta;
+  LockTableMeta lock_table_meta[MAX_REMOTE_NODE_NUM];
   // std::unordered_map<table_id_t, node_id_t> lock_table_nodes;
   // std::unordered_map<node_id_t, offset_t> lock_node_expanded_base_off;
 

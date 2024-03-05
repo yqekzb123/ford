@@ -218,6 +218,37 @@ void DTX::ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype){
     // }
 }
 
+void DTX::ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_data, QPType qptype){
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
+
+    char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+
+    std::shared_ptr<ExclusiveUnlock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveUnlock_SharedMutex_Batch>();
+
+    // 不写lock，写入后面所有字节
+    doorbell->SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
+    // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
+    doorbell->SetUnLockReq(faa_buf, node_off.offset);
+
+    if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
+        std::cerr << "GetHashIndex release Exclusive mutex sendreqs faild" << std::endl;
+        assert(false);
+    }
+}
+
 void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype){
 
     RCQP*const* qp_arr = nullptr;

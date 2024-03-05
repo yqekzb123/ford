@@ -232,7 +232,8 @@ class DTX {
             std::vector<char*>& cas_bufs);
   void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype);
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype);
-
+  void ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_data, QPType qptype);
+  
   DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
 
  public:

@@ -116,13 +116,16 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
     assert(total_hash_node_offs_vec.size() == 0);
 
     std::vector<std::vector<lock_table_request_list_item>> lock_request_list;
+    lock_request_list.reserve(node_offs.size());
+    total_hash_node_offs_vec.reserve(node_offs.size());
+
     // init total_hash_node_offs_vec
     for(int i=0; i<node_offs.size(); i++){
         auto index = std::find(total_hash_node_offs_vec.begin(), total_hash_node_offs_vec.end(), node_offs[i]);
         if(index == total_hash_node_offs_vec.end()){
             // not find
             total_hash_node_offs_vec.push_back(node_offs[i]);
-            lock_request_list.push_back(std::vector<lock_table_request_list_item>({{lock_data_id[i], i}}));
+            lock_request_list.emplace_back(std::vector<lock_table_request_list_item>({{lock_data_id[i], i}}));
         }else{
             // find
             lock_request_list[index - total_hash_node_offs_vec.begin()].push_back({lock_data_id[i], i});
@@ -130,7 +133,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
     }
     
     assert(pending_hash_node_latch_idx.size() == 0);
-    pending_hash_node_latch_idx.resize(total_hash_node_offs_vec.size());
+    pending_hash_node_latch_idx = std::vector<int>(total_hash_node_offs_vec.size());
     std::vector<char*> local_hash_nodes_vec(total_hash_node_offs_vec.size(), nullptr);
     std::vector<char*> cas_bufs_vec(total_hash_node_offs_vec.size(), nullptr);
     // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
@@ -142,10 +145,11 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
 
     // std::unordered_set<NodeOffset> unlock_node_off_with_write;
     // std::unordered_set<NodeOffset> unlock_node_off_no_write;
-    std::unordered_set<NodeOffset> hold_node_off_latch;
+    // std::unordered_set<NodeOffset> hold_node_off_latch;
 
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
+    shared_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -244,8 +248,6 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
             }
         }
     }
-    // 这里所有的latch都已经释放了
-    assert(hold_node_off_latch.size() == 0);
     assert(shared_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
     return ret_lock_fail_data_id;
 }
@@ -260,6 +262,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     assert(total_hash_node_offs_vec.size() == 0);
 
     std::vector<std::vector<lock_table_request_list_item>> lock_request_list;
+    lock_request_list.reserve(node_offs.size());
+    total_hash_node_offs_vec.reserve(node_offs.size());
+
     // init total_hash_node_offs_vec
     for(int i=0; i<node_offs.size(); i++){
         auto index = std::find(total_hash_node_offs_vec.begin(), total_hash_node_offs_vec.end(), node_offs[i]);
@@ -274,7 +279,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     }
     
     assert(pending_hash_node_latch_idx.size() == 0);
-    pending_hash_node_latch_idx.resize(total_hash_node_offs_vec.size());
+    pending_hash_node_latch_idx = std::vector<int>(total_hash_node_offs_vec.size());
     std::vector<char*> local_hash_nodes_vec(total_hash_node_offs_vec.size(), nullptr);
     std::vector<char*> cas_bufs_vec(total_hash_node_offs_vec.size(), nullptr);
     // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
@@ -284,10 +289,11 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
         pending_hash_node_latch_idx[i] = i;
     }
 
-    std::unordered_set<NodeOffset> hold_node_off_latch;
+    // std::unordered_set<NodeOffset> hold_node_off_latch;
 
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
+    exclusive_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -384,7 +390,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
         }
     }
     // 这里所有的latch都已经释放了
-    assert(hold_node_off_latch.size() == 0);
+    // assert(hold_node_off_latch.size() == 0);
     assert(exclusive_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
     return ret_lock_fail_data_id;
 }
@@ -615,6 +621,9 @@ bool DTX::LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_i
     std::vector<NodeOffset> batch_node_off;
     std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
+
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
 
@@ -632,7 +641,7 @@ bool DTX::LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_i
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockShared(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockShared(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
@@ -645,6 +654,9 @@ bool DTX::LockExclusiveOnTable(coro_yield_t& yield, std::vector<table_id_t> tabl
     std::vector<NodeOffset> batch_node_off;
     std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
+
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
         
@@ -662,7 +674,7 @@ bool DTX::LockExclusiveOnTable(coro_yield_t& yield, std::vector<table_id_t> tabl
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockExclusive(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockExclusive(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
@@ -673,13 +685,16 @@ bool DTX::LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_
     assert(table_id.size() == key.size());
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
-    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+    // std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
         
-        if(lock_data_id_set.count(lock_data_id) != 0) continue;
-        else lock_data_id_set.emplace(lock_data_id);
+        // if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        // else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
@@ -692,7 +707,7 @@ bool DTX::LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockShared(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockShared(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
@@ -703,14 +718,16 @@ bool DTX::LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> tab
     assert(table_id.size() == key.size());
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
+    // std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
 
-    std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
 
-        if(lock_data_id_set.count(lock_data_id) != 0) continue;
-        else lock_data_id_set.emplace(lock_data_id);
+        // if(lock_data_id_set.count(lock_data_id) != 0) continue;
+        // else lock_data_id_set.emplace(lock_data_id);
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
@@ -723,7 +740,7 @@ bool DTX::LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> tab
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockExclusive(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockExclusive(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
@@ -736,6 +753,9 @@ bool DTX::LockSharedOnRange(coro_yield_t& yield, std::vector<table_id_t> table_i
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
     std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RANGE);
@@ -754,7 +774,7 @@ bool DTX::LockSharedOnRange(coro_yield_t& yield, std::vector<table_id_t> table_i
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockShared(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockShared(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
@@ -766,6 +786,9 @@ bool DTX::LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> tabl
     std::vector<LockDataId> batch_lock_data_id;
     std::vector<NodeOffset> batch_node_off;
     std::unordered_set<LockDataId> lock_data_id_set; // 去重使用
+
+    batch_lock_data_id.reserve(table_id.size());
+    batch_node_off.reserve(table_id.size());
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
@@ -784,7 +807,7 @@ bool DTX::LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> tabl
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
 
-    if(LockExclusive(yield, batch_lock_data_id, batch_node_off).size() == 0){
+    if(LockExclusive(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
     }
     return false;
