@@ -14,6 +14,7 @@
 #include <list>
 #include <unordered_map>
 #include <condition_variable>
+#include <cstddef>
 
 #include "memstore/mem_store.h"
 #include "allocator/buffer_allocator.h"
@@ -48,6 +49,7 @@ struct PageTableItem {
   PageTableItem(PageId page_id, PageAddress page_address) :page_id(page_id), page_address(page_address), rwcount(0),
     page_valid(false), valid(1) {}
 } Aligned8;
+const size_t RWCOUNT_OFF = offsetof(PageTableItem, rwcount); 
 
 struct PageTableMeta {
   // Virtual address of the page table, used to calculate the distance

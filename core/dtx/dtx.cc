@@ -13,6 +13,7 @@ DTX::DTX(MetaManager* meta_man,
          RDMABufferAllocator* rdma_buffer_allocator,
          LogOffsetAllocator* remote_log_offset_allocator,
          AddrCache* addr_buf,
+         IndexCache* _index_cache,
          std::list<PageAddress>* _free_page_list, 
          std::mutex* _free_page_list_mutex,
          brpc::Channel* data_channel,
@@ -35,7 +36,7 @@ DTX::DTX(MetaManager* meta_man,
   select_backup = 0;
   // thread_remote_log_offset_alloc = remote_log_offset_allocator;
   addr_cache = addr_buf;
-
+  index_cache = _index_cache;
   hit_local_cache_times = 0;
   miss_local_cache_times = 0;
 

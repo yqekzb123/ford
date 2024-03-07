@@ -270,18 +270,12 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
     return pages;
 }
 
-bool DTX::UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<FetchPageType> types){
+bool DTX::UnpinPage(coro_yield_t &yield, std::vector<PageId>& ids,  std::vector<FetchPageType>& types){
 
-    assert(ids.size() == page_table_item_localaddr_and_remote_offset.size());
-    assert(ids.size() == all_page_ids.size());
+    // assert(ids.size() == page_table_item_localaddr_and_remote_offset.size());
+    // assert(ids.size() == all_page_ids.size());
     // 1. 根据rids获取对应的page_id
     // 这里先用unordered_map转化，已处理Rid中的重复page_id
-    assert(ids.size() == types.size());
-    std::unordered_map<PageId, FetchPageType> ids_map;
-    for(int i=0; i<ids.size(); i++){
-        assert(types[i] == FetchPageType::kReadPage || types[i] == FetchPageType::kUpdateRecord);
-        ids_map[ids[i]] = types[i];
-    }
 
     // 修改页表中的item
     for(int i=0; i<ids.size(); i++){
@@ -293,13 +287,13 @@ bool DTX::UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<F
         if(types[i] == FetchPageType::kReadPage || types[i] == FetchPageType::kUpdateRecord){
             // rwcount - 1
             char* faa_cnt = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->rwcount) - (offset_t)item, SHARED_UNLOCK_TO_BE_ADDED))
+            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + RWCOUNT_OFF, SHARED_UNLOCK_TO_BE_ADDED))
                 assert(false);
         }
         else if(types[i] == FetchPageType::kInsertRecord || types[i] == FetchPageType::kDeleteRecord){
             // 插入/删除数据页
             char* faa_cnt = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
-            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->rwcount) - (offset_t)item, EXCLUSIVE_UNLOCK_TO_BE_ADDED))
+            if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + RWCOUNT_OFF, EXCLUSIVE_UNLOCK_TO_BE_ADDED))
                 assert(false);
         }
         else{
@@ -376,10 +370,6 @@ bool DTX::WriteTuple(coro_yield_t &yield, std::vector<table_id_t> &table_id, std
             continue;
         }
         else if(types[i] == FetchPageType::kUpdateRecord){
-            // 1. 根据rids获取对应的page_id
-            PageId page_id;
-            page_id.table_id = table_id[i];
-            page_id.page_no = rids[i].page_no_;
             // 2. 根据page_id获取对应的page
             char* page = page_data_localaddr_and_remote_offset[rid_map_pageid_idx[i]].first;
             PageAddress remote_page_addr = page_data_localaddr_and_remote_offset[rid_map_pageid_idx[i]].second;

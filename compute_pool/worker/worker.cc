@@ -73,6 +73,7 @@ __thread std::mutex* free_page_list_mutex;
 __thread RDMABufferAllocator* rdma_buffer_allocator;
 __thread LogOffsetAllocator* log_offset_allocator;
 __thread AddrCache* addr_cache;
+__thread IndexCache* index_cache;
 
 // __thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
@@ -329,6 +330,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      rdma_buffer_allocator,
                      log_offset_allocator,
                      addr_cache,
+                     index_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -394,6 +396,9 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
       timer[stat_committed_tx_total++] = tx_usec;
     }
+    else{
+      printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
+    }
     if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
       clock_gettime(CLOCK_REALTIME, &msr_end);
@@ -426,6 +431,7 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      rdma_buffer_allocator,
                      log_offset_allocator,
                      addr_cache,
+                     index_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -850,6 +856,8 @@ void run_thread(thread_params* params,
 
   auto alloc_rdma_region_range = params->global_rdma_region->GetThreadLocalRegion(thread_local_id);
   addr_cache = new AddrCache();
+  index_cache = new IndexCache();
+
   rdma_buffer_allocator = new RDMABufferAllocator(alloc_rdma_region_range.first, alloc_rdma_region_range.second);
   // log_offset_allocator = new LogOffsetAllocator(thread_gid, params->total_thread_num);
   timer = new double[ATTEMPTED_NUM]();

@@ -455,7 +455,7 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
 
   if (chk_val_0->bal < amount) {
     dtx->TxAbortReadWrite(yield);
-    return false;
+    return true;
   }
 
   chk_val_0->bal -= amount; /* Debit */

@@ -21,13 +21,13 @@ std::vector<int> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std:
     }
 
     for(int i=0; i<pending_hash_node_latch_idx.size(); i++) {
-        std::shared_ptr<SharedLock_SharedMutex_Batch> doorbell = std::make_shared<SharedLock_SharedMutex_Batch>();
+        SharedLock_SharedMutex_Batch doorbell;
 
         NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
-        doorbell->SetFAAReq(faa_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
-        doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell.SetFAAReq(faa_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
+        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
-        if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
+        if (!doorbell.SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
             assert(false);
         }
@@ -36,7 +36,8 @@ std::vector<int> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std:
     coro_sched->Yield(yield, coro_id);
 
     std::vector<int> success_get_latch_off_idx;
-
+    success_get_latch_off_idx.reserve(pending_hash_node_latch_idx.size());
+    
     for (int i=0; i<pending_hash_node_latch_idx.size(); ) {
         if ((*(lock_t*)faa_bufs[pending_hash_node_latch_idx[i]] & MASKED_SHARED_LOCKS) >> 56 == 0x00) {
             success_get_latch_off_idx.push_back(pending_hash_node_latch_idx[i]);
@@ -152,14 +153,27 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
             assert(false);
     }
 
+    // for(int i=0; i<pending_hash_node_latch_idx.size(); i++) {
+    //     std::shared_ptr<ExclusiveLock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveLock_SharedMutex_Batch>();
+        
+    //     NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
+    //     doorbell->SetLockReq(cas_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
+    //     doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        
+    //     if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
+    //         std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
+    //         assert(false);
+    //     }
+    // }
+
     for(int i=0; i<pending_hash_node_latch_idx.size(); i++) {
-        std::shared_ptr<ExclusiveLock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveLock_SharedMutex_Batch>();
+        ExclusiveLock_SharedMutex_Batch doorbell;
         
         NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
-        doorbell->SetLockReq(cas_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
-        doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell.SetLockReq(cas_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
+        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
         
-        if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
+        if (!doorbell.SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
             assert(false);
         }
@@ -168,6 +182,7 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
     coro_sched->Yield(yield, coro_id);
 
     std::vector<int> success_get_latch_off_idx;
+    success_get_latch_off_idx.reserve(pending_hash_node_latch_idx.size());
 
     for (int i=0; i<pending_hash_node_latch_idx.size(); ) {
         if (*(lock_t*)cas_bufs[pending_hash_node_latch_idx[i]] == UNLOCKED) {
@@ -268,26 +283,17 @@ void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_bac
 
     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
 
-    std::shared_ptr<ExclusiveUnlock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveUnlock_SharedMutex_Batch>();
+    ExclusiveUnlock_SharedMutex_Batch doorbell;
 
     // 不写lock，写入后面所有字节
-    doorbell->SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
+    doorbell.SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
     // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
-    doorbell->SetUnLockReq(faa_buf, node_off.offset);
+    doorbell.SetUnLockReq(faa_buf, node_off.offset);
 
-    if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
+    if (!doorbell.SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
         std::cerr << "GetHashIndex release Exclusive mutex sendreqs faild" << std::endl;
         assert(false);
     }
-    
-    // // 切换到其他协程
-    // coro_sched->Yield(yield, coro_id);
-
-    // if( (*(lock_t*)faa_buf & MASKED_SHARED_LOCKS) != EXCLUSIVE_LOCKED){
-    //     // 原值没上锁，出问题
-    //     std::cerr << "Unlcok but there is no latch before" << std::endl;
-    //     assert(false);
-    // }
 }
 
 // // 以下是非batching的上锁函数

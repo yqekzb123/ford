@@ -110,7 +110,7 @@ struct lock_table_request_list_item{
 
 // 这个函数是要对std::vector<LockDataId> lock_data_id上共享锁, 它们的偏移量分别是std::vector<offset_t> node_off
 // 这里的offset是可能重复的, 返回No-wait上锁失败的所有LockDataID可以尝试多次
-std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
+std::vector<LockDataId> DTX::LockSharedBatch(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
 
     total_hash_node_offs_vec.clear();
     assert(total_hash_node_offs_vec.size() == 0);
@@ -200,7 +200,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
                     ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
-                    if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                    if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
                 }
@@ -228,7 +228,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                     auto release_node_off = total_hash_node_offs_vec[release_idx];
                     while(true){
                         ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
-                        if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                        if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                         release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                         release_node_off = total_hash_node_offs_vec[release_idx];
                     }
@@ -253,10 +253,117 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
 }
 
 
+// 这个函数是要对std::vector<LockDataId> lock_data_id上共享锁, 它们的偏移量分别是std::vector<offset_t> node_off
+// 这里的offset是可能重复的, 返回No-wait上锁失败的所有LockDataID可以尝试多次
+std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
+    // init
+    total_hash_node_offs_vec = node_offs;
+    
+    assert(pending_hash_node_latch_idx.size() == 0);
+    pending_hash_node_latch_idx = std::vector<int>(total_hash_node_offs_vec.size());
+    std::vector<char*> local_hash_nodes_vec(total_hash_node_offs_vec.size(), nullptr);
+    std::vector<char*> cas_bufs_vec(total_hash_node_offs_vec.size(), nullptr);
+    // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
+    for(int i=0; i<total_hash_node_offs_vec.size(); i++){
+        local_hash_nodes_vec[i] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+        cas_bufs_vec[i] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+        pending_hash_node_latch_idx[i] = i;
+    }
+
+    std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
+    std::vector<LockDataId> ret_lock_fail_data_id;
+    shared_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+
+    while (pending_hash_node_latch_idx.size()!=0){
+        // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
+        auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
+
+        for(auto idx : succ_node_off_idx ){
+            // read now
+            LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes_vec[idx]);
+            NodeOffset node_off = total_hash_node_offs_vec[idx];
+            // 遍历这个node_off上的所有请求即所有的lock_data_id, 
+            // 如果找到, 就从列表中移除
+            bool is_find = false;
+            for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+                if (lock_node->lock_items[i].key == lock_data_id[idx] && lock_node->lock_items[i].valid == true) {
+                    // not exclusive lock
+                    if((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) == UNLOCKED){
+                        // 记录lock table item远程地址
+                        shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
+                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
+                            NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));                            
+                        // lock shared lock
+                        lock_node->lock_items[i].lock += 1;
+                    }
+                    else{
+                        // LockDataId already locked
+                        ret_lock_fail_data_id.emplace_back(lock_data_id[idx] );
+                    }
+                    is_find = true;
+                    break;
+                }
+            }
+            if(is_find){
+                // release latch and write back
+                auto release_idx = idx;
+                auto release_node_off = total_hash_node_offs_vec[release_idx];
+                while(true){
+                    ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                    if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
+                    release_idx = hold_latch_to_previouse_node_off.at(release_idx);
+                    release_node_off = total_hash_node_offs_vec[release_idx];
+                }
+            }
+            else{
+                // 存在未处理的请求, 保留latch
+                // if LockDataId not exist, find next bucket
+                // 一个表一定会进入一个哈希桶中
+                table_id_t table_id = lock_data_id[idx].table_id_;
+                node_id_t node_id = global_meta_man->GetLockTableNode(table_id);
+                auto expand_node_id = lock_node->next_expand_node_id[0];
+                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(table_id);
+                offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
+                if(expand_node_id < 0){
+                    // find to the bucket end, here latch is already get and insert it
+                    if(!InsertSharedLockIntoHashNodeList(local_hash_nodes_vec, 
+                            lock_data_id[idx], idx, expand_base_off, hold_latch_to_previouse_node_off)){
+                        // insert fail
+                        ret_lock_fail_data_id.emplace_back(lock_data_id[idx]);
+                    }
+                    // after insert, release latch and write back
+                    auto release_idx = idx;
+                    auto release_node_off = total_hash_node_offs_vec[release_idx];
+                    while(true){
+                        ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                        if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
+                        release_idx = hold_latch_to_previouse_node_off.at(release_idx);
+                        release_node_off = total_hash_node_offs_vec[release_idx];
+                    }
+                }
+                else{
+                    // alloc next node read buffer and cas buffer
+                    NodeOffset next_node_off{node_id, next_off};
+                    total_hash_node_offs_vec.push_back(next_node_off);
+                    int new_idx = total_hash_node_offs_vec.size() - 1;
+                    pending_hash_node_latch_idx.push_back(new_idx);
+                    lock_data_id.push_back(lock_data_id[idx]);
+                    hold_latch_to_previouse_node_off[new_idx] = idx;
+                    assert(local_hash_nodes_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    assert(cas_bufs_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    local_hash_nodes_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode)));
+                    cas_bufs_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(lock_t)));
+                }
+            }
+        }
+    }
+    assert(shared_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    return ret_lock_fail_data_id;
+}
 
 // 这个函数是要对std::vector<LockDataId> lock_data_id上共享锁, 它们的偏移量分别是std::vector<offset_t> node_off
 // 这里的offset是可能重复的, 返回No-wait上锁失败的所有LockDataID可以尝试多次
-std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
+std::vector<LockDataId> DTX::LockExclusiveBatch(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
 
     total_hash_node_offs_vec.clear();
     assert(total_hash_node_offs_vec.size() == 0);
@@ -377,6 +484,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 else{
                     // alloc next node read buffer and cas buffer
                     NodeOffset next_node_off{node_id, next_off};
+                    total_hash_node_offs_vec.push_back(next_node_off);
                     int new_idx = total_hash_node_offs_vec.size() - 1;
                     pending_hash_node_latch_idx.push_back(new_idx);
                     lock_request_list.push_back(lock_request_list[idx]);
@@ -392,6 +500,120 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     // 这里所有的latch都已经释放了
     // assert(hold_node_off_latch.size() == 0);
     assert(exclusive_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    return ret_lock_fail_data_id;
+}
+
+std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
+
+    // 计时
+    struct timespec tx_lock_time;
+    clock_gettime(CLOCK_REALTIME, &tx_lock_time);
+    // init
+    total_hash_node_offs_vec = node_offs;
+    
+    assert(pending_hash_node_latch_idx.size() == 0);
+    pending_hash_node_latch_idx = std::vector<int>(total_hash_node_offs_vec.size());
+    std::vector<char*> local_hash_nodes_vec(total_hash_node_offs_vec.size(), nullptr);
+    std::vector<char*> cas_bufs_vec(total_hash_node_offs_vec.size(), nullptr);
+    // init local_hash_nodes and cas_bufs, and get_pagetable_request_list , and pending_hash_node_latch_offs
+    for(int i=0; i<total_hash_node_offs_vec.size(); i++){
+        local_hash_nodes_vec[i] = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode));
+        cas_bufs_vec[i] = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+        pending_hash_node_latch_idx[i] = i;
+    }
+    std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
+    std::vector<LockDataId> ret_lock_fail_data_id;
+    exclusive_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+
+    while (pending_hash_node_latch_idx.size()!=0){
+        // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
+        auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
+
+        for(auto idx : succ_node_off_idx ){
+            // read now
+            LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes_vec[idx]);
+            NodeOffset node_off = total_hash_node_offs_vec[idx];
+            // 如果找到, 就从列表中移除
+            // find lock item
+            bool is_find = false;
+            for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+                if (lock_node->lock_items[i].key == lock_data_id[idx] && lock_node->lock_items[i].valid == true) {
+                    // not exclusive lock
+                    if(lock_node->lock_items[i].lock == UNLOCKED){
+                        // 加入exclusive_lock_item_localaddr_and_remote_offset
+                        exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
+                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
+                            NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));
+                        // lock EXCLUSIVE lock
+                        lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;    
+                    }
+                    else{
+                        // LockDataId already locked
+                        ret_lock_fail_data_id.emplace_back(lock_data_id[idx]);
+                    }
+                    is_find = true;
+                    break;
+                }
+            }
+            if(is_find){
+                // release latch and write back
+                auto release_idx = idx;
+                auto release_node_off = total_hash_node_offs_vec[release_idx];
+                while(true){
+                    ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                    if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                    release_idx = hold_latch_to_previouse_node_off.at(release_idx);
+                    release_node_off = total_hash_node_offs_vec[release_idx];
+                }
+            }
+            else{
+                // 存在未处理的请求, 保留latch
+                // if LockDataId not exist, find next bucket
+                // 一个表一定会进入一个哈希桶中
+                table_id_t table_id = lock_data_id[idx].table_id_;
+                node_id_t node_id = global_meta_man->GetLockTableNode(table_id);
+                auto expand_node_id = lock_node->next_expand_node_id[0];
+                offset_t expand_base_off = global_meta_man->GetLockTableExpandBase(table_id);
+                offset_t next_off = expand_base_off + expand_node_id * sizeof(LockNode);
+                if(expand_node_id < 0){
+                    if(!InsertExclusiveLockIntoHashNodeList(local_hash_nodes_vec, 
+                            lock_data_id[idx], idx, expand_base_off, hold_latch_to_previouse_node_off)){
+                        // insert fail
+                        ret_lock_fail_data_id.emplace_back(lock_data_id[idx]);
+                    }
+                    // after insert, release latch and write back
+                    auto release_idx = idx;
+                    auto release_node_off = total_hash_node_offs_vec[release_idx];
+                    while(true){
+                        ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                        if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                        release_idx = hold_latch_to_previouse_node_off.at(release_idx);
+                        release_node_off = total_hash_node_offs_vec[release_idx];
+                    }
+                }
+                else{
+                    // alloc next node read buffer and cas buffer
+                    NodeOffset next_node_off{node_id, next_off};
+                    total_hash_node_offs_vec.push_back(next_node_off);
+                    int new_idx = total_hash_node_offs_vec.size() - 1;
+                    pending_hash_node_latch_idx.push_back(new_idx);
+                    lock_data_id.push_back(lock_data_id[idx]);
+                    hold_latch_to_previouse_node_off[new_idx] = idx;
+                    assert(local_hash_nodes_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    assert(cas_bufs_vec.size() == total_hash_node_offs_vec.size() - 1);
+                    local_hash_nodes_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(PageTableNode)));
+                    cas_bufs_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(lock_t)));
+                }
+            }
+        }
+    }
+    assert(exclusive_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+
+    // struct timespec tx_lock_end_time;
+    // clock_gettime(CLOCK_REALTIME, &tx_lock_end_time);
+    // double lock_usec = (tx_lock_end_time.tv_sec - tx_lock_time.tv_sec) * 1000000 + (double)(tx_lock_end_time.tv_nsec - tx_lock_time.tv_nsec) / 1000;
+    // printf("lock time: %lf us\n", lock_usec);
+
     return ret_lock_fail_data_id;
 }
 

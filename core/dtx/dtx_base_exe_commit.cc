@@ -212,6 +212,7 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
 
 bool DTX::WriteRemote(coro_yield_t& yield) {
   std::vector<DataItemPtr> new_data_list;
+  new_data_list.reserve(read_write_set.size());
   for (auto& write_item : read_write_set) {
     auto it = write_item.item_ptr;
     new_data_list.push_back(it);
@@ -222,9 +223,6 @@ bool DTX::WriteRemote(coro_yield_t& yield) {
 
   std::vector<int> rw_rid_map_pageid_idx(rid_map_pageid_idx.begin() + read_only_set.size(), rid_map_pageid_idx.end());
   WriteTuple(yield, tid_list, id_list, rw_rid_map_pageid_idx, fetch_type, new_data_list, tx_id);
-  tid_list.clear();
-  id_list.clear();
-  new_data_list.clear();
 
   return true;
 }

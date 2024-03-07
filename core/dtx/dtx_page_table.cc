@@ -242,6 +242,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
     // 如果桶链都没有找到，则需要进入下一个节点遍历
 
     std::vector<std::vector<page_table_request_list_item>> get_pagetable_request_list; // bool 存放的是is_write
+    get_pagetable_request_list.reserve(pending_read_all_page_ids.size());
     for(int i=0; i<pending_read_all_page_ids.size(); i++){
         auto hash_meta = global_meta_man->GetPageTableMeta(nodes[0]); // 获取第一个节点的页表元数据
         auto hash = MurmurHash64A(pending_read_all_page_ids[i].Get(), 0xdeadbeef) % hash_meta.bucket_num;
@@ -251,8 +252,8 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
         auto index = std::find(total_hash_node_offs_vec.begin(), total_hash_node_offs_vec.end(), node_off);
         if(index == total_hash_node_offs_vec.end()){
             // not find
-            total_hash_node_offs_vec.push_back(node_off);
-            get_pagetable_request_list.push_back({{pending_read_all_page_ids[i], is_write[i], i}});
+            total_hash_node_offs_vec.emplace_back(node_off);
+            get_pagetable_request_list.emplace_back(std::vector<page_table_request_list_item>({{pending_read_all_page_ids[i], is_write[i], i}}));
         }
         else{
             // find
@@ -342,7 +343,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                 while(true){
                     // unlock_node_off_with_write.emplace(release_node_off);
                     ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kPageTable);
-                    if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                    if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
                 }
@@ -388,7 +389,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                         while(true){
                             // unlock_node_off_with_write.emplace(release_node_off);
                             ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kPageTable);
-                            if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
+                            if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                             release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                             release_node_off = total_hash_node_offs_vec[release_idx];
                         }
@@ -412,21 +413,8 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                     cas_bufs_vec.push_back(thread_rdma_buffer_alloc->Alloc(sizeof(lock_t)));
                 }
             }
-            // // release all latch and write back
-            // for (auto node_off : unlock_node_off_with_write){
-            //     ExclusiveUnlockHashNode_WithWrite(node_off, local_hash_nodes[node_off], QPType::kPageTable);
-            //     hold_node_off_latch.erase(node_off);
-            // }
-            // unlock_node_off_with_write.clear();
         }
     }
-    // 这里所有的latch都已经释放了
-    // assert(hold_node_off_latch.size() == 0);
-    // // 转化成vector
-    // std::vector<PageAddress> res_vec;
-    // for(auto id : pending_read_all_page_ids){
-    //     res_vec.push_back(res[id]);
-    // }
 
     // 检查
     for(int i=0; i<pending_read_all_page_ids.size(); i++){

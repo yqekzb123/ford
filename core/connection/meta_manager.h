@@ -225,13 +225,11 @@ class MetaManager {
     return table_name_map.at(table_id);
   }
   const TableMeta& GetTableMeta(const table_id_t table_id) const {
-    return table_meta_map.at(table_id);
+    return table_meta_map[table_id];
   }
 
   const offset_t GetDataOff(const node_id_t node_id) const {
-    auto search = data_metas.find(node_id);
-    assert(search != data_metas.end());
-    return search->second.base_off;
+    return data_metas[node_id].base_off;
   }
   
  private:
@@ -267,11 +265,11 @@ class MetaManager {
   std::vector<node_id_t> page_table_nodes;
 
   std::vector<node_id_t> data_nodes;
-  std::unordered_map<node_id_t, DataStoreMeta> data_metas;
+  DataStoreMeta data_metas[MAX_REMOTE_NODE_NUM];
   // std::unordered_map<node_id_t, offset_t> data_base_off;
 
   std::unordered_map<table_id_t, std::string> table_name_map;
-  std::unordered_map<table_id_t, TableMeta> table_meta_map;
+  TableMeta table_meta_map[MAX_DB_TABLE_NUM];
 
   std::unordered_map<node_id_t, offset_t> data_off;
 

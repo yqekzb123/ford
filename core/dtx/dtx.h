@@ -24,6 +24,7 @@
 #include "cache/addr_cache.h"
 #include "cache/lock_status.h"
 #include "cache/version_status.h"
+#include "cache/index_cache.h"
 #include "connection/meta_manager.h"
 #include "connection/qp_manager.h"
 #include "dtx/doorbell.h"
@@ -93,6 +94,7 @@ class DTX {
       RDMABufferAllocator* rdma_buffer_allocator,
       LogOffsetAllocator* log_offset_allocator,
       AddrCache* addr_buf,
+      IndexCache* index_cache,
       std::list<PageAddress>* free_page_list, 
       std::mutex* free_page_list_mutex,
       brpc::Channel* data_channel,
@@ -142,6 +144,7 @@ class DTX {
   void Clean();  // Clean data sets after commit/abort
  public:
   // for hash index
+  std::vector<Rid> GetHashIndexBatch(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
   std::vector<Rid> GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key);
 
   bool InsertHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key, std::vector<Rid> rids);
@@ -178,7 +181,7 @@ class DTX {
     int size;
   };
   std::vector<char*> FetchPage(coro_yield_t &yield, batch_id_t request_batch_id);
-  bool UnpinPage(coro_yield_t &yield, std::vector<PageId> ids,  std::vector<FetchPageType> types);
+  bool UnpinPage(coro_yield_t &yield, std::vector<PageId>& ids,  std::vector<FetchPageType>& types);
   
   std::vector<DataItemPtr> FetchTuple(coro_yield_t &yield, std::vector<table_id_t> table_id, std::vector<Rid> rids, std::vector<FetchPageType> types, batch_id_t request_batch_id);
 
@@ -207,9 +210,10 @@ class DTX {
 
   // for private function for LockManager, 实际执行批量加锁的函数
   std::vector<LockDataId> LockShared(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
-
+  std::vector<LockDataId> LockSharedBatch(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
   std::vector<LockDataId> LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
-
+  std::vector<LockDataId> LockExclusiveBatch(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs);
+  
   // for rwlatch in hash node
   enum class QPType {
     kPageTable,
@@ -281,6 +285,7 @@ class DTX {
   std::vector<size_t> locked_rw_set;  // For release lock during abort
 
   AddrCache* addr_cache;
+  IndexCache* index_cache;
 
   // For backup-enabled read. Which backup is selected (the backup index, not the backup's machine id)
   size_t select_backup;
