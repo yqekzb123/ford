@@ -9,9 +9,12 @@
 #include <vector>
 
 #include "config/table_type.h"
+#include "memstore/hash_index_store.h"
 #include "memstore/hash_store.h"
 #include "util/fast_random.h"
 #include "util/json_config.h"
+#include "record/rm_manager.h"
+#include "record/rm_file_handle.h"
 
 // YYYY-MM-DD HH:MM:SS This is supposed to be a date/time field from Jan 1st 1900 -
 // Dec 31st 2100 with a resolution of 1 second. See TPC-C 5.11.0.
@@ -662,51 +665,78 @@ class TPCC {
 
   uint32_t num_stock_per_warehouse = 100000;
 
+  /* Indexes */
+  IndexStore* warehouse_table_index = nullptr;
+
+  IndexStore* district_table_index = nullptr;
+
+  IndexStore* customer_table_index = nullptr;
+
+  IndexStore* history_table_index = nullptr;
+
+  IndexStore* new_order_index = nullptr;
+
+  IndexStore* order_table_index = nullptr;
+
+  IndexStore* order_line_index = nullptr;
+
+  IndexStore* item_table_index = nullptr;
+
+  IndexStore* stock_table_index = nullptr;
+
+  IndexStore* customer_index_index = nullptr;
+
+  IndexStore* order_index_index = nullptr;
+
+  std::vector<IndexStore*> index_store_ptrs;
+
   /* Tables */
-  HashStore* warehouse_table = nullptr;
+  // HashStore* warehouse_table = nullptr;
 
-  HashStore* district_table = nullptr;
+  // HashStore* district_table = nullptr;
 
-  HashStore* customer_table = nullptr;
+  // HashStore* customer_table = nullptr;
 
-  HashStore* history_table = nullptr;
+  // HashStore* history_table = nullptr;
 
-  HashStore* new_order_table = nullptr;
+  // HashStore* new_order_table = nullptr;
 
-  HashStore* order_table = nullptr;
+  // HashStore* order_table = nullptr;
 
-  HashStore* order_line_table = nullptr;
+  // HashStore* order_line_table = nullptr;
 
-  HashStore* item_table = nullptr;
+  // HashStore* item_table = nullptr;
 
-  HashStore* stock_table = nullptr;
+  // HashStore* stock_table = nullptr;
 
-  HashStore* customer_index_table = nullptr;
+  // HashStore* customer_index_table = nullptr;
 
-  HashStore* order_index_table = nullptr;
+  // HashStore* order_index_table = nullptr;
 
-  std::vector<HashStore*> primary_table_ptrs;
+  // std::vector<HashStore*> primary_table_ptrs;
 
-  std::vector<HashStore*> backup_table_ptrs;
+  // std::vector<HashStore*> backup_table_ptrs;
+
+  RmManager* rm_manager;
 
   // For server and client usage: Provide interfaces to servers for loading tables
-  TPCC() {
+  TPCC(RmManager* rm_manager): rm_manager(rm_manager) {
     bench_name = "TPCC";
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("table");
+    auto warehouse_table_config = warehouse_json_config.get("index");
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("table");
+    auto district_table_config = district_json_config.get("index");
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("table");
+    auto customer_table_config = customer_json_config.get("index");
     std::string item_config_filepath = "../../../workload/tpcc/tpcc_tables/item.json";
     auto item_json_config = JsonConfig::load_file(item_config_filepath);
-    auto item_table_config = item_json_config.get("table");
+    auto item_table_config = item_json_config.get("index");
     std::string stock_config_filepath = "../../../workload/tpcc/tpcc_tables/stock.json";
     auto stock_json_config = JsonConfig::load_file(stock_config_filepath);
-    auto stock_table_config = stock_json_config.get("table");
+    auto stock_table_config = stock_json_config.get("index");
 
     num_warehouse = warehouse_table_config.get("bkt_num").get_uint64();
     num_district_per_warehouse = district_table_config.get("bkt_num").get_uint64();
@@ -716,14 +746,17 @@ class TPCC {
   }
 
   ~TPCC() {
-    delete warehouse_table;
-    delete customer_table;
-    delete history_table;
-    delete new_order_table;
-    delete order_table;
-    delete order_line_table;
-    delete item_table;
-    delete stock_table;
+    delete warehouse_table_index;
+    delete district_table_index;
+    delete customer_table_index;
+    delete history_table_index;
+    delete new_order_index;
+    delete order_table_index;
+    delete order_line_index;
+    delete item_table_index;
+    delete stock_table_index;
+    delete customer_index_index;
+    delete order_index_index;
   }
 
   /* create workload generation array for benchmarking */
@@ -752,43 +785,58 @@ class TPCC {
     return workgen_arr;
   }
 
+  void LoadTable(node_id_t node_id, node_id_t num_server);
+
   // For server-side usage
-  void LoadTable(node_id_t node_id,
+  void LoadIndex(node_id_t node_id,
                  node_id_t num_server,
                  MemStoreAllocParam* mem_store_alloc_param,
                  MemStoreReserveParam* mem_store_reserve_param);
 
-  void PopulateWarehouseTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateWarehouseTable(unsigned long seed);
 
-  void PopulateDistrictTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateDistrictTable(unsigned long seed);
 
-  void PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateCustomerAndHistoryTable(unsigned long seed);
 
-  void PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateOrderNewOrderAndOrderLineTable(unsigned long seed);
 
-  void PopulateItemTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateItemTable(unsigned long seed);
 
-  void PopulateStockTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateStockTable(unsigned long seed);
 
-  int LoadRecord(HashStore* table,
+  void PopulateIndexWarehouseTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexDistrictTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexCustomerTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexCustomerIndexTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexHistoryTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexOrderTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexOrderIndexTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexNewOrderTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexOrderLineTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexItemTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexStockTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  int LoadRecord(RmFileHandle* file_handle,
                  itemkey_t item_key,
                  void* val_ptr,
                  size_t val_size,
                  table_id_t table_id,
-                 MemStoreReserveParam* mem_store_reserve_param);
-  DataItem* GetRecord(HashStore* table,
+                 std::ofstream& indexfile);
+  std::unique_ptr<DataItem> GetRecord(RmFileHandle* file_handle,
                       itemkey_t item_key,
                       table_id_t table_id);
-
-  ALWAYS_INLINE
-  std::vector<HashStore*>& GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
-
-  ALWAYS_INLINE
-  std::vector<HashStore*>& GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  Rid findRID(const std::string& filename, itemkey_t item_key);
 
   /* Followng pieces of codes mainly comes from Silo */
   ALWAYS_INLINE

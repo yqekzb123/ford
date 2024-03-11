@@ -1,6 +1,6 @@
 {
-  "index": {
+  "table": {
     "name": "WAREHOUSE",
-    "bkt_num": 8
+    "bkt_num": 50
   }
 }

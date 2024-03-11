@@ -1,6 +1,6 @@
 {
-  "index": {
+  "table": {
     "name": "CUSTOMER",
-    "bkt_num": 300
+    "bkt_num": 30
   }
 }
