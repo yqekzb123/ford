@@ -16,7 +16,8 @@ enum DTX_SYS : int {
   FORD = 2,
   LOCAL = 3, // FORD with localized metadata including locks and versions
   BASELINE = 4,
-  OUR = 5
+  OUR = 5,
+  ONE_WRITE = 6
 };
 
 enum TXStatus : int {

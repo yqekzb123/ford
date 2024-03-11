@@ -52,6 +52,8 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
     txn_system_value = 4;
   } else if (system_name.find("our") != std::string::npos) {
     txn_system_value = 5;
+  } else if (system_name.find("one_write") != std::string::npos) {
+    txn_system_value = 6;
   }
   std::string s = "sed -i '8c \"txn_system\": " + std::to_string(txn_system_value) + ",' " + config_file;
   system(s.c_str());

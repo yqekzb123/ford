@@ -166,6 +166,7 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
     std::vector<char*> cache_index_item_vec(table_id.size(), nullptr);
     
     // 计算每个itemkey的hash值和对应的NodeOffset
+    bool if_yield = false;
     for(int i=0; i<table_id.size(); i++){
         auto hash_meta = global_meta_man->GetHashIndexMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetHashIndexNode(table_id[i]);
@@ -177,6 +178,7 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
             cache_index_item_vec[i] = thread_rdma_buffer_alloc->Alloc(sizeof(IndexItem));
             auto qp = thread_qp_man->GetRemoteIndexQPWithNodeID(remote_node_id);
             coro_sched->RDMARead(coro_id, qp, cache_index_item_vec[i], cache_off, sizeof(IndexItem));
+            if_yield = true;
         }
         else{
             auto hash = MurmurHash64A(item_key[i], 0xdeadbeef) % hash_meta.bucket_num;
@@ -189,8 +191,9 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
     }
 
     std::vector<Rid> res(table_id.size(), {INVALID_PAGE_ID, -1});
+    
+    if(if_yield) coro_sched->Yield(yield, coro_id);
 
-    coro_sched->Yield(yield, coro_id);
     // 检查缓存正确性
     for(int i=0; i<table_id.size(); i++){
         if(is_cache[i]){

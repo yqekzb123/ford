@@ -11,6 +11,7 @@ set(DTX_SRC
         dtx/dtx_lock.cc
         dtx/dtx_local.cc
         dtx/dtx_local_exe_commit.cc
+        dtx/dtx_onewrite_exe_commit.cc
         dtx/dtx_base_exe_commit.cc
         dtx/dtx_page_table.cc
         dtx/structs.cc
@@ -26,6 +27,7 @@ set(STORAGE_SRC
         storage/storage_service.pb.cc
         storage/storage_rpc.cc
         storage/disk_manager.cc
+        storage/rdma_log_buffer.cc
         )
 
 set(BATCH_SRC

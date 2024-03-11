@@ -81,6 +81,19 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
   #endif
 
+  #if LOG_RPC_OR_RDMA
+  brpc::CallId cid;
+  SendLogToStoragePool(tx_id, &cid);
+  #else
+  SendLogToStoragePool(tx_id);
+  #endif
+
+  #if OPEN_TIME
+  struct timespec tx_send_log_time;
+  clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
+  double send_log_usec = (tx_send_log_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  #endif
+
   if (!read_write_set.empty()) {
     WriteRemote(yield);
   }
@@ -88,7 +101,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   #if OPEN_TIME
   struct timespec tx_write_time;
   clock_gettime(CLOCK_REALTIME, &tx_write_time);
-  double write_usec = (tx_write_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_write_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  double write_usec = (tx_write_time.tv_sec - tx_send_log_time.tv_sec) * 1000000 + (double)(tx_write_time.tv_nsec - tx_send_log_time.tv_nsec) / 1000;
   #endif
 
   Unpin(yield);
@@ -98,15 +111,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
   double unpin_usec = (tx_unpin_time.tv_sec - tx_write_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_write_time.tv_nsec) / 1000;
   #endif
-
-  brpc::CallId cid;
-  SendLogToStoragePool(tx_id, &cid);
-
-  #if OPEN_TIME
-  struct timespec tx_send_log_time;
-  clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
-  double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
-  #endif
   
   UnlockShared(yield);
   UnlockExclusive(yield);
@@ -114,12 +118,15 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   #if OPEN_TIME
   struct timespec tx_unlock_time;
   clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
-  double unlock_usec = (tx_unlock_time.tv_sec - tx_send_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_send_log_time.tv_nsec) / 1000;
+  double unlock_usec = (tx_unlock_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
   DEBUG_TIME("dtx_base_exe_commit.cc:80, exe a new txn %ld, write_usec: %lf, unpin_usec: %lf, send_log_usec: %lf, unlock_usec: %lf\n", tx_id, write_usec, unpin_usec, send_log_usec, unlock_usec);
   #endif
 
+  #if LOG_RPC_OR_RDMA
   //!! brpc同步
   brpc::Join(cid);
+  #endif
+
   // printf("txn: %ld, commit\n", tx_id);
   return true;
 }

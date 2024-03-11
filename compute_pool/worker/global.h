@@ -5,6 +5,9 @@
 #include "batch/local_batch.h"
 
 #define OPEN_TIME false
+// true: RPC, false: RDMA
+#define LOG_RPC_OR_RDMA false 
+#define SYS_ONE_WRITE true
 
 #define DEBUG_TIME(...) \
   if(OPEN_TIME) { \

@@ -15,7 +15,7 @@ namespace storage_service{
                        ::google::protobuf::Closure* done){
             
         brpc::ClosureGuard done_guard(done);
-        RDMA_LOG(INFO) << "handle write log request, log is " << request->log();
+        // RDMA_LOG(INFO) << "handle write log request, log is " << request->log();
         log_manager_->write_batch_log_to_disk(request->log());
 
         std::unordered_map<std::string, int> table_fd_map;

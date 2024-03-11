@@ -49,3 +49,79 @@ void DTX::SendLogToStoragePool(uint64_t bid, brpc::CallId* cid){
 
     // ! 在程序外部同步
 }
+
+void DTX::SendLogToStoragePool(uint64_t bid){
+    batch_txn_log.batch_id_ = bid;
+    BatchEndLogRecord* batch_end_log = new BatchEndLogRecord(bid, global_meta_man->local_machine_id, tx_id);
+    batch_txn_log.logs.push_back(batch_end_log);
+
+    node_id_t node_id = global_meta_man->GetStorageNodeID();
+    RCQP* qp = thread_qp_man->GetRemoteStorageQPWithNodeID(node_id);
+
+    char* faa_cnt_buf = thread_rdma_buffer_alloc->Alloc(sizeof(int64_t));
+    char* faa_head_buf = thread_rdma_buffer_alloc->Alloc(sizeof(uint64_t));
+    
+    auto log_base_off = global_meta_man->GetStorageLogBase(node_id);
+    auto log_head_off = global_meta_man->GetStorageHead(node_id);
+    auto log_cnt_off = global_meta_man->GetStorageCnt(node_id);
+
+    // 试探性faa cnt and head
+    std::string log_string = batch_txn_log.get_log_string();
+    size_t write_size = log_string.size();
+    char* log_data = thread_rdma_buffer_alloc->Alloc(write_size);
+    memcpy(log_data, log_string.c_str(), write_size);
+
+    while(true){
+        auto rc = qp->post_faa(faa_cnt_buf, log_cnt_off, write_size, IBV_SEND_SIGNALED);
+        if (rc != SUCC) {
+            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "SendLog";
+        }
+        rc = qp->post_faa(faa_head_buf, log_head_off, write_size, IBV_SEND_SIGNALED);
+        if (rc != SUCC) {
+            RDMA_LOG(ERROR) << "client: post cas fail. rc=" << rc << "SendLog";
+        }
+        ibv_wc wc{};
+        rc = qp->poll_till_completion(wc, no_timeout);
+        if (rc != SUCC) {
+            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "SendLog";
+        }
+        rc = qp->poll_till_completion(wc, no_timeout);
+        if (rc != SUCC) {
+            RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "SendLog";
+        }
+
+        if(*(int64_t*)faa_cnt_buf >= RDMA_LOG_BUFFER_SIZE - PAGE_SIZE){
+            // 这里是不能往里写入的，因为单线程刷盘，这里还不能确定已经刷盘，因此可能会覆盖掉之前的日志
+            auto rc = qp->post_faa(faa_cnt_buf, log_cnt_off, -write_size, IBV_SEND_SIGNALED);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: post faa fail. rc=" << rc << "SendLog";
+            }
+            rc = qp->post_faa(faa_head_buf, log_head_off, -write_size, IBV_SEND_SIGNALED);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: post faa fail. rc=" << rc << "SendLog";
+            }
+            ibv_wc wc{};
+            rc = qp->poll_till_completion(wc, no_timeout);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: poll faa fail. rc=" << rc << "SendLog";
+            }
+            rc = qp->poll_till_completion(wc, no_timeout);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: poll faa fail. rc=" << rc << "SendLog";
+            }
+            continue;
+        }else{
+            auto rc = qp->post_send(IBV_WR_RDMA_WRITE, log_data, write_size, 
+                log_base_off + (*(int64_t*)faa_head_buf) % RDMA_LOG_BUFFER_SIZE, IBV_SEND_SIGNALED);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: post write fail. rc=" << rc << "SendLog";
+            }
+            ibv_wc wc{};
+            rc = qp->poll_till_completion(wc, no_timeout);
+            if (rc != SUCC) {
+                RDMA_LOG(ERROR) << "client: poll read fail. rc=" << rc << "SendLog";
+            }
+            break;
+        }
+    }
+}

@@ -65,8 +65,8 @@ void LogReplay::apply_sigle_log(LogRecord* log, int curr_offset) {
             persist_off_ = curr_offset + batch_end_log->log_tot_len_;
             latch.unlock();
 
-            RDMA_LOG(INFO) << "Update persist_batch_id, new persist_batch_id: " << persist_batch_id_;
-            RDMA_LOG(INFO) << "Update persist_off, new persist_off: " << persist_off_;
+            // RDMA_LOG(INFO) << "Update persist_batch_id, new persist_batch_id: " << persist_batch_id_;
+            // RDMA_LOG(INFO) << "Update persist_off, new persist_off: " << persist_off_;
 
             lseek(log_write_head_fd_, 0, SEEK_SET);
             ssize_t result = write(log_write_head_fd_, &persist_batch_id_, sizeof(batch_id_t));
@@ -120,11 +120,11 @@ void LogReplay::replayFun(){
             std::this_thread::sleep_for(std::chrono::milliseconds(50)); //sleep 50 ms
             continue;
         }
-        RDMA_LOG(INFO) << "Begin apply log, apply size is " << read_size << ", max_replay_off_: " << max_replay_off_ << ", offset: " << offset;
+        // RDMA_LOG(INFO) << "Begin apply log, apply size is " << read_size << ", max_replay_off_: " << max_replay_off_ << ", offset: " << offset;
         // offset为要读取数据的起始位置，persist_off_为已经读取的字节的结尾位置，所以需要+1
         // offset ++;
         read_bytes = read_log(buffer_.buffer_, read_size, offset);
-        RDMA_LOG(INFO) << "read bytes: " << read_bytes;
+        // RDMA_LOG(INFO) << "read bytes: " << read_bytes;
         buffer_.offset_ = read_bytes - 1;
 
         int inner_offset = 0;
@@ -140,7 +140,8 @@ void LogReplay::replayFun(){
             uint32_t size = *reinterpret_cast<const uint32_t *>(buffer_.buffer_ + inner_offset + OFFSET_LOG_TOT_LEN);
             // 如果剩余数据不是一条完整的日志记录，则不再进行读取
             if (size == 0 || size + inner_offset > buffer_.offset_ + 1) {
-                RDMA_LOG(INFO) << "The remain data does not contain a complete log record, the next log record's size is: " << size << ", inner_offset: " << inner_offset << ", buffer_offset: " << buffer_.offset_;
+                // RDMA_LOG(INFO) << "The remain data does not contain a complete log record, the next log record's size is: " << size << ", inner_offset: " << inner_offset << ", buffer_offset: " << buffer_.offset_;
+                usleep(1000);
                 break;
             }
             

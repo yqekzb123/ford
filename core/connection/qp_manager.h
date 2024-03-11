@@ -20,6 +20,8 @@ class QPManager {
 
   void BuildIndexNodeQPConnection(MetaManager* meta_man);
   
+  void BuildStorageQPConnection(MetaManager* meta_man);
+
   ALWAYS_INLINE
   RCQP* GetRemoteDataQPWithNodeID(const node_id_t node_id) const {
     return data_qps[node_id];
@@ -56,6 +58,11 @@ class QPManager {
   }
 
   ALWAYS_INLINE
+  RCQP* GetRemoteStorageQPWithNodeID(const node_id_t node_id) const {
+    return storage_qps[node_id];
+  }
+
+  ALWAYS_INLINE
   RCQP* GetRemoteIndexQPWithNodeID(const node_id_t node_id) const {
     return index_qps[node_id];
   }
@@ -81,6 +88,11 @@ class QPManager {
     return index_qps;
   }
 
+  ALWAYS_INLINE
+  auto GetStorageQPPtrWithNodeID() const {
+    return storage_qps;
+  }
+
  private:
   RCQP* data_qps[MAX_REMOTE_NODE_NUM]{nullptr};
 
@@ -94,5 +106,7 @@ class QPManager {
 
   RCQP* index_qps[MAX_REMOTE_NODE_NUM]{nullptr};
   
+  RCQP* storage_qps[MAX_REMOTE_NODE_NUM]{nullptr};
+
   t_id_t global_tid;
 };

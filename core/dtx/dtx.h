@@ -66,6 +66,8 @@ class DTX {
 
   bool TxLocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);
 
+  bool UnLockLocalRW();
+
   bool TxLocalAbort(coro_yield_t& yield);
 
   bool TxExe(coro_yield_t& yield, bool fail_abort = true);
@@ -74,6 +76,17 @@ class DTX {
 
   void TxAbort(coro_yield_t& yield);
 
+  bool TxReadWriteTxnExe(coro_yield_t& yield, bool fail_abort = true); //一写多读场景下，执行写事务方法
+
+  bool TxReadOnlyTxnExe(coro_yield_t& yield, bool fail_abort = true); //一写多读场景下，执行只读事务方法
+
+  bool TxReadWriteTxnCommit(coro_yield_t& yield); 
+
+  bool TxReadOnlyTxnCommit(); 
+
+  bool TxReadWriteAbort();
+
+  bool TxReadOnlyAbort();
   /*****************************************************/
 
  public:
@@ -136,8 +149,9 @@ class DTX {
   brpc::Channel* storage_data_channel;
   brpc::Channel* storage_log_channel;
   
-  void SendLogToStoragePool(uint64_t bid, brpc::CallId* cid);
-  
+  void SendLogToStoragePool(uint64_t bid, brpc::CallId* cid); // use for rpc
+  void SendLogToStoragePool(uint64_t bid); // use for rdma
+
  private:
   void Abort();
 
@@ -236,8 +250,9 @@ class DTX {
             std::vector<char*>& cas_bufs);
   void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype);
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype);
-  void ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_data, QPType qptype);
-  
+  void ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_item, offset_t item_offset, size_t size, QPType qptype);
+  void ExclusiveUnlockHashNode_RemoteWriteItem(node_id_t node_id, offset_t item_offset, char* write_back_item, size_t size, QPType qptype);
+
   DataItemPtr GetDataItemFromPage(table_id_t table_id, char* data, Rid rid);
 
  public:

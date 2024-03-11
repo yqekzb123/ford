@@ -186,7 +186,9 @@ PageAddress DTX::InsertPageTableIntoHashNodeList(std::vector<char*>& local_hash_
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                 page_table_item_localaddr_and_remote_offset[all_page_id_idx] = std::make_pair(
                     local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
-
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
+                        sizeof(PageTableItem), QPType::kPageTable);
+                        
                 page_table_node->page_table_items[i].valid = true;
                 page_table_node->page_table_items[i].page_id = page_id;
                 // 从BufferPoolManager中获取frame_id
@@ -303,7 +305,9 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                         NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                         page_table_item_localaddr_and_remote_offset[all_page_id_idx[it->index]] = std::make_pair(
                             local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
-
+                        // write remote here
+                        ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
+                                sizeof(PageTableItem), QPType::kPageTable);
                         need_fetch_from_disk[it->index] = false;
                         // this page is not valid, because other thread is fetch this page from disk and haven't write back
                         if(page_table_node->page_table_items[i].page_valid == false){
@@ -341,8 +345,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                 auto release_idx = idx;
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
-                    // unlock_node_off_with_write.emplace(release_node_off);
-                    ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kPageTable);
+                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kPageTable);
                     if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -387,8 +390,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                         auto release_idx = idx;
                         auto release_node_off = total_hash_node_offs_vec[release_idx];
                         while(true){
-                            // unlock_node_off_with_write.emplace(release_node_off);
-                            ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kPageTable);
+                            ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kPageTable);
                             if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                             release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                             release_node_off = total_hash_node_offs_vec[release_idx];

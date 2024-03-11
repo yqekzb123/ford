@@ -12,7 +12,7 @@ void QPManager::BuildDataNodeQPConnection(MetaManager* meta_man) {
     // Build QPs with one remote machine (this machine can be a primary or a backup)
     // Create the thread local queue pair
     MemoryAttr local_mr = meta_man->global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
-    RCQP* data_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 5),
+    RCQP* data_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6),
                                                              meta_man->opened_rnic,
                                                              &local_mr);
 
@@ -39,11 +39,11 @@ void QPManager::BuildPageNodeQPConnection(MetaManager* meta_man) {
     // Build QPs with one remote machine (this machine can be a primary or a backup)
     // Create the thread local queue pair
     MemoryAttr local_mr = meta_man->global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
-    RCQP* page_table_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 5 + 1),
+    RCQP* page_table_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6 + 1),
                                                              meta_man->opened_rnic,
                                                              &local_mr);
 
-    RCQP* page_ringbuffer_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 5 + 2),
+    RCQP* page_ringbuffer_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6 + 2),
                                                             meta_man->opened_rnic,
                                                             &local_mr);
 
@@ -79,7 +79,7 @@ void QPManager::BuildLockNodeQPConnection(MetaManager* meta_man) {
     // Build QPs with one remote machine (this machine can be a primary or a backup)
     // Create the thread local queue pair
     MemoryAttr local_mr = meta_man->global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
-    RCQP* locktable_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 5 + 3),
+    RCQP* locktable_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6 + 3),
                                                              meta_man->opened_rnic,
                                                              &local_mr);
 
@@ -105,7 +105,7 @@ void QPManager::BuildIndexNodeQPConnection(MetaManager* meta_man) {
     // Build QPs with one remote machine (this machine can be a primary or a backup)
     // Create the thread local queue pair
     MemoryAttr local_mr = meta_man->global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
-    RCQP* index_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 5 + 4),
+    RCQP* index_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6 + 4),
                                                              meta_man->opened_rnic,
                                                              &local_mr);
 
@@ -123,10 +123,37 @@ void QPManager::BuildIndexNodeQPConnection(MetaManager* meta_man) {
   }
 }
 
+void QPManager::BuildStorageQPConnection(MetaManager* meta_man) {
+  for (const auto& remote_node : meta_man->remote_storage_nodes) {
+    // Note that each remote machine has one MemStore mr and one Log mr
+    MemoryAttr remote_data_node_mr = meta_man->GetStorageMR(remote_node.node_id);
+
+    // Build QPs with one remote machine (this machine can be a primary or a backup)
+    // Create the thread local queue pair
+    MemoryAttr local_mr = meta_man->global_rdma_ctrl->get_local_mr(CLIENT_MR_ID);
+    RCQP* storage_qp = meta_man->global_rdma_ctrl->create_rc_qp(create_rc_idx(remote_node.node_id, (int)global_tid * 6 + 5),
+                                                             meta_man->opened_rnic,
+                                                             &local_mr);
+
+    // Queue pair connection, exchange queue pair info via TCP
+    ConnStatus rc;
+    do {
+      rc = storage_qp->connect(remote_node.ip, remote_node.port);
+      if (rc == SUCC) {
+        storage_qp->bind_remote_mr(remote_data_node_mr);  // Bind the hash mr as the default remote mr for convenient parameter passing
+        storage_qps[remote_node.node_id] = storage_qp;
+        // RDMA_LOG(INFO) << "Thread " << global_tid << ": Data QP connected! with remote node: " << remote_node.node_id << " ip: " << remote_node.ip;
+      }
+      usleep(2000);
+    } while (rc != SUCC);
+  }
+}
+
 void QPManager::BuildQPConnection(MetaManager* meta_man) {
   BuildDataNodeQPConnection(meta_man);
   BuildPageNodeQPConnection(meta_man);
   BuildLockNodeQPConnection(meta_man);
   BuildIndexNodeQPConnection(meta_man);
+  BuildStorageQPConnection(meta_man);
   return ;
 }
