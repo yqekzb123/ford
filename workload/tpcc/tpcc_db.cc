@@ -396,21 +396,21 @@ void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed) {
 
         tpcc_customer_index_val_t customer_index_val;
         customer_index_val.debug_magic = tpcc_add_magic;
-        auto mn = GetRecord(customer_index_table_file.get(), 
-                                 customer_index_key.item_key,
-                                 (table_id_t)TPCCTableType::kCustomerIndexTable);
-        assert(mn == NULL);
-        if (mn == NULL) {
-          customer_index_val.c_id = customer_key.c_id;
-          total_customer_index_records_inserted += LoadRecord(customer_index_table_file.get(),
-                                                              customer_index_key.item_key,
-                                                              (void*)&customer_index_val,
-                                                              sizeof(tpcc_customer_index_val_t),
-                                                              (table_id_t)TPCCTableType::kCustomerIndexTable,
-                                                              indexfile_customer_index);
-          total_customer_index_records_examined++;
-          // printf("total_customer_index_records_inserted = %d, total_customer_index_records_examined = %d\n", total_customer_index_records_inserted, total_customer_index_records_examined);
-        }
+        // auto mn = GetRecord(customer_index_table_file.get(), 
+        //                          customer_index_key.item_key,
+        //                          (table_id_t)TPCCTableType::kCustomerIndexTable);
+        // assert(mn == NULL);
+        // if (mn == NULL) {
+        customer_index_val.c_id = customer_key.c_id;
+        total_customer_index_records_inserted += LoadRecord(customer_index_table_file.get(),
+                                                            customer_index_key.item_key,
+                                                            (void*)&customer_index_val,
+                                                            sizeof(tpcc_customer_index_val_t),
+                                                            (table_id_t)TPCCTableType::kCustomerIndexTable,
+                                                            indexfile_customer_index);
+        total_customer_index_records_examined++;
+        // printf("total_customer_index_records_inserted = %d, total_customer_index_records_examined = %d\n", total_customer_index_records_inserted, total_customer_index_records_examined);
+        // }
 
         tpcc_history_key_t history_key;
         history_key.h_id = MakeHistoryKey(w_id, d_id, w_id, d_id, c_id);
@@ -456,7 +456,7 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed) {
   rm_manager->create_file(bench_name + "_customer_index", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> customer_index_table_file = rm_manager->open_file(bench_name + "_customer_index");
   std::ofstream indexfile_customer_index;
-  indexfile_customer_index.open(bench_name + "_customer_index_index.txt");
+  indexfile_customer_index.open(bench_name + "_customer_index_index.txt", std::ios::app);
   
   rm_manager->create_file(bench_name + "_order_line_table", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> order_line_table_file = rm_manager->open_file(bench_name + "_order_line_table");
@@ -510,22 +510,22 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed) {
         tpcc_order_index_val_t order_index_val;
         order_index_val.o_id = order_key.o_id;
 
-        auto mn = GetRecord(order_index_table_file.get(),  
-                                 order_index_key.item_key,
-                                 (table_id_t)TPCCTableType::kOrderIndexTable);
-        assert(mn == NULL);
-        if (mn == NULL) {
-          order_index_val.o_id = order_key.o_id;
-          order_index_val.debug_magic = tpcc_add_magic;
-          total_order_index_records_inserted += LoadRecord(order_index_table_file.get(),
-                                                           order_index_key.item_key,
-                                                           (void*)&order_index_val,
-                                                           sizeof(tpcc_order_index_val_t),
-                                                           (table_id_t)TPCCTableType::kOrderIndexTable,
-                                                           indexfile_order_index);
-          total_order_index_records_examined++;
-          // printf("total_order_index_records_inserted = %d, total_order_index_records_examined = %d\n", total_order_index_records_inserted, total_order_index_records_examined);
-        }
+        // auto mn = GetRecord(order_index_table_file.get(),  
+        //                          order_index_key.item_key,
+        //                          (table_id_t)TPCCTableType::kOrderIndexTable);
+        // assert(mn == NULL);
+        // if (mn == NULL) {
+        order_index_val.o_id = order_key.o_id;
+        order_index_val.debug_magic = tpcc_add_magic;
+        total_order_index_records_inserted += LoadRecord(order_index_table_file.get(),
+                                                          order_index_key.item_key,
+                                                          (void*)&order_index_val,
+                                                          sizeof(tpcc_order_index_val_t),
+                                                          (table_id_t)TPCCTableType::kOrderIndexTable,
+                                                          indexfile_order_index);
+        total_order_index_records_examined++;
+        // printf("total_order_index_records_inserted = %d, total_order_index_records_examined = %d\n", total_order_index_records_inserted, total_order_index_records_examined);
+        //}
 
         if (c > num_customer_per_district * tpcc_new_order_val_t::SCALE_CONSTANT_BETWEEN_NEWORDER_ORDER) {
           // MZ-Notation: must obey the relationship between the numbers of entries in Order and New-Order specified in tpcc docs
@@ -838,18 +838,14 @@ Rid TPCC::findRID(const std::string& filename, itemkey_t item_key) {
   if (file.is_open()) {
     while (getline(file, line)) {
       std::istringstream iss(line);
-      std::string temp_key;
       uint64_t key;
       int page_no, slot_no;
-      if (iss >> temp_key >> page_no >> slot_no) {
-          key = std::stoull(temp_key); 
-          if (key >= item_key) { 
-            if (key == item_key) { 
-                rid.page_no_ = page_no;
-                rid.slot_no_ = slot_no;
-            }
+      if (iss >> key >> page_no >> slot_no) {
+        if (key == item_key) { 
+            rid.page_no_ = page_no;
+            rid.slot_no_ = slot_no;
             break; 
-          }
+        }
       }
     }
     file.close();
