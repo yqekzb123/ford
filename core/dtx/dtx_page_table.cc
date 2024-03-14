@@ -186,9 +186,6 @@ PageAddress DTX::InsertPageTableIntoHashNodeList(std::vector<char*>& local_hash_
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                 page_table_item_localaddr_and_remote_offset[all_page_id_idx] = std::make_pair(
                     local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
-                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
-                        sizeof(PageTableItem), QPType::kPageTable);
-                        
                 page_table_node->page_table_items[i].valid = true;
                 page_table_node->page_table_items[i].page_id = page_id;
                 // 从BufferPoolManager中获取frame_id
@@ -201,6 +198,8 @@ PageAddress DTX::InsertPageTableIntoHashNodeList(std::vector<char*>& local_hash_
                 else{
                     page_table_node->page_table_items[i].rwcount = 1;
                 }
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
+                        sizeof(PageTableItem), QPType::kPageTable);
                 return page_table_node->page_table_items[i].page_address;
             }
         }
@@ -305,11 +304,9 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                         NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node};
                         page_table_item_localaddr_and_remote_offset[all_page_id_idx[it->index]] = std::make_pair(
                             local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, remote_off);
-                        // write remote here
-                        ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
-                                sizeof(PageTableItem), QPType::kPageTable);
                         need_fetch_from_disk[it->index] = false;
                         // this page is not valid, because other thread is fetch this page from disk and haven't write back
+                        bool write_pagetableitem_back = false;
                         if(page_table_node->page_table_items[i].page_valid == false){
                             now_valid[it->index] = false;
                         }
@@ -319,6 +316,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                             if((page_table_node->page_table_items[i].rwcount & MASKED_SHARED_LOCKS) != EXCLUSIVE_LOCKED){
                                 now_valid[it->index] = true;
                                 page_table_node->page_table_items[i].rwcount |= EXCLUSIVE_LOCKED;
+                                write_pagetableitem_back = true;
                             }
                             else{
                                 now_valid[it->index] = false;
@@ -328,6 +326,12 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                             //is read, read directly
                             now_valid[it->index] = true;
                             page_table_node->page_table_items[i].rwcount++;
+                            write_pagetableitem_back = true;
+                        }
+                        // write remote here
+                        if(write_pagetableitem_back){
+                            ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, local_hash_nodes_vec[idx] + (offset_t)&page_table_node->page_table_items[i] - (offset_t)page_table_node, 
+                                sizeof(PageTableItem), QPType::kPageTable);
                         }
                         // erase会返回下一个元素的迭代器
                         get_pagetable_request_list[idx].erase(it);

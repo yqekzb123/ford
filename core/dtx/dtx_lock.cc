@@ -33,13 +33,12 @@ bool DTX::InsertSharedLockIntoHashNodeList(std::vector<char*>& local_hash_nodes_
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
                 shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
                     local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off));              
-                // write remote here
-                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
-                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
-
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = 1;
                 lock_node->lock_items[i].valid = true;
+                // write remote here
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
+                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                 return true;
             }
         }
@@ -79,12 +78,12 @@ bool DTX::InsertExclusiveLockIntoHashNodeList(std::vector<char*>& local_hash_nod
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
                 exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
                     local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off));
-                // write remote here
-                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
-                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
                 lock_node->lock_items[i].valid = true;
+                // write remote here
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
+                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                 return true;
             }
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
@@ -298,11 +297,11 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                         NodeOffset item_off{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
                         shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
                             local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, item_off));                 
+                        // lock shared lock
+                        lock_node->lock_items[i].lock += 1;
                         // write remote here
                         ExclusiveUnlockHashNode_RemoteWriteItem(item_off.nodeId, item_off.offset, 
                             local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
-                        // lock shared lock
-                        lock_node->lock_items[i].lock += 1;
                     }
                     else{
                         // LockDataId already locked
@@ -553,11 +552,11 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                         NodeOffset item_off{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
                         exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
                             local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, item_off));
+                        // lock EXCLUSIVE lock
+                        lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
                         // write remote here
                         ExclusiveUnlockHashNode_RemoteWriteItem(item_off.nodeId, item_off.offset, 
                             local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
-                        // lock EXCLUSIVE lock
-                        lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;    
                     }
                     else{
                         // LockDataId already locked

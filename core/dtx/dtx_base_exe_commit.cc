@@ -33,6 +33,7 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   #endif
 
   if (!LockRemoteRO(yield)) {
+    // printf("LockRemoteRO failed\n");
     TxAbort(yield);
     return false;
   } 
@@ -44,6 +45,7 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   #endif
 
   if (!LockRemoteRW(yield)) {
+    // printf("LockRemoteRW failed\n");
     TxAbort(yield);
     return false;
   }

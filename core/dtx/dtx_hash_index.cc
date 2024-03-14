@@ -306,9 +306,11 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
     assert(pending_hash_node_latch_offs.size() == 0);
     // // assert(hold_node_off_latch.size() == 0);
     // // 检查请求的HashIndex是否都被处理了
-    // for(int i=0; i<table_id.size(); i++){
+    // for(int i=0; i<res.size(); i++){
     //     // std::cout << "/// table_id: " << table_id[i] << " item_key: " << item_key[i] << " rid: " << res[table_id[i]][item_key[i]].page_no_ << " " << res[table_id[i]][item_key[i]].slot_no_ << std::endl;
-    //     assert(res[i].page_no_ != INVALID_PAGE_ID); 
+    //     if(res[i].page_no_ == INVALID_PAGE_ID){
+    //         RDMA_LOG(FATAL) << "HashIndex: fail to find hash index item";
+    //     }
     // }
     return res;
 }
