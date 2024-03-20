@@ -6,150 +6,181 @@
 #define NUM_CUSTOMER_LAST_NAME_FROM_CID 100
 #define NUM_ORDER_MINUS_NEWORDER 210
 
-void TPCC::LoadTable(node_id_t node_id,
+void TPCC::LoadIndex(node_id_t node_id,
                      node_id_t num_server,
                      MemStoreAllocParam* mem_store_alloc_param,
                      MemStoreReserveParam* mem_store_reserve_param) {
-  printf(
-      "sizeof(tpcc_warehouse_val_t) = %lu, sizeof(tpcc_district_val_t) = %lu\n"
-      "sizeof(tpcc_customer_val_t) = %lu, sizeof(tpcc_customer_index_val_t) = %lu\n"
-      "sizeof(tpcc_history_val_t) = %lu, sizeof(tpcc_new_order_val_t) = %lu\n"
-      "sizeof(tpcc_order_val_t) = %lu, sizeof(tpcc_order_index_val_t) = %lu\n"
-      "sizeof(tpcc_order_line_val_t) = %lu, sizeof(tpcc_item_val_t) = %lu\n"
-      "sizeof(tpcc_stock_val_t) = %lu, DataItemSize = %lu\n",
-      sizeof(tpcc_warehouse_val_t),
-      sizeof(tpcc_district_val_t),
-
-      sizeof(tpcc_customer_val_t),
-      sizeof(tpcc_customer_index_val_t),
-      sizeof(tpcc_history_val_t),
-
-      sizeof(tpcc_new_order_val_t),
-      sizeof(tpcc_order_val_t),
-      sizeof(tpcc_order_index_val_t),
-      sizeof(tpcc_order_line_val_t),
-      sizeof(tpcc_item_val_t),
-      sizeof(tpcc_stock_val_t),
-      DataItemSize);
   // Initiate + Populate table for primary role
   if ((node_id_t)TPCCTableType::kWarehouseTable % num_server == node_id) {
-    printf("Primary: Initializing Warehouse table\n");
+    printf("Hash Index: Initializing Warehouse table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("table");
-    warehouse_table =
-        new HashStore((table_id_t)TPCCTableType::kWarehouseTable,
+    auto table_config = json_config.get("index");
+    warehouse_table_index =
+        new IndexStore((table_id_t)TPCCTableType::kWarehouseTable,
                       table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    printf("Warehouse table setup\n");
-    PopulateWarehouseTable(9324, mem_store_reserve_param);
-    primary_table_ptrs.push_back(warehouse_table);
+                      mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexWarehouseTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(warehouse_table_index);
   }
+  
   if ((node_id_t)TPCCTableType::kDistrictTable % num_server == node_id) {
-    printf("Primary: Initializing District table\n");
+    printf("Hash Index: Initializing District table\n");
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("table");
+    auto warehouse_table_config = warehouse_json_config.get("index");
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("table");
-    district_table =
-        new HashStore((table_id_t)TPCCTableType::kDistrictTable,
+    auto district_table_config = district_json_config.get("index"); 
+    district_table_index =
+        new IndexStore((table_id_t)TPCCTableType::kDistrictTable,
                       warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-
-    PopulateDistrictTable(129856349, mem_store_reserve_param);
-    primary_table_ptrs.push_back(district_table);
+                      mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexDistrictTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(district_table_index);
   }
+
   if ((node_id_t)TPCCTableType::kCustomerTable % num_server == node_id) {
-    printf("Primary: Initializing Customer+CustomerIndex+History table\n");
+    printf("Hash Index: Initializing Customer, Customer Index, and History table\n");
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("table");
+    auto warehouse_table_config = warehouse_json_config.get("index");
+
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("table");
+    auto district_table_config = district_json_config.get("index");
+
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("table");
+    auto customer_table_config = customer_json_config.get("index"); 
 
-    customer_table =
-        new HashStore((table_id_t)TPCCTableType::kCustomerTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
+    // Initialize tables with calculated bucket numbers
+    customer_table_index = new IndexStore((table_id_t)TPCCTableType::kCustomerTable,
+                                          warehouse_table_config.get("bkt_num").get_uint64() * 
+                                          district_table_config.get("bkt_num").get_uint64() * 
+                                          customer_table_config.get("bkt_num").get_uint64(),
+                                          mem_store_alloc_param, mem_store_reserve_param);
 
-    customer_index_table =
-        new HashStore((table_id_t)TPCCTableType::kCustomerIndexTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    history_table =
-        new HashStore((table_id_t)TPCCTableType::kHistoryTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
+    customer_index_index = new IndexStore((table_id_t)TPCCTableType::kCustomerIndexTable,
+                                                warehouse_table_config.get("bkt_num").get_uint64() * 
+                                                district_table_config.get("bkt_num").get_uint64() * 
+                                                customer_table_config.get("bkt_num").get_uint64(),
+                                                mem_store_alloc_param, mem_store_reserve_param);
 
-    PopulateCustomerAndHistoryTable(923587856425, mem_store_reserve_param);
-    primary_table_ptrs.push_back(customer_table);
-    primary_table_ptrs.push_back(customer_index_table);
-    primary_table_ptrs.push_back(history_table);
+    history_table_index = new IndexStore((table_id_t)TPCCTableType::kHistoryTable,
+                                         warehouse_table_config.get("bkt_num").get_uint64() * 
+                                         district_table_config.get("bkt_num").get_uint64() * 
+                                         customer_table_config.get("bkt_num").get_uint64(),
+                                         mem_store_alloc_param, mem_store_reserve_param);
+
+    PopulateIndexCustomerTable(mem_store_reserve_param);
+    PopulateIndexCustomerIndexTable(mem_store_reserve_param);
+    PopulateIndexHistoryTable(mem_store_reserve_param);
+
+    index_store_ptrs.push_back(customer_table_index);    
+    index_store_ptrs.push_back(customer_index_index);
+    index_store_ptrs.push_back(history_table_index);
   }
+
   if ((node_id_t)TPCCTableType::kOrderTable % num_server == node_id) {
-    printf("Primary: Initializing Order+OrderIndex+NewOrder+OrderLine table\n");
+    printf("Hash Index: Initializing Order, Order Index, New Order, and Order Line table\n");
+    
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("table");
+    auto warehouse_table_config = warehouse_json_config.get("index");
+
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("table");
+    auto district_table_config = district_json_config.get("index");
+
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("table");
+    auto customer_table_config = customer_json_config.get("index"); 
+    
+    order_table_index = new IndexStore((table_id_t)TPCCTableType::kOrderTable,
+                                       warehouse_table_config.get("bkt_num").get_uint64() * 
+                                       district_table_config.get("bkt_num").get_uint64() * 
+                                       customer_table_config.get("bkt_num").get_uint64(),
+                                       mem_store_alloc_param, mem_store_reserve_param);
 
-    order_table =
-        new HashStore((table_id_t)TPCCTableType::kOrderTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    order_index_table =
-        new HashStore((table_id_t)TPCCTableType::kOrderIndexTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    new_order_table =
-        new HashStore((table_id_t)TPCCTableType::kNewOrderTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64() * 0.3,
-                      mem_store_alloc_param);
-    order_line_table =
-        new HashStore((table_id_t)TPCCTableType::kOrderLineTable,
-                      warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64() * 15,
-                      mem_store_alloc_param);
+    order_index_index = new IndexStore((table_id_t)TPCCTableType::kOrderIndexTable,
+                                             warehouse_table_config.get("bkt_num").get_uint64() * 
+                                             district_table_config.get("bkt_num").get_uint64() * 
+                                             customer_table_config.get("bkt_num").get_uint64(),
+                                             mem_store_alloc_param, mem_store_reserve_param);
 
-    PopulateOrderNewOrderAndOrderLineTable(2343352, mem_store_reserve_param);
-    primary_table_ptrs.push_back(order_table);
-    primary_table_ptrs.push_back(order_index_table);
-    primary_table_ptrs.push_back(new_order_table);
-    primary_table_ptrs.push_back(order_line_table);
+    new_order_index = new IndexStore((table_id_t)TPCCTableType::kNewOrderTable,
+                                           warehouse_table_config.get("bkt_num").get_uint64() * 
+                                           district_table_config.get("bkt_num").get_uint64() * 
+                                           customer_table_config.get("bkt_num").get_uint64() * 0.3, 
+                                           mem_store_alloc_param, mem_store_reserve_param);
+
+    order_line_index = new IndexStore((table_id_t)TPCCTableType::kOrderLineTable,
+                                            warehouse_table_config.get("bkt_num").get_uint64() * 
+                                            district_table_config.get("bkt_num").get_uint64() * 
+                                            customer_table_config.get("bkt_num").get_uint64() * 15, 
+                                            mem_store_alloc_param, mem_store_reserve_param);
+
+    PopulateIndexOrderTable(mem_store_reserve_param);
+    PopulateIndexOrderIndexTable(mem_store_reserve_param);
+    PopulateIndexNewOrderTable(mem_store_reserve_param);
+    PopulateIndexOrderLineTable(mem_store_reserve_param);
+
+    index_store_ptrs.push_back(order_table_index);
+    index_store_ptrs.push_back(order_index_index);
+    index_store_ptrs.push_back(new_order_index);
+    index_store_ptrs.push_back(order_line_index);
   }
+
   if ((node_id_t)TPCCTableType::kStockTable % num_server == node_id) {
-    printf("Primary: Initializing Stock table\n");
+    printf("Hash Index: Initializing Stock table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/stock.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("table");
-    stock_table =
-        new HashStore((table_id_t)TPCCTableType::kStockTable,
-                      table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    PopulateStockTable(89785943, mem_store_reserve_param);
-    primary_table_ptrs.push_back(stock_table);
+    auto table_config = json_config.get("index"); 
+    stock_table_index = new IndexStore((table_id_t)TPCCTableType::kStockTable,
+                                       table_config.get("bkt_num").get_uint64(),
+                                       mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexStockTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(stock_table_index);
   }
+
   if ((node_id_t)TPCCTableType::kItemTable % num_server == node_id) {
-    printf("Primary: Initializing Item table\n");
+    printf("Hash Index: Initializing Item table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/item.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("table");
-    item_table =
-        new HashStore((table_id_t)TPCCTableType::kItemTable,
-                      table_config.get("bkt_num").get_uint64(),
-                      mem_store_alloc_param);
-    PopulateItemTable(235443, mem_store_reserve_param);
-    primary_table_ptrs.push_back(item_table);
+    auto table_config = json_config.get("index");
+    item_table_index = new IndexStore((table_id_t)TPCCTableType::kItemTable,
+                                      table_config.get("bkt_num").get_uint64(),
+                                      mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexItemTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(item_table_index);
+  }  
+}
+
+void TPCC::LoadTable(node_id_t node_id, node_id_t num_server) {
+  if ((node_id_t)TPCCTableType::kWarehouseTable % num_server == node_id) {
+    printf("Backup: Initializing Warehouse table\n");
+    PopulateWarehouseTable(9324);
+  }
+  if ((node_id_t)TPCCTableType::kDistrictTable % num_server == node_id) {
+    printf("Backup: Initializing District table\n");
+    PopulateDistrictTable(129856349);
+  }
+  if ((node_id_t)TPCCTableType::kCustomerTable % num_server == node_id) {
+    printf("Backup: Initializing Customer+CustomerIndex+History table\n");
+    PopulateCustomerAndHistoryTable(923587856425);
+  }
+  if ((node_id_t)TPCCTableType::kOrderTable % num_server == node_id) {
+    printf("Backup: Initializing Order+OrderIndex+NewOrder+OrderLine table\n");
+    PopulateOrderNewOrderAndOrderLineTable(2343352);
+  }
+  if ((node_id_t)TPCCTableType::kStockTable % num_server == node_id) {
+    printf("Backup: Initializing Stock table\n");
+    PopulateStockTable(89785943);
+  }
+  if ((node_id_t)TPCCTableType::kItemTable % num_server == node_id) {
+    printf("Backup: Initializing Item table\n");
+    PopulateItemTable(235443);
   }
 
   // Initiate + Populate table for backup role
@@ -157,127 +188,37 @@ void TPCC::LoadTable(node_id_t node_id,
     for (node_id_t i = 1; i <= BACKUP_DEGREE; i++) {
       if ((node_id_t)TPCCTableType::kWarehouseTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing Warehouse table\n");
-        std::string config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
-        auto json_config = JsonConfig::load_file(config_filepath);
-        auto table_config = json_config.get("table");
-        warehouse_table =
-            new HashStore((table_id_t)TPCCTableType::kWarehouseTable,
-                          table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        PopulateWarehouseTable(9324, mem_store_reserve_param);
-        backup_table_ptrs.push_back(warehouse_table);
+        PopulateWarehouseTable(9324);
       }
       if ((node_id_t)TPCCTableType::kDistrictTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing District table\n");
-        std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
-        auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-        auto warehouse_table_config = warehouse_json_config.get("table");
-        std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
-        auto district_json_config = JsonConfig::load_file(district_config_filepath);
-        auto district_table_config = district_json_config.get("table");
-        district_table =
-            new HashStore((table_id_t)TPCCTableType::kDistrictTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-
-        PopulateDistrictTable(129856349, mem_store_reserve_param);
-        backup_table_ptrs.push_back(district_table);
+        PopulateDistrictTable(129856349);
       }
       if ((node_id_t)TPCCTableType::kCustomerTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing Customer+CustomerIndex+History table\n");
-        std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
-        auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-        auto warehouse_table_config = warehouse_json_config.get("table");
-        std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
-        auto district_json_config = JsonConfig::load_file(district_config_filepath);
-        auto district_table_config = district_json_config.get("table");
-        std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
-        auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-        auto customer_table_config = customer_json_config.get("table");
-
-        customer_table =
-            new HashStore((table_id_t)TPCCTableType::kCustomerTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-
-        customer_index_table =
-            new HashStore((table_id_t)TPCCTableType::kCustomerIndexTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        history_table =
-            new HashStore((table_id_t)TPCCTableType::kHistoryTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-
-        PopulateCustomerAndHistoryTable(923587856425, mem_store_reserve_param);
-        backup_table_ptrs.push_back(customer_table);
-        backup_table_ptrs.push_back(customer_index_table);
-        backup_table_ptrs.push_back(history_table);
+        PopulateCustomerAndHistoryTable(923587856425);
       }
       if ((node_id_t)TPCCTableType::kOrderTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing Order+OrderIndex+NewOrder+OrderLine table\n");
-        std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
-        auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-        auto warehouse_table_config = warehouse_json_config.get("table");
-        std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
-        auto district_json_config = JsonConfig::load_file(district_config_filepath);
-        auto district_table_config = district_json_config.get("table");
-        std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
-        auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-        auto customer_table_config = customer_json_config.get("table");
-
-        order_table =
-            new HashStore((table_id_t)TPCCTableType::kOrderTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        order_index_table =
-            new HashStore((table_id_t)TPCCTableType::kOrderIndexTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        new_order_table =
-            new HashStore((table_id_t)TPCCTableType::kNewOrderTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64() * 0.3,
-                          mem_store_alloc_param);
-        order_line_table =
-            new HashStore((table_id_t)TPCCTableType::kOrderLineTable,
-                          warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64() * customer_table_config.get("bkt_num").get_uint64() * 15,
-                          mem_store_alloc_param);
-
-        PopulateOrderNewOrderAndOrderLineTable(2343352, mem_store_reserve_param);
-        backup_table_ptrs.push_back(order_table);
-        backup_table_ptrs.push_back(order_index_table);
-        backup_table_ptrs.push_back(new_order_table);
-        backup_table_ptrs.push_back(order_line_table);
+        PopulateOrderNewOrderAndOrderLineTable(2343352);
       }
       if ((node_id_t)TPCCTableType::kStockTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing Stock table\n");
-        std::string config_filepath = "../../../workload/tpcc/tpcc_tables/stock.json";
-        auto json_config = JsonConfig::load_file(config_filepath);
-        auto table_config = json_config.get("table");
-        stock_table =
-            new HashStore((table_id_t)TPCCTableType::kStockTable,
-                          table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        PopulateStockTable(89785943, mem_store_reserve_param);
-        backup_table_ptrs.push_back(stock_table);
+        PopulateStockTable(89785943);
       }
       if ((node_id_t)TPCCTableType::kItemTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing Item table\n");
-        std::string config_filepath = "../../../workload/tpcc/tpcc_tables/item.json";
-        auto json_config = JsonConfig::load_file(config_filepath);
-        auto table_config = json_config.get("table");
-        item_table =
-            new HashStore((table_id_t)TPCCTableType::kItemTable,
-                          table_config.get("bkt_num").get_uint64(),
-                          mem_store_alloc_param);
-        PopulateItemTable(235443, mem_store_reserve_param);
-        backup_table_ptrs.push_back(item_table);
+        PopulateItemTable(235443);
       }
     }
   }
 }
 
-void TPCC::PopulateWarehouseTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+void TPCC::PopulateWarehouseTable(unsigned long seed) {
+  rm_manager->create_file(bench_name + "_warehouse", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_warehouse");
+  std::ofstream indexfile;
+  indexfile.open(bench_name + "_warehouse_index.txt");
   int total_warehouse_records_inserted = 0, total_warehouse_records_examined = 0;
   FastRandom random_generator(seed);
   //populate warehouse table
@@ -304,18 +245,23 @@ void TPCC::PopulateWarehouseTable(unsigned long seed, MemStoreReserveParam* mem_
     strcpy(warehouse_val.w_zip, "123456789");
 
     assert(warehouse_val.w_state[2] == '\0' && strcmp(warehouse_val.w_zip, "123456789") == 0);
-    total_warehouse_records_inserted += LoadRecord(warehouse_table,
+    total_warehouse_records_inserted += LoadRecord(table_file.get(),
                                                    warehouse_key.item_key,
                                                    (void*)&warehouse_val,
                                                    sizeof(tpcc_warehouse_val_t),
                                                    (table_id_t)TPCCTableType::kWarehouseTable,
-                                                   mem_store_reserve_param);
+                                                   indexfile);
     total_warehouse_records_examined++;
   }
-  // printf("total_warehouse_records_inserted = %d, total_warehouse_records_examined = %d\n",
-  //        total_warehouse_records_inserted, total_warehouse_records_examined);
+  indexfile.close();
 }
-void TPCC::PopulateDistrictTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+
+void TPCC::PopulateDistrictTable(unsigned long seed) {
+  rm_manager->create_file(bench_name + "_district", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_district");
+  std::ofstream indexfile;
+  indexfile.open(bench_name + "_district_index.txt");
+
   int total_district_records_inserted = 0, total_district_records_examined = 0;
   FastRandom random_generator(seed);
   for (uint32_t w_id = 1; w_id <= num_warehouse; w_id++) {
@@ -345,21 +291,37 @@ void TPCC::PopulateDistrictTable(unsigned long seed, MemStoreReserveParam* mem_s
       strcpy(district_val.d_state, RandomStr(random_generator, Address::STATE).c_str());
       strcpy(district_val.d_zip, "123456789");
 
-      total_district_records_inserted += LoadRecord(district_table,
+      total_district_records_inserted += LoadRecord(table_file.get(),
                                                     district_key.item_key,
                                                     (void*)&district_val,
                                                     sizeof(tpcc_district_val_t),
                                                     (table_id_t)TPCCTableType::kDistrictTable,
-                                                    mem_store_reserve_param);
+                                                    indexfile);
       total_district_records_examined++;
     }
   }
   // printf("total_district_records_inserted = %d, total_district_records_examined = %d\n",
   //        total_district_records_inserted, total_district_records_examined);
+  indexfile.close();
 }
 
 //no batch in this implementation
-void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed) {
+  rm_manager->create_file(bench_name + "_customer_table", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> customer_table_file = rm_manager->open_file(bench_name + "_customer_table");
+  std::ofstream indexfile_customer;
+  indexfile_customer.open(bench_name + "_customer_table_index.txt");
+
+  rm_manager->create_file(bench_name + "_history", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> history_table_file = rm_manager->open_file(bench_name + "_history");
+  std::ofstream indexfile_history;
+  indexfile_history.open(bench_name + "_history_index.txt");
+
+  rm_manager->create_file(bench_name + "_customer_index", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> customer_index_table_file = rm_manager->open_file(bench_name + "_customer_index");
+  std::ofstream indexfile_customer_index;
+  indexfile_customer_index.open(bench_name + "_customer_index_index.txt");
+
   int total_customer_records_inserted = 0, total_customer_records_examined = 0;
   int total_customer_index_records_inserted = 0, total_customer_index_records_examined = 0;
   int total_history_records_inserted = 0, total_history_records_examined = 0;
@@ -417,12 +379,12 @@ void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReservePa
         assert(!strcmp(customer_val.c_middle, "OE"));
         // printf("before insert customer record\n");
 
-        total_customer_records_inserted += LoadRecord(customer_table,
+        total_customer_records_inserted += LoadRecord(customer_table_file.get(),
                                                       customer_key.item_key,
                                                       (void*)&customer_val,
                                                       sizeof(tpcc_customer_val_t),
                                                       (table_id_t)TPCCTableType::kCustomerTable,
-                                                      mem_store_reserve_param);
+                                                      indexfile_customer);
         total_customer_records_examined++;
 
         // printf("total_customer_records_inserted = %d, total_customer_records_examined = %d\n", total_customer_records_inserted, total_customer_records_examined);
@@ -434,18 +396,18 @@ void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReservePa
 
         tpcc_customer_index_val_t customer_index_val;
         customer_index_val.debug_magic = tpcc_add_magic;
-        DataItem* mn = GetRecord(customer_index_table,
+        auto mn = GetRecord(customer_index_table_file.get(), 
                                  customer_index_key.item_key,
                                  (table_id_t)TPCCTableType::kCustomerIndexTable);
         assert(mn == NULL);
         if (mn == NULL) {
           customer_index_val.c_id = customer_key.c_id;
-          total_customer_index_records_inserted += LoadRecord(customer_index_table,
+          total_customer_index_records_inserted += LoadRecord(customer_index_table_file.get(),
                                                               customer_index_key.item_key,
                                                               (void*)&customer_index_val,
                                                               sizeof(tpcc_customer_index_val_t),
                                                               (table_id_t)TPCCTableType::kCustomerIndexTable,
-                                                              mem_store_reserve_param);
+                                                              indexfile_customer_index);
           total_customer_index_records_examined++;
           // printf("total_customer_index_records_inserted = %d, total_customer_index_records_examined = %d\n", total_customer_index_records_inserted, total_customer_index_records_examined);
         }
@@ -458,12 +420,12 @@ void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReservePa
         strcpy(history_val.h_data,
                RandomStr(random_generator, RandomNumber(random_generator, tpcc_history_val_t::MIN_DATA, tpcc_history_val_t::MAX_DATA)).c_str());
 
-        total_history_records_inserted += LoadRecord(history_table,
+        total_history_records_inserted += LoadRecord(history_table_file.get(),
                                                      history_key.item_key,
                                                      (void*)&history_val,
                                                      sizeof(tpcc_history_val_t),
                                                      (table_id_t)TPCCTableType::kHistoryTable,
-                                                     mem_store_reserve_param);
+                                                     indexfile_history);
         total_history_records_examined++;
         // printf("total_history_records_inserted = %d, total_history_records_examined = %d\n", total_history_records_inserted, total_history_records_examined);
       }
@@ -475,7 +437,32 @@ void TPCC::PopulateCustomerAndHistoryTable(unsigned long seed, MemStoreReservePa
   // printf("total_history_records_inserted = %d, total_history_records_examined = %d\n", total_history_records_inserted, total_history_records_examined);
 }
 
-void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed) { 
+  rm_manager->create_file(bench_name + "_order_table", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> order_table_file = rm_manager->open_file(bench_name + "_order_table");
+  std::ofstream indexfile_order;
+  indexfile_order.open(bench_name + "_order_table_index.txt");
+
+  rm_manager->create_file(bench_name + "_order_index", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> order_index_table_file = rm_manager->open_file(bench_name + "_order_index");
+  std::ofstream indexfile_order_index;
+  indexfile_order_index.open(bench_name + "_order_index_index.txt");
+
+  rm_manager->create_file(bench_name + "_new_order", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> new_order_table_file = rm_manager->open_file(bench_name + "_new_order");
+  std::ofstream indexfile_new_order;
+  indexfile_new_order.open(bench_name + "_new_order_index.txt");
+
+  rm_manager->create_file(bench_name + "_customer_index", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> customer_index_table_file = rm_manager->open_file(bench_name + "_customer_index");
+  std::ofstream indexfile_customer_index;
+  indexfile_customer_index.open(bench_name + "_customer_index_index.txt");
+  
+  rm_manager->create_file(bench_name + "_order_line_table", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> order_line_table_file = rm_manager->open_file(bench_name + "_order_line_table");
+  std::ofstream indexfile_order_line;
+  indexfile_order_line.open(bench_name + "_order_line_index.txt");
+
   int total_order_records_inserted = 0, total_order_records_examined = 0;
   int total_order_index_records_inserted = 0, total_order_index_records_examined = 0;
   int total_new_order_records_inserted = 0, total_new_order_records_examined = 0;
@@ -508,12 +495,12 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreRe
         order_val.o_all_local = 1;
         order_val.o_entry_d = GetCurrentTimeMillis();
 
-        total_order_records_inserted += LoadRecord(order_table,
+        total_order_records_inserted += LoadRecord(order_table_file.get(),
                                                    order_key.item_key,
                                                    (void*)&order_val,
                                                    sizeof(tpcc_order_val_t),
                                                    (table_id_t)TPCCTableType::kOrderTable,
-                                                   mem_store_reserve_param);
+                                                   indexfile_order);
         total_order_records_examined++;
         // printf("total_order_records_inserted = %d, total_order_records_examined = %d\n", total_order_records_inserted, total_order_records_examined);
 
@@ -523,19 +510,19 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreRe
         tpcc_order_index_val_t order_index_val;
         order_index_val.o_id = order_key.o_id;
 
-        DataItem* mn = GetRecord(order_index_table,
+        auto mn = GetRecord(order_index_table_file.get(),  
                                  order_index_key.item_key,
                                  (table_id_t)TPCCTableType::kOrderIndexTable);
         assert(mn == NULL);
         if (mn == NULL) {
           order_index_val.o_id = order_key.o_id;
           order_index_val.debug_magic = tpcc_add_magic;
-          total_order_index_records_inserted += LoadRecord(order_index_table,
+          total_order_index_records_inserted += LoadRecord(order_index_table_file.get(),
                                                            order_index_key.item_key,
                                                            (void*)&order_index_val,
                                                            sizeof(tpcc_order_index_val_t),
                                                            (table_id_t)TPCCTableType::kOrderIndexTable,
-                                                           mem_store_reserve_param);
+                                                           indexfile_order_index);
           total_order_index_records_examined++;
           // printf("total_order_index_records_inserted = %d, total_order_index_records_examined = %d\n", total_order_index_records_inserted, total_order_index_records_examined);
         }
@@ -548,12 +535,12 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreRe
 
           tpcc_new_order_val_t new_order_val;
           new_order_val.debug_magic = tpcc_add_magic;
-          total_new_order_records_inserted += LoadRecord(new_order_table,
+          total_new_order_records_inserted += LoadRecord(new_order_table_file.get(),
                                                          new_order_key.item_key,
                                                          (void*)&new_order_val,
                                                          sizeof(tpcc_new_order_val_t),
                                                          (table_id_t)TPCCTableType::kNewOrderTable,
-                                                         mem_store_reserve_param);
+                                                         indexfile_new_order);
           total_new_order_records_examined++;
           // printf("total_new_order_records_inserted = %d, total_new_order_records_examined = %d\n", total_new_order_records_inserted, total_new_order_records_examined);
         }
@@ -578,12 +565,12 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreRe
 
           order_line_val.debug_magic = tpcc_add_magic;
           assert(order_line_val.ol_i_id >= 1 && static_cast<size_t>(order_line_val.ol_i_id) <= num_item);
-          total_order_line_records_inserted += LoadRecord(order_line_table,
+          total_order_line_records_inserted += LoadRecord(order_line_table_file.get(),
                                                           order_line_key.item_key,
                                                           (void*)&order_line_val,
                                                           sizeof(tpcc_order_line_val_t),
                                                           (table_id_t)TPCCTableType::kOrderLineTable,
-                                                          mem_store_reserve_param);
+                                                          indexfile_order_line);
           total_order_line_records_examined++;
           // printf("total_order_line_records_inserted = %d, total_order_line_records_examined = %d\n", total_order_line_records_inserted, total_order_line_records_examined);
         }
@@ -602,7 +589,12 @@ void TPCC::PopulateOrderNewOrderAndOrderLineTable(unsigned long seed, MemStoreRe
   //        total_order_line_records_inserted, total_order_line_records_examined);
 }
 
-void TPCC::PopulateItemTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+void TPCC::PopulateItemTable(unsigned long seed) {
+  rm_manager->create_file(bench_name + "_item", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> item_table_file = rm_manager->open_file(bench_name + "_item");
+  std::ofstream indexfile_item;
+  indexfile_item.open(bench_name + "_item_index.txt");
+
   int total_item_records_inserted = 0, total_item_records_examined = 0;
   //    printf("total_item_records_inserted = %d, total_item_records_examined = %d\n",
   //           total_item_records_inserted, total_item_records_examined);
@@ -631,19 +623,24 @@ void TPCC::PopulateItemTable(unsigned long seed, MemStoreReserveParam* mem_store
     //check item price
     assert(item_val.i_price >= 1.0 && item_val.i_price <= 100.0);
 
-    total_item_records_inserted += LoadRecord(item_table,
+    total_item_records_inserted += LoadRecord(item_table_file.get(),
                                               item_key.item_key,
                                               (void*)&item_val,
                                               sizeof(tpcc_item_val_t),
                                               (table_id_t)TPCCTableType::kItemTable,
-                                              mem_store_reserve_param);
+                                              indexfile_item);
     total_item_records_examined++;
     // printf("total_item_records_inserted = %d, total_item_records_examined = %d\n", total_item_records_inserted, total_item_records_examined);
   }
   // printf("total_item_records_inserted = %d, total_item_records_examined = %d\n", total_item_records_inserted, total_item_records_examined);
 }
 
-void TPCC::PopulateStockTable(unsigned long seed, MemStoreReserveParam* mem_store_reserve_param) {
+void TPCC::PopulateStockTable(unsigned long seed) {
+  rm_manager->create_file(bench_name + "_stock", sizeof(DataItem));
+  std::unique_ptr<RmFileHandle> stock_table_file = rm_manager->open_file(bench_name + "_stock");
+  std::ofstream indexfile_stock;
+  indexfile_stock.open(bench_name + "_stock_index.txt");
+
   int total_stock_records_inserted = 0, total_stock_records_examined = 0;
   for (uint32_t w_id = 1; w_id <= num_warehouse; w_id++) {
     for (uint32_t i_id = 1; i_id <= num_item; i_id++) {
@@ -669,12 +666,12 @@ void TPCC::PopulateStockTable(unsigned long seed, MemStoreReserveParam* mem_stor
       }
 
       stock_val.debug_magic = tpcc_add_magic;
-      total_stock_records_inserted += LoadRecord(stock_table,
+      total_stock_records_inserted += LoadRecord(stock_table_file.get(),
                                                  stock_key.item_key,
                                                  (void*)&stock_val,
                                                  sizeof(tpcc_stock_val_t),
                                                  (table_id_t)TPCCTableType::kStockTable,
-                                                 mem_store_reserve_param);
+                                                 indexfile_stock);
       total_stock_records_examined++;
       // printf("total_stock_records_inserted = %d, total_stock_records_examined = %d\n", total_stock_records_inserted, total_stock_records_examined);
     }
@@ -682,23 +679,370 @@ void TPCC::PopulateStockTable(unsigned long seed, MemStoreReserveParam* mem_stor
   // printf("total_stock_records_inserted = %d, total_stock_records_examined = %d\n", total_stock_records_inserted, total_stock_records_examined);
 }
 
-int TPCC::LoadRecord(HashStore* table,
+int TPCC::LoadRecord(RmFileHandle* file_handle,
                      itemkey_t item_key,
                      void* val_ptr,
                      size_t val_size,
                      table_id_t table_id,
-                     MemStoreReserveParam* mem_store_reserve_param) {
+                     std::ofstream& indexfile) {
   assert(val_size <= MAX_ITEM_SIZE);
-  /* Insert into HashStore */
+  /* Insert into Disk */
   DataItem item_to_be_inserted(table_id, val_size, item_key, (uint8_t*)val_ptr);
-  DataItem* inserted_item = table->LocalInsert(item_key, item_to_be_inserted, mem_store_reserve_param);
-  inserted_item->remote_offset = table->GetItemRemoteOffset(inserted_item);
+  char* item_char = (char*)malloc(item_to_be_inserted.GetSerializeSize());
+  item_to_be_inserted.Serialize(item_char);
+  Rid rid = file_handle->insert_record(item_key, item_char, nullptr);
+  // record index
+  indexfile << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+  free(item_char);
   return 1;
 }
 
-DataItem* TPCC::GetRecord(HashStore* table,
+std::unique_ptr<DataItem> TPCC::GetRecord(RmFileHandle* file_handle,
                           itemkey_t item_key,
                           table_id_t table_id) {
+  // 根据table_id去看get的是哪个Table里的record，然后去对应的Index文件里去get
+  // Index文件中存储的信息是：(item_key, rid.page_no_, rid.slot_no_), 通过这个信息去get对应的record, 然后转换成DataItem
+  // 缺点：性能较差，和原来的hash去get的方式有所区别
+  Rid rid;
+  if(table_id == (table_id_t)TPCCTableType::kWarehouseTable) {
+    rid = findRID(bench_name + "_warehouse_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kDistrictTable) {
+    rid = findRID(bench_name + "_district_index.txt", item_key);   
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr); 
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kCustomerTable) {
+    rid = findRID(bench_name + "_customer_table_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kHistoryTable) {
+    rid = findRID(bench_name + "_history_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kNewOrderTable) {
+    rid = findRID(bench_name + "_new_order_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kOrderTable) {
+    rid = findRID(bench_name + "_order_table_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kOrderLineTable) {
+    rid = findRID(bench_name + "_order_line_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kItemTable) {
+    rid = findRID(bench_name + "_item_index.txt", item_key);  
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kStockTable) {
+    rid = findRID(bench_name + "_stock_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kCustomerIndexTable) {
+    rid = findRID(bench_name + "_customer_index_index.txt", item_key);  
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+  if(table_id == (table_id_t)TPCCTableType::kOrderIndexTable) {
+    rid = findRID(bench_name + "_order_index_index.txt", item_key);
+    if(rid == (Rid){-1, -1}){
+      return nullptr;
+    }
+    auto rm_record = file_handle->get_record(rid, nullptr);
+    if(rm_record == nullptr || rid == (Rid){-1, -1}){
+      return nullptr;
+    }   
+    return std::make_unique<DataItem>(table_id, rm_record->value_size_, item_key, reinterpret_cast<uint8_t*>(rm_record->value_));
+  }
+
   /* get from HashStore */
-  return table->LocalGet(item_key);
+  //return table->LocalGet(item_key);
+}
+
+Rid TPCC::findRID(const std::string& filename, itemkey_t item_key) {
+  std::ifstream file(filename);
+  std::string line;
+  Rid rid = {-1, -1}; 
+
+  if (file.is_open()) {
+    while (getline(file, line)) {
+      std::istringstream iss(line);
+      std::string temp_key;
+      uint64_t key;
+      int page_no, slot_no;
+      if (iss >> temp_key >> page_no >> slot_no) {
+          key = std::stoull(temp_key); 
+          if (key >= item_key) { 
+            if (key == item_key) { 
+                rid.page_no_ = page_no;
+                rid.slot_no_ = slot_no;
+            }
+            break; 
+          }
+      }
+    }
+    file.close();
+  } else {
+    std::cerr << "Unable to open file" << std::endl;
+  }
+
+  return rid;
+}
+
+void TPCC::PopulateIndexWarehouseTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_warehouse_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_warehouse_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    warehouse_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexDistrictTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_district_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_district_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexCustomerTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_customer_table_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_customer_table_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexCustomerIndexTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_customer_index_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_customer_index_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexHistoryTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_history_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_history_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexOrderTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_order_table_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_order_table_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexOrderIndexTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_order_index_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_order_index_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexNewOrderTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_new_order_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_new_order_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexOrderLineTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_order_line_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_order_line_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexItemTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_item_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_item_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
+}
+
+void TPCC::PopulateIndexStockTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_stock_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_stock_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+  return;
 }

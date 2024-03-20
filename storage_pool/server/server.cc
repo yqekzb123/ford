@@ -20,16 +20,16 @@ void LoadData(node_id_t machine_id,
   RDMA_LOG(INFO) << "Start loading database data...";
   if (workload == "TATP") {
     TATP* tatp_server = new TATP(rm_manager);
-    // tatp_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+    tatp_server->LoadTable(machine_id, machine_num);
   } else if (workload == "SmallBank") {
     SmallBank* smallbank_server = new SmallBank(rm_manager);
     smallbank_server->LoadTable(machine_id, machine_num);
   } else if (workload == "TPCC") {
-    TPCC* tpcc_server = new TPCC();
-    // tpcc_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+    TPCC* tpcc_server = new TPCC(rm_manager);
+    tpcc_server->LoadTable(machine_id, machine_num);
   } else if (workload == "MICRO") {
-    MICRO* micro_server = new MICRO();
-    // micro_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+    MICRO* micro_server = new MICRO(rm_manager);
+    micro_server->LoadTable(machine_id, machine_num);
   } else{
     RDMA_LOG(ERROR) << "Unsupported workload: " << workload;
     assert(false);

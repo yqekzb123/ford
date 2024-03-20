@@ -107,7 +107,7 @@ void Handler::GenThreads(std::string bench_name) {
     total_try_times.resize(SmallBank_TX_TYPES, 0);
     total_commit_times.resize(SmallBank_TX_TYPES, 0);
   } else if (bench_name == "tpcc") {
-    tpcc_client = new TPCC();
+    tpcc_client = new TPCC(nullptr);
     total_try_times.resize(TPCC_TX_TYPES, 0);
     total_commit_times.resize(TPCC_TX_TYPES, 0);
   }
