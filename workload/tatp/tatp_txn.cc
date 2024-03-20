@@ -62,7 +62,7 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   if (!dtx->TxExe(yield)) return false;
 
   if (specfac_obj->value_size == 0) {
-    dtx->TxAbortReadOnly();
+    dtx->TxAbortReadOnly(yield);
     return false;
   }
 
@@ -73,7 +73,7 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   }
   if (specfac_val->is_active == 0) {
     // is_active is randomly generated at pm node side
-    dtx->TxAbortReadOnly();
+    dtx->TxAbortReadOnly(yield);
     return false;
   }
 
@@ -112,7 +112,7 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
     bool commit_status = dtx->TxCommit(yield);
     return commit_status;
   } else {
-    dtx->TxAbortReadOnly();
+    dtx->TxAbortReadOnly(yield);
     return false;
   }
 }
@@ -142,7 +142,7 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
     return commit_status;
   } else {
     /* Key not found */
-    dtx->TxAbortReadOnly();
+    dtx->TxAbortReadOnly(yield);
     return false;
   }
 }
@@ -274,7 +274,7 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   /* The Special Facility record exists only 62.5% of the time */
   if (specfac_obj->value_size == 0) {
-    dtx->TxAbortReadOnly();
+    dtx->TxAbortReadOnly(yield);
     return false;
   }
 

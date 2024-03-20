@@ -47,16 +47,16 @@ void HashIndexServer::LoadIndex(node_id_t machine_id,
   MemStoreReserveParam mem_store_reserve_param(hash_index_reserve_buffer, 0, hash_index_bucket_buffer + hash_buf_size);
   if (workload == "TATP") {
     tatp_server = new TATP(nullptr); // not need rmmanager
-    // TODO
+    tatp_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   } else if (workload == "SmallBank") {
     smallbank_server = new SmallBank(nullptr);
     smallbank_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   } else if (workload == "TPCC") {
     tpcc_server = new TPCC(nullptr);
-    // tpcc_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+    tpcc_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   } else if (workload == "MICRO") {
     micro_server = new MICRO(nullptr);
-    // micro_server->LoadTable(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
+    micro_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   }
   RDMA_LOG(INFO) << "Loading table successfully!";
 }

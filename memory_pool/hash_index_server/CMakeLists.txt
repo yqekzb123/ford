@@ -8,8 +8,10 @@ set(INDEX_SERVER_SOURCE hash_index_server.cc
         ../../test/buffer/bufferpool_manager.cpp
         ../../test/buffer/replacer/lru_replacer.cpp
 
-        ../../workload/smallbank/smallbank_db.cc)
+        ../../workload/smallbank/smallbank_db.cc
+        ../../workload/micro/micro_db.cc
+        ../../workload/tatp/tatp_db.cc
+        ../../workload/tpcc/tpcc_db.cc)
 
 add_executable(index_server ${INDEX_SERVER_SOURCE})
-# target_link_libraries(zm_mem_pool tatp_db smallbank_db tpcc_db micro_db rlib)
 target_link_libraries(index_server rlib)
