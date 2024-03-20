@@ -58,8 +58,6 @@ void TATP::LoadIndex(node_id_t node_id, node_id_t num_server,
     special_facility_index = new IndexStore((table_id_t)TATPTableType::kSpecialFacilityTable,
                                                   table_config.get("bkt_num").get_uint64(),
                                                   mem_store_alloc_param, mem_store_reserve_param);
-    PopulateIndexSpecialFacilityTable(mem_store_reserve_param);
-    index_store_ptrs.push_back(special_facility_index);
 
     printf("Hash Index: Initializing CALL FORWARDING table index\n");
     config_filepath = "../../../workload/tatp/tatp_tables/call_forwarding.json";
@@ -68,7 +66,9 @@ void TATP::LoadIndex(node_id_t node_id, node_id_t num_server,
     call_forwarding_index = new IndexStore((table_id_t)TATPTableType::kCallForwardingTable,
                                                  table_config.get("bkt_num").get_uint64(),
                                                  mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexSpecialFacilityTable(mem_store_reserve_param);
     PopulateIndexCallForwardingTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(special_facility_index);
     index_store_ptrs.push_back(call_forwarding_index);
   }
 }
