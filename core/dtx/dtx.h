@@ -58,6 +58,10 @@ class DTX {
 
   void AddToReadWriteSet(DataItemPtr item);
 
+  void ClearReadOnlySet();
+
+  void ClearReadWriteSet();
+
   void AddToReadOnlySet(DataItemPtr item, LVersionPtr version);
 
   void AddToReadWriteSet(DataItemPtr item, LVersionPtr version);
@@ -326,10 +330,8 @@ class DTX {
   std::list<PageAddress>* free_page_list;
   std::mutex* free_page_list_mutex;
 
-  // std::vector<LockDataId> hold_exclusive_lock_data_id;
-  // std::vector<NodeOffset> hold_exclusive_lock_node_offs;
-  // std::vector<LockDataId> hold_shared_lock_data_id;
-  // std::vector<NodeOffset> hold_shared_lock_node_offs;
+  // std::unordered_set<LockDataId> hold_exclusive_lock_data_id;
+  // std::unordered_set<LockDataId> hold_shared_lock_data_id;
 
   // only used for baseline
   std::vector<table_id_t> all_tableid;
@@ -343,10 +345,16 @@ class DTX {
   // 索引，记录每一个要访问的数据所在的all_page_ids的位置
   std::vector<int> rid_map_pageid_idx;
   // 与all_page_ids一一对应
+  struct LockStatusItem {
+    LockDataId lock_data_id;
+    char* localaddr;
+    NodeOffset node_off;
+  };
+  
   std::vector<std::pair<char*, NodeOffset>> page_table_item_localaddr_and_remote_offset;
   std::vector<std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
-  std::vector<std::pair<char*, NodeOffset>> shared_lock_item_localaddr_and_remote_offset;
-  std::vector<std::pair<char*, NodeOffset>> exclusive_lock_item_localaddr_and_remote_offset;
+  std::vector<LockStatusItem> shared_lock_item_localaddr_and_remote_offset;
+  std::vector<LockStatusItem> exclusive_lock_item_localaddr_and_remote_offset;
 };
 
 /*************************************************************
@@ -374,6 +382,16 @@ void DTX::AddToReadWriteSet(DataItemPtr item) {
   // DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
   // printf("DTX.h:275\n");
   read_write_set.emplace_back(data_set_item);
+}
+
+ALWAYS_INLINE
+void DTX::ClearReadOnlySet() {
+  read_only_set.clear();
+}
+
+ALWAYS_INLINE
+void DTX::ClearReadWriteSet() {
+  read_write_set.clear();
 }
 
 ALWAYS_INLINE

@@ -479,12 +479,7 @@ class TATP {
   std::vector<uint8_t> SelectUniqueItem(uint64_t* tmp_seed, std::vector<uint8_t> values, unsigned N, unsigned M);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
-
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
   }
 };

@@ -116,12 +116,7 @@ class MICRO {
                  std::ofstream& indexfile);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
-
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
   }
 };

@@ -10,7 +10,7 @@ MetaManager::MetaManager(std::string bench_name) {
   // init table name and table id map
   if (bench_name == "tatp") {
     table_name_map[0] = "TATP_subscriber";
-    table_name_map[1] = "TATP_sec_subcriber";
+    table_name_map[1] = "TATP_sec_subscriber";
     table_name_map[2] = "TATP_special_facility";
     table_name_map[3] = "TATP_access_info";
     table_name_map[4] = "TATP_call_forwarding";
@@ -50,7 +50,23 @@ MetaManager::MetaManager(std::string bench_name) {
     table_name_map[8] = "TPCC_stock";
     table_name_map[9] = "TPCC_customer_index";
     table_name_map[10] = "TPCC_order_index";
-    // TODO
+    
+    TableMeta meta;
+    meta.record_size_ = sizeof(DataItem);
+    meta.num_records_per_page_ = (BITMAP_WIDTH * (PAGE_SIZE - 1 - (int)sizeof(RmFileHdr)) + 1) / (1 + (meta.record_size_ + sizeof(itemkey_t)) * BITMAP_WIDTH);
+    meta.bitmap_size_ = (meta.num_records_per_page_ + BITMAP_WIDTH - 1) / BITMAP_WIDTH;
+
+    table_meta_map[0] = meta;
+    table_meta_map[1] = meta;
+    table_meta_map[2] = meta;
+    table_meta_map[3] = meta;
+    table_meta_map[4] = meta;
+    table_meta_map[5] = meta;
+    table_meta_map[6] = meta;
+    table_meta_map[7] = meta;
+    table_meta_map[8] = meta;
+    table_meta_map[9] = meta;
+    table_meta_map[10] = meta;
 
   } else if (bench_name == "micro"){
     table_name_map[0] = "MICRO_micro";

@@ -26,7 +26,8 @@ enum TXStatus : int {
   TX_LOCK,      // Transaction execution, read+lock
   TX_VAL,       // Transaction validate
   TX_COMMIT,    // Commit primary and backups
-  TX_ABORT      // Aborted transaction
+  TX_ABORT,     // Aborted transaction
+  TX_VAL_NOTFOUND // Validate not found
 };
 
 enum ValStatus : int {

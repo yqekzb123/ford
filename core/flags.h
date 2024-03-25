@@ -11,7 +11,7 @@
 // 40: micro-benchmark
 
 // ! pay attention: need modify this when use different workload
-const size_t MAX_ITEM_SIZE = 664;
+const size_t MAX_ITEM_SIZE = 40;
 
 /*********************** For FORD **********************/
 // 0: Read rw data without lock

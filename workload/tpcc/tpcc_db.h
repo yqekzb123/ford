@@ -838,6 +838,11 @@ class TPCC {
                       table_id_t table_id);
   Rid findRID(const std::string& filename, itemkey_t item_key);
 
+  ALWAYS_INLINE
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
+  }
+
   /* Followng pieces of codes mainly comes from Silo */
   ALWAYS_INLINE
   uint32_t GetCurrentTimeMillis() {

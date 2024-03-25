@@ -103,13 +103,13 @@ void HashIndexServer::PrepareIndexMeta(node_id_t machine_id, std::string& worklo
   std::vector<IndexStore*> all_index_store;
 
   if (workload == "TATP") {
-    // all_index_store = tatp_server->GetPrimaryHashStore();
+    all_index_store = tatp_server->GetAllIndexStore();
   } else if (workload == "SmallBank") {
     all_index_store = smallbank_server->GetAllIndexStore();
   } else if (workload == "TPCC") {
-    // all_index_store = tpcc_server->GetPrimaryHashStore();
+    all_index_store = tpcc_server->GetAllIndexStore();
   } else if (workload == "MICRO") {
-    // all_index_store = micro_server->GetPrimaryHashStore();
+    all_index_store = micro_server->GetAllIndexStore();
   }
 
   for (auto& hash_table : all_index_store) {

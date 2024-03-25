@@ -13,6 +13,8 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   if (read_write_set.empty() && read_only_set.empty()) {
     return true;
   }
+  all_tableid.clear();
+  all_keyid.clear();
   for (auto& item : read_only_set) {
     auto it = item.item_ptr;
     all_tableid.push_back(it->table_id);
@@ -32,6 +34,21 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
   #endif
 
+  // 获取索引
+  all_rids = GetHashIndex(yield, all_tableid, all_keyid);
+  for(int i=0; i<all_rids.size(); i++){
+    if(all_rids[i].page_no_ == INVALID_PAGE_ID){
+      tx_status = TXStatus::TX_VAL_NOTFOUND;
+      return true;
+    }
+  }
+
+  #if OPEN_TIME
+  struct timespec tx_get_index_time;
+  clock_gettime(CLOCK_REALTIME, &tx_get_index_time);
+  double get_index_usec = (tx_get_index_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_get_index_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  #endif
+
   if (!LockRemoteRO(yield)) {
     // printf("LockRemoteRO failed\n");
     TxAbort(yield);
@@ -41,7 +58,7 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   #if OPEN_TIME
   struct timespec tx_lock_ro_time;
   clock_gettime(CLOCK_REALTIME, &tx_lock_ro_time);
-  double lock_ro_usec = (tx_lock_ro_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_ro_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  double lock_ro_usec = (tx_lock_ro_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_ro_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
   #endif
 
   if (!LockRemoteRW(yield)) {
@@ -65,7 +82,8 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
   struct timespec tx_read_time;
   clock_gettime(CLOCK_REALTIME, &tx_read_time);
   double read_usec = (tx_read_time.tv_sec - tx_lock_rw_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_lock_rw_time.tv_nsec) / 1000;
-  DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, lock_ro_usec: %lf, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, lock_ro_usec, lock_rw_usec, read_usec);
+  DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, read_index_usec: %lf, \
+    lock_ro_usec: %lf, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, get_index_usec, lock_ro_usec, lock_rw_usec, read_usec);
   #endif
 
   return true;
@@ -129,6 +147,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   brpc::Join(cid);
   #endif
 
+  tx_status = TXStatus::TX_COMMIT;
   // printf("txn: %ld, commit\n", tx_id);
   return true;
 }
@@ -144,6 +163,10 @@ bool DTX::LockRemoteRO(coro_yield_t& yield) {
   if(read_only_set.empty()) return true;
   std::vector<table_id_t> readonly_tableid(all_tableid.begin(), all_tableid.begin() + read_only_set.size());
   std::vector<itemkey_t> readonly_keyid(all_keyid.begin(), all_keyid.begin() + read_only_set.size());
+  // debug
+  // for(int i=0; i<read_only_set.size(); i++){
+  //   printf("lock ro, table_id: %d, item_id: %d", readonly_tableid[i], readonly_keyid[i]);
+  // }
   bool res = LockSharedOnRecord(yield, std::move(readonly_tableid), std::move(readonly_keyid));
   return res;
 }
@@ -153,6 +176,10 @@ bool DTX::LockRemoteRW(coro_yield_t& yield) {
   if(read_write_set.empty()) return true;
   std::vector<table_id_t> readwrite_tableid(all_tableid.begin() + read_only_set.size(), all_tableid.end());
   std::vector<itemkey_t> readwrite_keyid(all_keyid.begin() + read_only_set.size(), all_keyid.end());
+  // debug
+  // for(int i=0; i<read_write_set.size(); i++){
+  //   printf("lock rw, table_id: %d, item_id: %d", readwrite_tableid[i], readwrite_keyid[i]);
+  // }
   bool res = LockExclusiveOnRecord(yield, std::move(readwrite_tableid), std::move(readwrite_keyid));
   return res;
 }
@@ -161,16 +188,6 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
   #if OPEN_TIME
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
-  #endif
-
-  // 获取索引
-  all_rids = GetHashIndex(yield, all_tableid, all_keyid);
-  if (all_rids.empty()) return false;
-
-  #if OPEN_TIME
-  struct timespec tx_get_index_time;
-  clock_gettime(CLOCK_REALTIME, &tx_get_index_time);
-  double get_index_usec = (tx_get_index_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_get_index_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
   #endif
 
   // 获取数据项

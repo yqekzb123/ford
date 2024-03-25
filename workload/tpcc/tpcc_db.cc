@@ -15,7 +15,7 @@ void TPCC::LoadIndex(node_id_t node_id,
     printf("Hash Index: Initializing Warehouse table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("index");
+    auto table_config = json_config.get("table");
     warehouse_table_index =
         new IndexStore((table_id_t)TPCCTableType::kWarehouseTable,
                       table_config.get("bkt_num").get_uint64(),
@@ -28,10 +28,10 @@ void TPCC::LoadIndex(node_id_t node_id,
     printf("Hash Index: Initializing District table\n");
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("index");
+    auto warehouse_table_config = warehouse_json_config.get("table");
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("index"); 
+    auto district_table_config = district_json_config.get("table"); 
     district_table_index =
         new IndexStore((table_id_t)TPCCTableType::kDistrictTable,
                       warehouse_table_config.get("bkt_num").get_uint64() * district_table_config.get("bkt_num").get_uint64(),
@@ -44,15 +44,15 @@ void TPCC::LoadIndex(node_id_t node_id,
     printf("Hash Index: Initializing Customer, Customer Index, and History table\n");
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("index");
+    auto warehouse_table_config = warehouse_json_config.get("table");
 
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("index");
+    auto district_table_config = district_json_config.get("table");
 
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("index"); 
+    auto customer_table_config = customer_json_config.get("table"); 
 
     // Initialize tables with calculated bucket numbers
     customer_table_index = new IndexStore((table_id_t)TPCCTableType::kCustomerTable,
@@ -87,15 +87,15 @@ void TPCC::LoadIndex(node_id_t node_id,
     
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("index");
+    auto warehouse_table_config = warehouse_json_config.get("table");
 
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("index");
+    auto district_table_config = district_json_config.get("table");
 
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("index"); 
+    auto customer_table_config = customer_json_config.get("table"); 
     
     order_table_index = new IndexStore((table_id_t)TPCCTableType::kOrderTable,
                                        warehouse_table_config.get("bkt_num").get_uint64() * 
@@ -136,7 +136,7 @@ void TPCC::LoadIndex(node_id_t node_id,
     printf("Hash Index: Initializing Stock table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/stock.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("index"); 
+    auto table_config = json_config.get("table"); 
     stock_table_index = new IndexStore((table_id_t)TPCCTableType::kStockTable,
                                        table_config.get("bkt_num").get_uint64(),
                                        mem_store_alloc_param, mem_store_reserve_param);
@@ -148,7 +148,7 @@ void TPCC::LoadIndex(node_id_t node_id,
     printf("Hash Index: Initializing Item table\n");
     std::string config_filepath = "../../../workload/tpcc/tpcc_tables/item.json";
     auto json_config = JsonConfig::load_file(config_filepath);
-    auto table_config = json_config.get("index");
+    auto table_config = json_config.get("table");
     item_table_index = new IndexStore((table_id_t)TPCCTableType::kItemTable,
                                       table_config.get("bkt_num").get_uint64(),
                                       mem_store_alloc_param, mem_store_reserve_param);

@@ -1,6 +1,6 @@
 {
-  "table": {
+  "index": {
     "name": "MICRO",
-    "bkt_num": 200000
+    "bkt_num": 5000
   }
 }

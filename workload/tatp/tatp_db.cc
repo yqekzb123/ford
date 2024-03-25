@@ -212,7 +212,7 @@ void TATP::LoadTable(node_id_t node_id, node_id_t num_server) {
 }
 
 void TATP::PopulateSubscriberTable() {
-  rm_manager->create_file(bench_name + "_subscriber", sizeof(tatp_sub_val_t));
+  rm_manager->create_file(bench_name + "_subscriber", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_subscriber");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_subscriber_index.txt");
@@ -257,7 +257,7 @@ void TATP::PopulateSubscriberTable() {
 }
 
 void TATP::PopulateSecondarySubscriberTable() {
-  rm_manager->create_file(bench_name + "_sec_subscriber", sizeof(tatp_sec_sub_val_t));
+  rm_manager->create_file(bench_name + "_sec_subscriber", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_sec_subscriber");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_sec_subscriber_index.txt");
@@ -287,7 +287,7 @@ void TATP::PopulateSecondarySubscriberTable() {
 }
 
 void TATP::PopulateAccessInfoTable() {
-  rm_manager->create_file(bench_name + "_access_info", sizeof(tatp_accinf_val_t));
+  rm_manager->create_file(bench_name + "_access_info", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_access_info");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_access_info_index.txt");
@@ -329,12 +329,12 @@ void TATP::PopulateAccessInfoTable() {
  * rows get inserted into the SPECIAL FACILITY, so process these two jointly.
  */
 void TATP::PopulateSpecfacAndCallfwdTable() {
-  rm_manager->create_file(bench_name + "_special_facility", sizeof(tatp_specfac_val_t));
+  rm_manager->create_file(bench_name + "_special_facility", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> special_facility_table = rm_manager->open_file(bench_name + "_special_facility");
   std::ofstream indexfile1;
   indexfile1.open(bench_name + "_special_facility_index.txt");
 
-  rm_manager->create_file(bench_name + "_call_forwarding", sizeof(tatp_callfwd_val_t));
+  rm_manager->create_file(bench_name + "_call_forwarding", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> call_forwarding_table = rm_manager->open_file(bench_name + "_call_forwarding");
   std::ofstream indexfile2;
   indexfile2.open(bench_name + "_call_forwarding_index.txt");
