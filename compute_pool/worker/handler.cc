@@ -33,10 +33,10 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
   if (argc == 5) {
     std::string s1 = "sed -i '5c \"thread_num_per_machine\": " + std::string(argv[3]) + ",' " + config_file;
     std::string s2 = "sed -i '6c \"coroutine_num\": " + std::string(argv[4]) + ",' " + config_file;
-    std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
+    // std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
     system(s1.c_str());
     system(s2.c_str());
-    system(s3.c_str());
+    // system(s3.c_str());
   }
   // Customized test without modifying configs
   int txn_system_value = 0;
@@ -72,8 +72,8 @@ void Handler::GenThreads(std::string bench_name) {
   g_thread_cnt = thread_num_per_machine;
   
   const int coro_num = (int)client_conf.get("coroutine_num").get_int64();
-  //! notice: the local_cache_size
-  const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
+  // //! notice: the local_cache_size
+  // const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
 
   /* Start working */
@@ -189,6 +189,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
 
   for (int i = 0; i < tid_vec.size(); i++) {
     of_detail << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
+    std::cout << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
     total_attemp_tp += attemp_tp_vec[i];
     total_tp += tp_vec[i];
     total_median += medianlat_vec[i];

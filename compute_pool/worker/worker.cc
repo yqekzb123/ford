@@ -863,7 +863,7 @@ void run_thread(thread_params* params,
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
 
-  printf("thread %ld Finish, Tps: %ld\n", thread_gid,commit_times);
+  // printf("thread %ld Finish, Tps: %ld\n", thread_gid, stat_committed_tx_total);
 
   // Clean
   delete[] timer;
