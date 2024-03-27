@@ -14,21 +14,21 @@ bool DTX::TxLocalExe(coro_yield_t& yield, bool fail_abort) {
 
   assert(global_meta_man->txn_system == DTX_SYS::OUR);
   // Run our system
-  if (read_write_set.empty()) {
-    if (LockLocalRO(yield)) {
-      return true;
-    }
-    else {
-      goto ABORT;
-    }
-  } else {
-    if (LockLocalRW(yield)){
-      return true;
-    } 
-    else {
-      goto ABORT;
-    }
-  }
+  // if (read_write_set.empty()) {
+  //   if (LockLocalRO(yield)) {
+  //     return true;
+  //   }
+  //   else {
+  //     goto ABORT;
+  //   }
+  // } else {
+  //   if (LockLocalRW(yield)){
+  //     return true;
+  //   } 
+  //   else {
+  //     goto ABORT;
+  //   }
+  // }
   return true;
 
 ABORT:

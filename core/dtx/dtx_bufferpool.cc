@@ -246,7 +246,7 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
             break;
         } else{
             for(int i=0; i<new_page_id.size(); i++){
-                std::cout << "txn: " << tx_id << "want to get page: " << new_page_id[i].table_id << " " << new_page_id[i].page_no << "but not valid now" <<std::endl;
+                // std::cout << "txn: " << tx_id << "want to get page: " << new_page_id[i].table_id << " " << new_page_id[i].page_no << "but not valid now" <<std::endl;
             }
             pending_read_all_page_ids = new_page_id;
             is_write = new_is_write;

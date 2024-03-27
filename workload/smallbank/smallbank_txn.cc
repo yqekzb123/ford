@@ -318,7 +318,7 @@ bool SmallBankDTX::TxAmalgamate(SmallBank* smallbank_client, uint64_t* seed, cor
   dtx->AddToReadWriteSet(chk_obj_1);
 
   if (!dtx->TxExe(yield)) return false;
-
+#if !RETURN_BEFORE
   /* If we are here, execution succeeded and we have locks */
   smallbank_savings_val_t* sav_val_0 = (smallbank_savings_val_t*)sav_obj_0->value;
   smallbank_checking_val_t* chk_val_0 = (smallbank_checking_val_t*)chk_obj_0->value;
@@ -341,7 +341,7 @@ bool SmallBankDTX::TxAmalgamate(SmallBank* smallbank_client, uint64_t* seed, cor
 
   sav_val_0->bal = 0;
   chk_val_0->bal = 0;
-
+#endif
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
 
@@ -368,7 +368,7 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
   dtx->AddToReadOnlySet(chk_obj);
 
   if (!dtx->TxExe(yield)) return false;
-
+#if !RETURN_BEFORE
   smallbank_savings_val_t* sav_val = (smallbank_savings_val_t*)sav_obj->value;
   smallbank_checking_val_t* chk_val = (smallbank_checking_val_t*)chk_obj->value;
   if (sav_val->magic != smallbank_savings_magic) {
@@ -380,6 +380,7 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
   }
   // assert(sav_val->magic == smallbank_savings_magic);
   // assert(chk_val->magic == smallbank_checking_magic);
+#endif
 
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
@@ -403,6 +404,7 @@ bool SmallBankDTX::TxDepositChecking(SmallBank* smallbank_client, uint64_t* seed
   dtx->AddToReadWriteSet(chk_obj);
 
   if (!dtx->TxExe(yield)) return false;
+#if !RETURN_BEFORE
 
   /* If we are here, execution succeeded and we have a lock*/
   smallbank_checking_val_t* chk_val = (smallbank_checking_val_t*)chk_obj->value;
@@ -412,7 +414,7 @@ bool SmallBankDTX::TxDepositChecking(SmallBank* smallbank_client, uint64_t* seed
   // assert(chk_val->magic == smallbank_checking_magic);
 
   chk_val->bal += amount; /* Update checking kBalance */
-
+#endif
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
   // return true;
@@ -440,6 +442,7 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
   dtx->AddToReadWriteSet(chk_obj_1);
 
   if (!dtx->TxExe(yield)) return false;
+#if !RETURN_BEFORE
 
   /* if we are here, execution succeeded and we have locks */
   smallbank_checking_val_t* chk_val_0 = (smallbank_checking_val_t*)chk_obj_0->value;
@@ -460,7 +463,7 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
 
   chk_val_0->bal -= amount; /* Debit */
   chk_val_1->bal += amount; /* Credit */
-
+#endif
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
 
@@ -482,6 +485,7 @@ bool SmallBankDTX::TxTransactSaving(SmallBank* smallbank_client, uint64_t* seed,
   auto sav_obj = std::make_shared<DataItem>((table_id_t)SmallBankTableType::kSavingsTable, sav_key.item_key);
   dtx->AddToReadWriteSet(sav_obj);
   if (!dtx->TxExe(yield)) return false;
+#if !RETURN_BEFORE
 
   /* If we are here, execution succeeded and we have a lock */
   smallbank_savings_val_t* sav_val = (smallbank_savings_val_t*)sav_obj->value;
@@ -491,7 +495,7 @@ bool SmallBankDTX::TxTransactSaving(SmallBank* smallbank_client, uint64_t* seed,
   // assert(sav_val->magic == smallbank_savings_magic);
 
   sav_val->bal += amount; /* Update saving kBalance */
-
+#endif
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
   // return true;
@@ -518,6 +522,7 @@ bool SmallBankDTX::TxWriteCheck(SmallBank* smallbank_client, uint64_t* seed, cor
   dtx->AddToReadWriteSet(chk_obj);
 
   if (!dtx->TxExe(yield)) return false;
+#if !RETURN_BEFORE
 
   smallbank_savings_val_t* sav_val = (smallbank_savings_val_t*)sav_obj->value;
   smallbank_checking_val_t* chk_val = (smallbank_checking_val_t*)chk_obj->value;
@@ -536,7 +541,7 @@ bool SmallBankDTX::TxWriteCheck(SmallBank* smallbank_client, uint64_t* seed, cor
   } else {
     chk_val->bal -= amount;
   }
-
+#endif
   bool commit_status = dtx->TxCommit(yield);
   return commit_status;
   // return true;

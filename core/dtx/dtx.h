@@ -114,13 +114,14 @@ class DTX {
   bool WriteRemote(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
   void Unpin(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
 
-  bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
-  bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
+  // bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
+  // bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
 
-  bool ExeLocalRO(coro_yield_t& yield);  // 在本地执行只读操作
-  bool ExeLocalRW(coro_yield_t& yield);  // 在本地执行读写操作
+  bool ExeLocalRO(coro_yield_t& yield, uint64_t bid);  // 在本地执行只读操作
+  bool ExeLocalRW(coro_yield_t& yield, uint64_t bid);  // 在本地执行读写操作
 
   bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
+  bool DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench);
   bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
   bool LocalAbort(coro_yield_t& yield);  //本地提交
 
@@ -249,6 +250,8 @@ class DTX {
 
   batch_id_t batch_id; // 
 
+  int batch_index;
+
  public:
   // For statistics
   struct timespec tx_start_time;
@@ -279,6 +282,8 @@ class DTX {
   std::vector<DataSetItem> read_only_set;
 
   std::vector<DataSetItem> read_write_set;
+
+  std::vector<uint64_t> batch_list;
 
   std::vector<size_t> not_eager_locked_rw_set;  // For eager logging
 
@@ -346,33 +351,33 @@ void DTX::TxBegin(tx_id_t txid) {
   tx_id = txid;
 }
 
+// uint64_t GetBid(uint64_t key) {
+//     return key % g_thread_cnt;
+// }
+
 ALWAYS_INLINE
 void DTX::AddToReadOnlySet(DataItemPtr item) {
   DataSetItem data_set_item(item);
-  // DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  // uint64_t bid = GetBid(item->key);
+  // data_set_item.bid = bid;
   read_only_set.emplace_back(data_set_item);
+  // auto it = std::find(batch_list.begin(), batch_list.end(), bid);
+  // if (it == batch_list.end()) {
+  //     batch_list.push_back(bid);
+  // }
 }
 
 ALWAYS_INLINE
 void DTX::AddToReadWriteSet(DataItemPtr item) {
   DataSetItem data_set_item(item);
-  // DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
-  // printf("DTX.h:275\n");
+  // uint64_t bid = GetBid(item->key);
+  // data_set_item.bid = bid;
   read_write_set.emplace_back(data_set_item);
-}
 
-ALWAYS_INLINE
-void DTX::AddToReadOnlySet(DataItemPtr item, LVersionPtr version) {
-  DataSetItem data_set_item(item,version);
-  // DataSetItem data_set_item{.item_ptr = std::move(item), .version_ptr = std::move(version), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
-  read_only_set.emplace_back(data_set_item);
-}
-
-ALWAYS_INLINE
-void DTX::AddToReadWriteSet(DataItemPtr item, LVersionPtr version) {
-  DataSetItem data_set_item(item,version);
-  // {.item_ptr = std::move(item), .version_ptr = std::move(version), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
-  read_write_set.emplace_back(data_set_item);
+  // auto it = std::find(batch_list.begin(), batch_list.end(), bid);
+  // if (it == batch_list.end()) {
+  //     batch_list.push_back(bid);
+  // }
 }
 
 ALWAYS_INLINE

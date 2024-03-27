@@ -76,6 +76,8 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   /*!
     Baseline's commit protocol
     */
+  brpc::CallId cid;
+  SendLogToStoragePool(tx_id, &cid);
   #if OPEN_TIME
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
@@ -99,8 +101,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   double unpin_usec = (tx_unpin_time.tv_sec - tx_write_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_write_time.tv_nsec) / 1000;
   #endif
 
-  brpc::CallId cid;
-  SendLogToStoragePool(tx_id, &cid);
+
 
   #if OPEN_TIME
   struct timespec tx_send_log_time;

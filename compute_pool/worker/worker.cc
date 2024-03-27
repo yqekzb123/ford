@@ -46,14 +46,14 @@ extern std::vector<uint64_t> total_commit_times;
 
 DEFINE_string(protocol, "baidu_std", "Protocol type");
 DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
-DEFINE_string(server, "127.0.0.1:12348", "IP address of server");
+DEFINE_string(server, "127.0.0.1:42348", "IP address of server");
 DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
 DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
 DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
 
 __thread uint64_t seed;                        // Thread-global random seed
 __thread FastRandom* random_generator = NULL;  // Per coroutine random generator
-__thread t_id_t thread_gid;
+
 __thread t_id_t thread_local_id;
 __thread t_id_t thread_num;
 
@@ -80,6 +80,7 @@ __thread SmallBankTxType* smallbank_workgen_arr;
 // __thread TPCCTxType* tpcc_workgen_arr;
 
 __thread coro_id_t coro_num;
+__thread coro_id_t batch_coro_num;
 __thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler
 
 // For MICRO benchmark
@@ -117,15 +118,16 @@ void RecordTpLat(double msr_sec) {
   mux.unlock();
 }
 
-void BatchExec(coro_yield_t& yield) {
-  while (thread_gid % g_thread_cnt == 0) {
-    // printf("worker.cc:97, batch exe\n");
-    local_batch_store.ExeBatch(yield);
+void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
+  while (true) {
+  // while (thread_gid % g_thread_cnt == 0) {
+    // printf("worker.cc:124, thread %ld batch exe\n", thread_gid);
+    local_batch_store[thread_gid]->ExeBatch(yield, coro_id);
     coro_sched->YieldBatch(yield, BATCH_TXN_ID);
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
       RecordTpLat(msr_sec);
-      printf("worker.cc:102, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+      printf("worker.cc:130, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       break;
     }
   }
@@ -408,6 +410,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       break;
     }
     /********************************** Stat end *****************************************/
+    delete dtx;
   }
   // delete dtx;
 }
@@ -489,30 +492,15 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-    execute_cnt++;
+    if (tx_committed) execute_cnt++;
     if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
     else {
       execute_cnt = 0;
-      coro_sched->Yield(yield, coro_id);
+      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, WORKER_EXE_LOCAL_TXN_CNT);
+      coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     }
-    // 此时只是本地执行完毕,batch还没做完，所以stats都得等等
-    // 下面的直接没执行
-    /********************************** Stat begin *****************************************/
-    // Stat after one transaction finishes
-    if (tx_committed) {
-      clock_gettime(CLOCK_REALTIME, &tx_end_time);
-      double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
-      timer[stat_committed_tx_total++] = tx_usec;
-    }
-    if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
-      // A coroutine calculate the total execution time and exits
-      clock_gettime(CLOCK_REALTIME, &msr_end);
-      // double msr_usec = (msr_end.tv_sec - msr_start.tv_sec) * 1000000 + (double) (msr_end.tv_nsec - msr_start.tv_nsec) / 1000;
-      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
-      RecordTpLat(msr_sec);
-      break;
-    }
+    
     /********************************** Stat end *****************************************/
   }
   // delete dtx;
@@ -813,7 +801,7 @@ void run_thread(thread_params* params,
   auto json_config = JsonConfig::load_file(config_filepath);
   auto conf = json_config.get(bench_name);
   ATTEMPTED_NUM = conf.get("attempted_num").get_uint64();
-
+  
   if (bench_name == "tatp") {
     // tatp_client = tatp_cli;
     // tatp_workgen_arr = tatp_client->CreateWorkgenArray();
@@ -847,6 +835,11 @@ void run_thread(thread_params* params,
   free_page_list_mutex = params->free_page_list_mutex;
 
   coro_num = (coro_id_t)params->coro_num;
+  batch_coro_num = (coro_id_t) params->batch_coro_num;
+  assert(batch_coro_num + 1 < coro_num);
+  local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
+
+  printf("worker.cc:889, exec batch\n");
 
   if(meta_man->txn_system == DTX_SYS::OUR) {
     coro_sched = new CoroutineScheduler(thread_gid, coro_num, true);
@@ -881,7 +874,9 @@ void run_thread(thread_params* params,
   random_generator = new FastRandom[coro_num];
 
   // Guarantee that each thread has a global different initial seed
-  seed = 0xdeadbeef + thread_gid;
+  // if (meta_man->txn_system == DTX_SYS::OUR) seed = 0xdeadbeef;
+  // else 
+    seed = 0xdeadbeef + thread_gid;
 
   // Init coroutines
   for (coro_id_t coro_i = 0; coro_i < coro_num; coro_i++) {
@@ -892,9 +887,10 @@ void run_thread(thread_params* params,
     if (meta_man->txn_system == DTX_SYS::OUR) {
       if (coro_i == POLL_ROUTINE_ID) {
       coro_sched->coro_array[coro_i].func = coro_call_t(bind(PollCompletion, _1));
-      } else if (coro_i == BATCH_TXN_ID ) {
+      } else if (coro_i > POLL_ROUTINE_ID && coro_i <= POLL_ROUTINE_ID + batch_coro_num) {
         // 只有batch的模式会需要batch协程
-        coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1));
+        coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1, coro_i));
+        // printf("worker.cc:889, exec batch\n");
       } else {
         if (bench_name == "tatp") {
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));

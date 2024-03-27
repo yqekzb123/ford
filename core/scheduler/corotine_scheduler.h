@@ -73,6 +73,8 @@ class CoroutineScheduler {
   // For coroutine yield, used by transactions
   void Yield(coro_yield_t& yield, coro_id_t cid);
 
+  void LocalTxnYield(coro_yield_t& yield, coro_id_t cid);
+
   // For coroutine yield, used by batch exc coro
   void YieldBatch(coro_yield_t& yield, coro_id_t cid);
 
@@ -254,6 +256,7 @@ void CoroutineScheduler::LoopLinkCoroutine(coro_id_t coro_num) {
   coro_tail = &(coro_array[coro_num - 1]);
   coro_array[0].prev_coro = coro_tail;
   coro_array[coro_num - 1].next_coro = coro_head;
+
 }
 
 // For coroutine yield, used by transactions
@@ -271,6 +274,19 @@ void CoroutineScheduler::Yield(coro_yield_t& yield, coro_id_t cid) {
   next->prev_coro = coro->prev_coro;
   if (coro_tail == coro) coro_tail = coro->prev_coro;
   coro->is_wait_poll = true;
+  // printf("thread %ld coro list remove coro %ld (is_wait_poll ? %s)\n",t_id, coro->coro_id, coro->is_wait_poll?"true":"false");
+  // 2. Yield to the next ccc
+  // RDMA_LOG(DBG) << "coro: " << cid << " yields to coro " << next->coro_id;
+  RunCoroutine(yield, next);
+}
+
+ALWAYS_INLINE
+void CoroutineScheduler::LocalTxnYield(coro_yield_t& yield, coro_id_t cid) {
+  assert(pending_counts[cid] == 0);
+  Coroutine* coro = &coro_array[cid];
+  assert(coro->is_wait_poll == false);
+  Coroutine* next = coro->next_coro;
+
   // 2. Yield to the next ccc
   // RDMA_LOG(DBG) << "coro: " << cid << " yields to coro " << next->coro_id;
   RunCoroutine(yield, next);
@@ -291,6 +307,7 @@ ALWAYS_INLINE
 void CoroutineScheduler::RunCoroutine(coro_yield_t& yield, Coroutine* coro) {
   // RDMA_LOG(DBG) << "yield to coro: " << coro->coro_id;
   coro->is_wait_poll = false;
+  // printf("thread %ld coro %ld execute (is_wait_poll ? %s)\n",t_id, coro->coro_id, coro->is_wait_poll?"true":"false");
   yield(coro->func);
 }
 
@@ -303,4 +320,5 @@ void CoroutineScheduler::AppendCoroutine(Coroutine* coro) {
   coro_tail = coro;
   coro_tail->next_coro = coro_head;
   coro_tail->prev_coro = prev;
+  // printf("thread %ld coroutine %ld add new coro %ld (is_wait_poll ? %s) to next\n",t_id, prev->coro_id, coro->coro_id, coro->is_wait_poll?"true":"false");
 }

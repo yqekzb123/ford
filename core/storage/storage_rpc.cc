@@ -52,7 +52,7 @@ namespace storage_service{
         std::string return_data;
         for(int i=0; i<request->page_id().size(); i++){
             std::string table_name = request->page_id()[i].table_name();
-            std::cout << "table_name: " << table_name << std::endl;
+            // std::cout << "table_name: " << table_name << std::endl;
             int fd;
             if(table_fd_map.find(table_name) == table_fd_map.end()){
                 fd = disk_manager_->open_file(table_name);
