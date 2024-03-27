@@ -31,6 +31,8 @@ using timestamp_t = int32_t;  // timestamp type, used for transaction concurrenc
 
 #define LOG_FILE_NAME "LOG_FILE"                                
 static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                    // size of a log buffer in byte
+#define RDMA_LOG_BUFFER_SIZE 1024 * 1024 * 1024 // 1GB
+#define MAX_PAGE_NUM_PER_RIGION 1024 * 1024 * 10 // 10MB / 10GB 
 
 // Memory region ids for server's hash store buffer and undo log buffer
 // const mr_id_t SERVER_HASH_BUFF_ID = 97;
@@ -40,8 +42,9 @@ const mr_id_t SERVER_LOCK_TABLE_ID = 101;
 const mr_id_t SERVER_DATA_ID = 102;
 const mr_id_t SERVER_PAGETABLE_ID = 103;
 const mr_id_t SERVER_PAGETABLE_RING_FREE_FRAME_BUFFER_ID = 104; // !提示：这里还没注册呢
-
+const mr_id_t SERVER_STORAGE_ID = 105;
 // Memory region ids for client's local_mr
+const mr_id_t STORAGE_CLINT_ID = 106;
 const mr_id_t CLIENT_MR_ID = 100;
 
 // Indicating that memory store metas have been transmitted
@@ -86,7 +89,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 
 #define REPLACER_TYPE "LRU"
 
-#define RM_MAX_RECORD_SIZE 512
+#define RM_MAX_RECORD_SIZE 720
 #define RM_FIRST_RECORD_PAGE 1
 #define RM_FILE_HDR_PAGE 0
 #define RM_NO_PAGE -1

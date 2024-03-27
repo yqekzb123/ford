@@ -13,6 +13,7 @@
 #include "memstore/hash_index_store.h"
 #include "memstore/lock_table_store.h"
 #include "memstore/page_table.h"
+#include "storage/rdma_log_buffer.h"
 #include "rlib/rdma_ctrl.hpp"
 // #include "record/rm_file_handle.h"
 
@@ -47,6 +48,8 @@ class MetaManager {
 
   node_id_t GetRemoteHashIndexStoreMeta(std::string& remote_ip, int remote_port);
 
+  node_id_t GetRemoteStorageMeta(std::string& remote_ip, int remote_port);
+
   void GetRemoteDataNodeMR(const RemoteNode& node);
 
   void GetRemotePageNodeMR(const RemoteNode& node);
@@ -54,6 +57,8 @@ class MetaManager {
   void GetRemoteLockNodeMR(const RemoteNode& node);
 
   void GetRemoteIndexNodeMR(const RemoteNode& node);
+
+  void GetRemoteStorageNodeMR(const RemoteNode& node);
 
   // get global_rdma_ctrl
   ALWAYS_INLINE
@@ -148,6 +153,13 @@ class MetaManager {
     return mrsearch->second;
   }
 
+  ALWAYS_INLINE
+  const MemoryAttr& GetStorageMR(const node_id_t node_id) const {
+    auto mrsearch = remote_storage_mrs.find(node_id);
+    assert(mrsearch != remote_storage_mrs.end());
+    return mrsearch->second;
+  }
+
   /*** Hash Index Node id ***/
   ALWAYS_INLINE
   node_id_t GetHashIndexNode(const table_id_t table_id) const {
@@ -185,6 +197,41 @@ class MetaManager {
   const offset_t GetLockTableExpandBase(const table_id_t table_id) const {
     LockTableMeta meta = GetLockTableMeta(table_id);
     return meta.expand_base_off;
+  }
+
+  ALWAYS_INLINE
+  const node_id_t GetStorageNodeID() const {
+    return remote_storage_nodes[0].node_id;
+  }
+
+  ALWAYS_INLINE
+  const offset_t GetStorageLogBase(const node_id_t node_id) const {
+    StorageMeta meta = storage_meta[node_id];
+    return meta.log_base_off;
+  }
+
+  ALWAYS_INLINE
+  const offset_t GetStorageHead(const node_id_t node_id) const {
+    StorageMeta meta = storage_meta[node_id];
+    return meta.log_head_off;
+  }
+
+  ALWAYS_INLINE
+  const offset_t GetStorageTail(const node_id_t node_id) const {
+    StorageMeta meta = storage_meta[node_id];
+    return meta.log_tail_off;
+  }
+
+  ALWAYS_INLINE
+  const offset_t GetStorageCnt(const node_id_t node_id) const {
+    StorageMeta meta = storage_meta[node_id];
+    return meta.log_cnt_off;
+  }
+
+  ALWAYS_INLINE
+  const offset_t GetStoragePageCnt(const node_id_t node_id) const {
+    StorageMeta meta = storage_meta[node_id];
+    return meta.page_cnt_off; //数据页上日志的个数
   }
 
   /*** Page Table Meta ***/
@@ -253,13 +300,14 @@ class MetaManager {
   std::unordered_map<node_id_t, MemoryAttr> remote_page_table_ringbuffer_mrs;
   std::unordered_map<node_id_t, MemoryAttr> remote_locktable_mrs;
   std::unordered_map<node_id_t, MemoryAttr> remote_hashindex_mrs;
+  std::unordered_map<node_id_t, MemoryAttr> remote_storage_mrs;
+
+  StorageMeta storage_meta[MAX_REMOTE_NODE_NUM];
 
   IndexMeta hash_index_meta[MAX_DB_TABLE_NUM];
   node_id_t hash_index_nodes[MAX_DB_TABLE_NUM];
 
   LockTableMeta lock_table_meta[MAX_REMOTE_NODE_NUM];
-  // std::unordered_map<table_id_t, node_id_t> lock_table_nodes;
-  // std::unordered_map<node_id_t, offset_t> lock_node_expanded_base_off;
 
   PageTableMeta page_table_meta[MAX_REMOTE_NODE_NUM];
   std::vector<node_id_t> page_table_nodes;
@@ -284,7 +332,8 @@ class MetaManager {
   std::vector<RemoteNode> remote_pagetable_nodes;
   std::vector<RemoteNode> remote_locktable_nodes;
   std::vector<RemoteNode> remote_hashindex_nodes;
-  
+  std::vector<RemoteNode> remote_storage_nodes;
+
   RNicHandler* opened_rnic;
 
   // Below are some parameteres from json file

@@ -15,7 +15,7 @@ namespace storage_service{
                        ::google::protobuf::Closure* done){
             
         brpc::ClosureGuard done_guard(done);
-        RDMA_LOG(INFO) << "handle write log request, log is " << request->log();
+        // RDMA_LOG(INFO) << "handle write log request, log is " << request->log();
         log_manager_->write_batch_log_to_disk(request->log());
 
         std::unordered_map<std::string, int> table_fd_map;
@@ -52,7 +52,6 @@ namespace storage_service{
         std::string return_data;
         for(int i=0; i<request->page_id().size(); i++){
             std::string table_name = request->page_id()[i].table_name();
-            // std::cout << "table_name: " << table_name << std::endl;
             int fd;
             if(table_fd_map.find(table_name) == table_fd_map.end()){
                 fd = disk_manager_->open_file(table_name);
@@ -66,8 +65,8 @@ namespace storage_service{
             batch_id_t request_batch_id = request->require_batch_id();
             LogReplay* log_replay = log_manager_->log_replay_;
 
-            RDMA_LOG(INFO) << "handle GetPage request";
-            RDMA_LOG(INFO) << "request_batch_id: " << request_batch_id << ", persist_batch_id: " << log_replay->get_persist_batch_id();
+            // RDMA_LOG(INFO) << "handle GetPage request";
+            // RDMA_LOG(INFO) << "request_batch_id: " << request_batch_id << ", persist_batch_id: " << log_replay->get_persist_batch_id();
             char data[PAGE_SIZE];
             // TODO, 这里逻辑要重新梳理一下
             // while(log_replay->get_persist_batch_id()+1 < request_batch_id) {
@@ -94,7 +93,7 @@ namespace storage_service{
         for(auto it = table_fd_map.begin(); it != table_fd_map.end(); it++){
             disk_manager_->close_file(it->second);
         }
-        RDMA_LOG(INFO) << "success to GetPage";
+        // RDMA_LOG(INFO) << "success to GetPage";
         return;
     };
 }

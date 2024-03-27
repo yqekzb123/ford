@@ -272,6 +272,8 @@ class TATP {
 
   IndexStore* call_forwarding_index;
 
+  std::vector<IndexStore*> index_store_ptrs;
+
   std::vector<HashStore*> primary_table_ptrs;
 
   std::vector<HashStore*> backup_table_ptrs;
@@ -444,6 +446,11 @@ class TATP {
   // For server-side usage
   void LoadTable(node_id_t node_id, node_id_t num_server);
 
+  void LoadIndex(node_id_t node_id,
+                 node_id_t num_server,
+                 MemStoreAllocParam* mem_store_alloc_param,
+                 MemStoreReserveParam* mem_store_reserve_param);
+
   void PopulateSubscriberTable();
 
   void PopulateSecondarySubscriberTable();
@@ -451,6 +458,16 @@ class TATP {
   void PopulateAccessInfoTable();
 
   void PopulateSpecfacAndCallfwdTable();
+
+  void PopulateIndexSubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexSecondarySubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexAccessInfoTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexCallForwardingTable(MemStoreReserveParam* mem_store_reserve_param);
+
+  void PopulateIndexSpecialFacilityTable(MemStoreReserveParam* mem_store_reserve_param);
 
   int LoadRecord(RmFileHandle* file_handle,
                  itemkey_t item_key,
@@ -462,12 +479,7 @@ class TATP {
   std::vector<uint8_t> SelectUniqueItem(uint64_t* tmp_seed, std::vector<uint8_t> values, unsigned N, unsigned M);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
-
-  ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
+  std::vector<IndexStore*> GetAllIndexStore() {
+    return index_store_ptrs;
   }
 };

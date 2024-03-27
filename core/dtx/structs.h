@@ -16,7 +16,8 @@ enum DTX_SYS : int {
   FORD = 2,
   LOCAL = 3, // FORD with localized metadata including locks and versions
   BASELINE = 4,
-  OUR = 5
+  OUR = 5,
+  ONE_WRITE = 6
 };
 
 enum TXStatus : int {
@@ -25,7 +26,8 @@ enum TXStatus : int {
   TX_LOCK,      // Transaction execution, read+lock
   TX_VAL,       // Transaction validate
   TX_COMMIT,    // Commit primary and backups
-  TX_ABORT      // Aborted transaction
+  TX_ABORT,     // Aborted transaction
+  TX_VAL_NOTFOUND // Validate not found
 };
 
 enum ValStatus : int {

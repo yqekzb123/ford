@@ -58,6 +58,25 @@
 //   return true;
 // }
 
+// 这个函数用于读写事务的本地解锁
+bool DTX::UnLockLocalRW() {
+  //! 2.本地释放锁
+  for (auto& item : read_only_set) {
+    if (!item.is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+    localdata->UnlockShared();
+    // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+  }
+  for (size_t i = 0; i < read_write_set.size(); i++) {
+    if (!read_write_set[i].is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
+    localdata->UnlockExclusive();
+    // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+  }
+  return true;
+}
+
+
 bool DTX::ExeLocalRO(coro_yield_t& yield, uint64_t bid) {
   std::vector<DirectRead> pending_direct_ro;
   auto batch = local_batch_store[bid]->GetBatchByIndex(batch_index,batch_id);

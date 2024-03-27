@@ -2,11 +2,13 @@
     "local_storage_node": {
       "machine_num": 1,
       "machine_id": 0,
-      "local_port": 12348,
+      "local_rdma_port":12344,
+      "local_rpc_port": 12348,
+      "local_client_port": 12346,
       "local_meta_port": 12349,
       "log_buf_size_GB": 1,
-      "use_rdma": true,
-      "workload": "SmallBank"
+      "use_rdma": false,
+      "workload": "SmallBank"  //SmallBank TATP TPCC MICRO
     },
     "remote_compute_nodes": {
       "compute_node_ips": ["127.0.0.1"],

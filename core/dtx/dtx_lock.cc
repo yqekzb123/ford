@@ -31,12 +31,15 @@ bool DTX::InsertSharedLockIntoHashNodeList(std::vector<char*>& local_hash_nodes_
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
                 // 在这里记录lock table item远程地址
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
-                shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off));
-
+                LockStatusItem lock_status_item = {lockdataid, local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off}; 
+                shared_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);  
+                // hold_shared_lock_data_id.emplace(lockdataid);            
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = 1;
                 lock_node->lock_items[i].valid = true;
+                // write remote here
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
+                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                 return true;
             }
         }
@@ -74,12 +77,15 @@ bool DTX::InsertExclusiveLockIntoHashNodeList(std::vector<char*>& local_hash_nod
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
                 // 在这里记录lock table item远程地址
                 NodeOffset remote_off = {node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
-                exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off));
-                
+                LockStatusItem lock_status_item = {lockdataid, local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, remote_off}; 
+                exclusive_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);  
+                // hold_exclusive_lock_data_id.emplace(lockdataid);
                 lock_node->lock_items[i].key = lockdataid;
                 lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
                 lock_node->lock_items[i].valid = true;
+                // write remote here
+                ExclusiveUnlockHashNode_RemoteWriteItem(remote_off.nodeId, remote_off.offset, 
+                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                 return true;
             }
             if (lock_node->lock_items[i].lock == UNLOCKED || lock_node->lock_items[i].valid == false) {
@@ -149,7 +155,9 @@ std::vector<LockDataId> DTX::LockSharedBatch(coro_yield_t& yield, std::vector<Lo
 
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
-    shared_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+    int lock_data_id_size = lock_data_id.size();
+    int last_hold_lock_cnt = shared_lock_item_localaddr_and_remote_offset.size();
+    shared_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -173,9 +181,10 @@ std::vector<LockDataId> DTX::LockSharedBatch(coro_yield_t& yield, std::vector<Lo
                         // not exclusive lock
                         if((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) == UNLOCKED){
                             // 记录lock table item远程地址
-                            shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                                local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
-                                NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));                            
+                            LockStatusItem lock_status_item = {it->lock_data, local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
+                                NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}}; 
+                            shared_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);                      
+                            // hold_shared_lock_data_id.emplace(it->lock_data);
                             // lock shared lock
                             lock_node->lock_items[i].lock += 1;
                         }
@@ -248,7 +257,7 @@ std::vector<LockDataId> DTX::LockSharedBatch(coro_yield_t& yield, std::vector<Lo
             }
         }
     }
-    assert(shared_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    assert(shared_lock_item_localaddr_and_remote_offset.size() == last_hold_lock_cnt + lock_data_id_size - ret_lock_fail_data_id.size());
     return ret_lock_fail_data_id;
 }
 
@@ -272,7 +281,9 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
 
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
-    shared_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+    int lock_data_id_size = lock_data_id.size();
+    int last_hold_lock_cnt = shared_lock_item_localaddr_and_remote_offset.size();
+    shared_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -290,11 +301,15 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                     // not exclusive lock
                     if((lock_node->lock_items[i].lock & MASKED_SHARED_LOCKS) == UNLOCKED){
                         // 记录lock table item远程地址
-                        shared_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
-                            NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));                            
+                        NodeOffset item_off{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
+                        LockStatusItem lock_status_item = {lock_data_id[idx], local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, item_off}; 
+                        shared_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);            
+                        // hold_shared_lock_data_id.emplace(lock_data_id[idx]);
                         // lock shared lock
                         lock_node->lock_items[i].lock += 1;
+                        // write remote here
+                        ExclusiveUnlockHashNode_RemoteWriteItem(item_off.nodeId, item_off.offset, 
+                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
                     }
                     else{
                         // LockDataId already locked
@@ -309,7 +324,8 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 auto release_idx = idx;
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
-                    ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                    // 在这里释放latch
+                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
                     if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -335,7 +351,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                     auto release_idx = idx;
                     auto release_node_off = total_hash_node_offs_vec[release_idx];
                     while(true){
-                        ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                        ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
                         if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                         release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                         release_node_off = total_hash_node_offs_vec[release_idx];
@@ -357,7 +373,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
             }
         }
     }
-    assert(shared_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    assert(shared_lock_item_localaddr_and_remote_offset.size() == last_hold_lock_cnt + lock_data_id_size - ret_lock_fail_data_id.size());
     return ret_lock_fail_data_id;
 }
 
@@ -400,7 +416,9 @@ std::vector<LockDataId> DTX::LockExclusiveBatch(coro_yield_t& yield, std::vector
 
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
-    exclusive_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+    int lock_data_id_size = lock_data_id.size();
+    int last_hold_lock_cnt = exclusive_lock_item_localaddr_and_remote_offset.size();
+    exclusive_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -420,10 +438,10 @@ std::vector<LockDataId> DTX::LockExclusiveBatch(coro_yield_t& yield, std::vector
                         // not exclusive lock
                         if(lock_node->lock_items[i].lock == UNLOCKED){
                             // 加入exclusive_lock_item_localaddr_and_remote_offset
-                            exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                                local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
-                                NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));
-
+                            LockStatusItem lock_status_item = {it->lock_data, local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
+                                NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}};
+                            exclusive_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);
+                            // hold_exclusive_lock_data_id.emplace(it->lock_data);
                             // lock EXCLUSIVE lock
                             lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;    
                         }
@@ -499,7 +517,7 @@ std::vector<LockDataId> DTX::LockExclusiveBatch(coro_yield_t& yield, std::vector
     }
     // 这里所有的latch都已经释放了
     // assert(hold_node_off_latch.size() == 0);
-    assert(exclusive_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    assert(exclusive_lock_item_localaddr_and_remote_offset.size() == last_hold_lock_cnt + lock_data_id_size - ret_lock_fail_data_id.size());
     return ret_lock_fail_data_id;
 }
 
@@ -523,7 +541,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     }
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<LockDataId> ret_lock_fail_data_id;
-    exclusive_lock_item_localaddr_and_remote_offset.reserve(lock_data_id.size());
+    int lock_data_id_size = lock_data_id.size();
+    int last_hold_lock_cnt = exclusive_lock_item_localaddr_and_remote_offset.size();
+    exclusive_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
@@ -541,11 +561,39 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                     // not exclusive lock
                     if(lock_node->lock_items[i].lock == UNLOCKED){
                         // 加入exclusive_lock_item_localaddr_and_remote_offset
-                        exclusive_lock_item_localaddr_and_remote_offset.push_back(std::make_pair(
-                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, 
-                            NodeOffset{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node}));
+                        NodeOffset item_off{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
+                        LockStatusItem lock_status_item = {lock_data_id[idx], local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, item_off};
+                        exclusive_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);
+                        // hold_exclusive_lock_data_id.emplace(lock_data_id[idx]);
                         // lock EXCLUSIVE lock
-                        lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;    
+                        lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
+                        // write remote here
+                        ExclusiveUnlockHashNode_RemoteWriteItem(item_off.nodeId, item_off.offset, 
+                            local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
+                    }
+                    else if(lock_node->lock_items[i].lock == 1){
+                        bool is_find_in_shard_lock = false;
+                        for(int i=0; i < shared_lock_item_localaddr_and_remote_offset.size();){
+                            if(shared_lock_item_localaddr_and_remote_offset[i].lock_data_id == lock_data_id[idx]){
+                                is_find_in_shard_lock = true;
+                                shared_lock_item_localaddr_and_remote_offset.erase(shared_lock_item_localaddr_and_remote_offset.begin() + i);
+                                NodeOffset item_off{node_off.nodeId, node_off.offset + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node};
+                                LockStatusItem lock_status_item = {lock_data_id[idx], local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, item_off};
+                                exclusive_lock_item_localaddr_and_remote_offset.push_back(lock_status_item);
+                                // lock EXCLUSIVE lock
+                                lock_node->lock_items[i].lock = EXCLUSIVE_LOCKED;
+                                // write remote here
+                                ExclusiveUnlockHashNode_RemoteWriteItem(item_off.nodeId, item_off.offset, 
+                                    local_hash_nodes_vec[idx] + (offset_t)&lock_node->lock_items[i] - (offset_t)lock_node, sizeof(LockItem), QPType::kLockTable);
+                                break;
+                            } else{
+                                i++;
+                            }
+                        }
+                        if(!is_find_in_shard_lock){
+                            // LockDataId already locked
+                            ret_lock_fail_data_id.emplace_back(lock_data_id[idx]);
+                        }
                     }
                     else{
                         // LockDataId already locked
@@ -560,7 +608,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 auto release_idx = idx;
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
-                    ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
                     if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -585,7 +633,8 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                     auto release_idx = idx;
                     auto release_node_off = total_hash_node_offs_vec[release_idx];
                     while(true){
-                        ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
+                        ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
+                        // ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
                         if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
                         release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                         release_node_off = total_hash_node_offs_vec[release_idx];
@@ -607,7 +656,8 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
             }
         }
     }
-    assert(exclusive_lock_item_localaddr_and_remote_offset.size() == lock_data_id.size() - ret_lock_fail_data_id.size());
+    // !这里lock_data_id不对
+    assert(exclusive_lock_item_localaddr_and_remote_offset.size() == last_hold_lock_cnt + lock_data_id_size - ret_lock_fail_data_id.size());
 
     // struct timespec tx_lock_end_time;
     // clock_gettime(CLOCK_REALTIME, &tx_lock_end_time);
@@ -623,8 +673,11 @@ bool DTX::UnlockShared(coro_yield_t& yield) {
     // 修改页表中的item
 
     for(int i=0; i<shared_lock_item_localaddr_and_remote_offset.size(); i++){
-        char* local_item = shared_lock_item_localaddr_and_remote_offset[i].first;
-        NodeOffset node_offset = shared_lock_item_localaddr_and_remote_offset[i].second;
+        // debug
+        // std::cout << "unlock shared " << shared_lock_item_localaddr_and_remote_offset[i].lock_data_id.table_id_ << " " 
+        //     << shared_lock_item_localaddr_and_remote_offset[i].lock_data_id.itemkey_ << "\n";
+        char* local_item = shared_lock_item_localaddr_and_remote_offset[i].localaddr;
+        NodeOffset node_offset = shared_lock_item_localaddr_and_remote_offset[i].node_off;
         LockItem* item = reinterpret_cast<LockItem*>(local_item);
 
         RCQP* qp = thread_qp_man->GetRemoteLockQPWithNodeID(node_offset.nodeId);
@@ -640,10 +693,14 @@ bool DTX::UnlockShared(coro_yield_t& yield) {
 bool DTX::UnlockExclusive(coro_yield_t& yield) {
     // 将exclusive_lock_item_localaddr_and_remote_offset中的item解锁
     // 修改页表中的item
-
+    
     for(int i=0; i<exclusive_lock_item_localaddr_and_remote_offset.size(); i++){
-        char* local_item = exclusive_lock_item_localaddr_and_remote_offset[i].first;
-        NodeOffset node_offset = exclusive_lock_item_localaddr_and_remote_offset[i].second;
+        // debug
+        // std::cout << "unlock exclusive " << exclusive_lock_item_localaddr_and_remote_offset[i].lock_data_id.table_id_ << " " 
+        //     << exclusive_lock_item_localaddr_and_remote_offset[i].lock_data_id.itemkey_ << "\n";
+
+        char* local_item = exclusive_lock_item_localaddr_and_remote_offset[i].localaddr;
+        NodeOffset node_offset = exclusive_lock_item_localaddr_and_remote_offset[i].node_off;
         LockItem* item = reinterpret_cast<LockItem*>(local_item);
 
         RCQP* qp = thread_qp_man->GetRemoteLockQPWithNodeID(node_offset.nodeId);
@@ -849,6 +906,11 @@ bool DTX::LockSharedOnTable(coro_yield_t& yield, std::vector<table_id_t> table_i
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
 
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(shared_lock_item_localaddr_and_remote_offset.begin(), shared_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != shared_lock_item_localaddr_and_remote_offset.end()) continue;
+
         if(lock_data_id_set.count(lock_data_id) != 0) continue;
         else lock_data_id_set.emplace(lock_data_id);
 
@@ -882,6 +944,11 @@ bool DTX::LockExclusiveOnTable(coro_yield_t& yield, std::vector<table_id_t> tabl
     for(auto table_id : table_id){
         auto lock_data_id = LockDataId(table_id, LockDataType::TABLE);
         
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(exclusive_lock_item_localaddr_and_remote_offset.begin(), exclusive_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != exclusive_lock_item_localaddr_and_remote_offset.end()) continue;
+
         if(lock_data_id_set.count(lock_data_id) != 0) continue;
         else lock_data_id_set.emplace(lock_data_id);
 
@@ -917,6 +984,11 @@ bool DTX::LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_
         
         // if(lock_data_id_set.count(lock_data_id) != 0) continue;
         // else lock_data_id_set.emplace(lock_data_id);
+        
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(shared_lock_item_localaddr_and_remote_offset.begin(), shared_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != shared_lock_item_localaddr_and_remote_offset.end()) continue;
 
         auto lock_table_meta = global_meta_man->GetLockTableMeta(table_id[i]);
         auto remote_node_id = global_meta_man->GetLockTableNode(table_id[i]);
@@ -947,6 +1019,11 @@ bool DTX::LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> tab
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
+
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(exclusive_lock_item_localaddr_and_remote_offset.begin(), exclusive_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != exclusive_lock_item_localaddr_and_remote_offset.end()) continue;
 
         // if(lock_data_id_set.count(lock_data_id) != 0) continue;
         // else lock_data_id_set.emplace(lock_data_id);
@@ -982,6 +1059,11 @@ bool DTX::LockSharedOnRange(coro_yield_t& yield, std::vector<table_id_t> table_i
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RANGE);
 
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(shared_lock_item_localaddr_and_remote_offset.begin(), shared_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != shared_lock_item_localaddr_and_remote_offset.end()) continue;
+
         if(lock_data_id_set.count(lock_data_id) != 0) continue;
         else lock_data_id_set.emplace(lock_data_id);
 
@@ -1014,6 +1096,11 @@ bool DTX::LockExclusiveOnRange(coro_yield_t& yield, std::vector<table_id_t> tabl
 
     for(int i=0; i<table_id.size(); i++){
         auto lock_data_id = LockDataId(table_id[i], key[i], LockDataType::RECORD);
+
+        // check if hold shared lock in this txn.
+        auto iter = std::find_if(exclusive_lock_item_localaddr_and_remote_offset.begin(), exclusive_lock_item_localaddr_and_remote_offset.end(), 
+            [lock_data_id](LockStatusItem item){return item.lock_data_id == lock_data_id;});
+        if(iter != exclusive_lock_item_localaddr_and_remote_offset.end()) continue;
 
         if(lock_data_id_set.count(lock_data_id) != 0) continue;
         else lock_data_id_set.emplace(lock_data_id);

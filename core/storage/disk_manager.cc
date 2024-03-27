@@ -71,7 +71,7 @@ void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_byt
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_read = read(fd, offset, num_bytes);
 
-    RDMA_LOG(INFO) << "Read page: fd: " << fd << ", page_no: " << page_no << ", read size: " << bytes_read;
+    // RDMA_LOG(INFO) << "Read page: fd: " << fd << ", page_no: " << page_no << ", read size: " << bytes_read;
 
     // 没有成功从buffer偏移处读取指定数字节
     if (bytes_read != num_bytes) {

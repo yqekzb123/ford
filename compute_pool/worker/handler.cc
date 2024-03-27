@@ -33,10 +33,10 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
   if (argc == 5) {
     std::string s1 = "sed -i '5c \"thread_num_per_machine\": " + std::string(argv[3]) + ",' " + config_file;
     std::string s2 = "sed -i '6c \"coroutine_num\": " + std::string(argv[4]) + ",' " + config_file;
-    std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
+    // std::string s3 = "sed -i '10c \"cache_size_GB\": " + std::string(argv[5]) + ",' " + config_file;
     system(s1.c_str());
     system(s2.c_str());
-    system(s3.c_str());
+    // system(s3.c_str());
   }
   // Customized test without modifying configs
   int txn_system_value = 0;
@@ -52,6 +52,8 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
     txn_system_value = 4;
   } else if (system_name.find("our") != std::string::npos) {
     txn_system_value = 5;
+  } else if (system_name.find("one_write") != std::string::npos) {
+    txn_system_value = 6;
   }
   std::string s = "sed -i '8c \"txn_system\": " + std::to_string(txn_system_value) + ",' " + config_file;
   system(s.c_str());
@@ -106,7 +108,7 @@ void Handler::GenThreads(std::string bench_name) {
     total_try_times.resize(SmallBank_TX_TYPES, 0);
     total_commit_times.resize(SmallBank_TX_TYPES, 0);
   } else if (bench_name == "tpcc") {
-    tpcc_client = new TPCC();
+    tpcc_client = new TPCC(nullptr);
     total_try_times.resize(TPCC_TX_TYPES, 0);
     total_commit_times.resize(TPCC_TX_TYPES, 0);
   }
@@ -191,6 +193,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
 
   for (int i = 0; i < tid_vec.size(); i++) {
     of_detail << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
+    std::cout << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
     total_attemp_tp += attemp_tp_vec[i];
     total_tp += tp_vec[i];
     total_median += medianlat_vec[i];

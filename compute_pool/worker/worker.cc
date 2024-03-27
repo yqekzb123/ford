@@ -16,11 +16,10 @@
 #include "allocator/log_allocator.h"
 #include "connection/qp_manager.h"
 #include "dtx/dtx.h"
-// #include "micro/micro_txn.h"
-// #include "smallbank/smallbank_txn.h"
+#include "micro/micro_txn.h"
 #include "smallbank/smallbank_txn.h"
-// #include "tatp/tatp_txn.h"
-// #include "tpcc/tpcc_txn.h"
+#include "tatp/tatp_txn.h"
+#include "tpcc/tpcc_txn.h"
 #include "util/latency.h"
 #include "util/zipf.h"
 
@@ -57,9 +56,9 @@ __thread FastRandom* random_generator = NULL;  // Per coroutine random generator
 __thread t_id_t thread_local_id;
 __thread t_id_t thread_num;
 
-// __thread TATP* tatp_client = nullptr;
+__thread TATP* tatp_client = nullptr;
 __thread SmallBank* smallbank_client = nullptr;
-// __thread TPCC* tpcc_client = nullptr;
+__thread TPCC* tpcc_client = nullptr;
 
 __thread MetaManager* meta_man;
 __thread QPManager* qp_man;
@@ -75,9 +74,9 @@ __thread LogOffsetAllocator* log_offset_allocator;
 __thread AddrCache* addr_cache;
 __thread IndexCache* index_cache;
 
-// __thread TATPTxType* tatp_workgen_arr;
+__thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
-// __thread TPCCTxType* tpcc_workgen_arr;
+__thread TPCCTxType* tpcc_workgen_arr;
 
 __thread coro_id_t coro_num;
 __thread coro_id_t batch_coro_num;
@@ -156,9 +155,14 @@ void PollCompletion(coro_yield_t& yield) {
 
 // Run actual transactions
 void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
-  #if 0
   // Each coroutine has a dtx: Each coroutine is a coordinator
-  DTX* dtx = new DTX(meta_man,
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
                      qp_man,
                      status,
                      lock_table,
@@ -168,19 +172,18 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
                      rdma_buffer_allocator,
                      log_offset_allocator,
                      addr_cache,
+                     index_cache,
                      free_page_list,
-                     free_page_list_mutex);
-  struct timespec tx_start_time, tx_end_time;
-  bool tx_committed = false;
+                     free_page_list_mutex,
+                     data_channel,
+                     log_channel);
 
-  // Running transactions
-  clock_gettime(CLOCK_REALTIME, &msr_start);
-  while (true) {
+
     // Guarantee that each coroutine has a different seed
     TATPTxType tx_type = tatp_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
     stat_attempted_tx_total++;
-#if 1
+
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
     switch (tx_type) {
       case TATPTxType::kGetSubsciberData: {
@@ -229,75 +232,16 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-#else
-    switch (tx_type) {
-      case TATPTxType::kGetSubsciberData: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxGetSubsciberData";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kGetNewDestination: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxGetNewDestination(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxGetNewDestination";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kGetAccessData: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxGetAccessData";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kUpdateSubscriberData: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxUpdateSubscriberData(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxUpdateSubscriberData";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kUpdateLocation: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxUpdateLocation(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxUpdateLocation";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kInsertCallForwarding: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxInsertCallForwarding(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxInsertCallForwarding";
-        } while (tx_committed != true);
-        break;
-      }
-      case TATPTxType::kDeleteCallForwarding: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxDeleteCallForwarding(tatp_client, &seed, yield, iter, dtx);
-          TLOG(INFO, thread_local_id) << "[" << iter << "] TxDeleteCallForwarding";
-        } while (tx_committed != true);
-        break;
-      }
-      default:
-        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
-        abort();
-    }
-#endif
+
     /********************************** Stat begin *****************************************/
     // Stat after one transaction finishes
     if (tx_committed) {
       clock_gettime(CLOCK_REALTIME, &tx_end_time);
       double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
       timer[stat_committed_tx_total++] = tx_usec;
+    }
+    else{
+      // printf("worker.cc: RunTATP, tx %ld not committed\n", iter);
     }
     if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
@@ -309,9 +253,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
     }
     /********************************** Stat end *****************************************/
   }
-
-  delete dtx;
-  #endif
+  // delete dtx;
 }
 
 void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
@@ -359,31 +301,31 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       case SmallBankTxType::kBalance: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
-        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kDepositChecking: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
-        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kSendPayment: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
-        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kTransactSaving: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
-        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       case SmallBankTxType::kWriteCheck: {
         thread_local_try_times[uint64_t(tx_type)]++;
         tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
-        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
         break;
       }
       default:
@@ -506,11 +448,16 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
   // delete dtx;
 }
 
-
 void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
   // Each coroutine has a dtx: Each coroutine is a coordinator
-  #if 0
-  DTX* dtx = new DTX(meta_man,
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
+  int execute_cnt = 0;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
                      qp_man,
                      status,
                      lock_table,
@@ -520,20 +467,17 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
                      rdma_buffer_allocator,
                      log_offset_allocator,
                      addr_cache,
+                     index_cache,
                      free_page_list,
-                     free_page_list_mutex);
-  struct timespec tx_start_time, tx_end_time;
-  bool tx_committed = false;
+                     free_page_list_mutex,
+                     data_channel,
+                     log_channel);
 
-  // Running transactions
-  clock_gettime(CLOCK_REALTIME, &msr_start);
-  while (true) {
     // Guarantee that each coroutine has a different seed
     TPCCTxType tx_type = tpcc_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
     stat_attempted_tx_total++;
-#if 1
-    clock_gettime(CLOCK_REALTIME, &tx_start_time);
+
     switch (tx_type) {
       case TPCCTxType::kDelivery: {
         thread_local_try_times[uint64_t(tx_type)]++;
@@ -574,55 +518,18 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-#else
-    switch (tx_type) {
-      case TPCCTxType::kDelivery: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxDelivery(tpcc_client, random_generator, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case TPCCTxType::kNewOrder: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxNewOrder(tpcc_client, random_generator, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case TPCCTxType::kOrderStatus: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case TPCCTxType::kPayment: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxPayment(tpcc_client, random_generator, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      case TPCCTxType::kStockLevel: {
-        do {
-          clock_gettime(CLOCK_REALTIME, &tx_start_time);
-          tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
-        } while (tx_committed != true);
-        break;
-      }
-      default:
-        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
-        abort();
-    }
 
-#endif
+    // 此时只是本地执行完毕,batch还没做完，所以stats都得等等
+    // 下面的直接没执行
     /********************************** Stat begin *****************************************/
     // Stat after one transaction finishes
     if (tx_committed) {
       clock_gettime(CLOCK_REALTIME, &tx_end_time);
       double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
       timer[stat_committed_tx_total++] = tx_usec;
+    }
+    else{
+      printf("worker.cc 602: RunTPCC, tx %ld not committed\n", iter);
     }
     if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
@@ -634,9 +541,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
     }
     /********************************** Stat end *****************************************/
   }
-
-  delete dtx;
-  #endif
+  // delete dtx;
 }
 
 void RunMICRO(coro_yield_t& yield, coro_id_t coro_id) {
@@ -803,24 +708,20 @@ void run_thread(thread_params* params,
   ATTEMPTED_NUM = conf.get("attempted_num").get_uint64();
   
   if (bench_name == "tatp") {
-    // tatp_client = tatp_cli;
-    // tatp_workgen_arr = tatp_client->CreateWorkgenArray();
-    // thread_local_try_times = new uint64_t[TATP_TX_TYPES]();
-    // thread_local_commit_times = new uint64_t[TATP_TX_TYPES]();
-    // 目前只实现了smallbank
-    assert(false);
+    tatp_client = tatp_cli;
+    tatp_workgen_arr = tatp_client->CreateWorkgenArray();
+    thread_local_try_times = new uint64_t[TATP_TX_TYPES]();
+    thread_local_commit_times = new uint64_t[TATP_TX_TYPES]();
   } else if (bench_name == "smallbank") {
     smallbank_client = smallbank_cli;
     smallbank_workgen_arr = smallbank_client->CreateWorkgenArray();
     thread_local_try_times = new uint64_t[SmallBank_TX_TYPES]();
     thread_local_commit_times = new uint64_t[SmallBank_TX_TYPES]();
   } else if (bench_name == "tpcc") {
-    // tpcc_client = tpcc_cli;
-    // tpcc_workgen_arr = tpcc_client->CreateWorkgenArray();
-    // thread_local_try_times = new uint64_t[TPCC_TX_TYPES]();
-    // thread_local_commit_times = new uint64_t[TPCC_TX_TYPES]();
-    // 目前只实现了smallbank
-    assert(false);
+    tpcc_client = tpcc_cli;
+    tpcc_workgen_arr = tpcc_client->CreateWorkgenArray();
+    thread_local_try_times = new uint64_t[TPCC_TX_TYPES]();
+    thread_local_commit_times = new uint64_t[TPCC_TX_TYPES]();
   }
 
   stop_run = false;
@@ -958,14 +859,14 @@ void run_thread(thread_params* params,
 
   // RDMA_LOG(DBG) << "Thread: " << thread_gid << ". Loop RDMA alloc times: " << rdma_buffer_allocator->loop_times;
 
-  printf("thread %ld Finish, Tps: %ld\n", thread_gid,commit_times);
+  // printf("thread %ld Finish, Tps: %ld\n", thread_gid, stat_committed_tx_total);
 
   // Clean
   delete[] timer;
   delete addr_cache;
-  // if (tatp_workgen_arr) delete[] tatp_workgen_arr;
+  if (tatp_workgen_arr) delete[] tatp_workgen_arr;
   if (smallbank_workgen_arr) delete[] smallbank_workgen_arr;
-  // if (tpcc_workgen_arr) delete[] tpcc_workgen_arr;
+  if (tpcc_workgen_arr) delete[] tpcc_workgen_arr;
   if (random_generator) delete[] random_generator;
   if (zipf_gen) delete zipf_gen;
   delete coro_sched;

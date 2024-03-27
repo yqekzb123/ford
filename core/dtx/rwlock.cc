@@ -223,17 +223,28 @@ void DTX::ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype){
         assert(false);
     };
 
-    // // 切换到其他协程
-    // coro_sched->Yield(yield, coro_id);
-
-    // if( (*(lock_t*)faa_buf & MASKED_SHARED_LOCKS) != EXCLUSIVE_LOCKED){
-    //     // juage lock legal
-    //     std::cerr << "Unlcok but there is no latch before" << std::endl;
-    //     assert(false);
-    // }
 }
 
-void DTX::ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_data, QPType qptype){
+void DTX::ExclusiveUnlockHashNode_RemoteWriteItem(node_id_t node_id, offset_t item_offset, char* write_back_item, size_t size, QPType qptype){
+    RCQP*const* qp_arr = nullptr;
+    switch (qptype){
+        case QPType::kHashIndex:
+            qp_arr = thread_qp_man->GetIndexQPPtrWithNodeID();
+            break;
+        case QPType::kLockTable:
+            qp_arr = thread_qp_man->GetLockQPPtrWithNodeID();
+            break;
+        case QPType::kPageTable:
+            qp_arr = thread_qp_man->GetPageTableQPPtrWithNodeID();
+            break;
+        default:
+            assert(false);
+    }
+    coro_sched->RDMAWrite(coro_id, qp_arr[node_id], write_back_item, item_offset, size);
+}
+
+// node_off 是hash node的offset, write_back_data是写回的数据项
+void DTX::ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_item, offset_t item_offset, size_t size, QPType qptype){
     RCQP*const* qp_arr = nullptr;
     switch (qptype){
         case QPType::kHashIndex:
@@ -254,7 +265,7 @@ void DTX::ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* writ
     std::shared_ptr<ExclusiveUnlock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveUnlock_SharedMutex_Batch>();
 
     // 不写lock，写入后面所有字节
-    doorbell->SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
+    doorbell->SetWriteReq(write_back_item, item_offset, size);  // Read a hash index bucket
     // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
     doorbell->SetUnLockReq(faa_buf, node_off.offset);
 

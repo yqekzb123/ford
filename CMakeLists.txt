@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(FORD)
 
+option(BRPC "With brpc" ON)
 # option(WITH_SNAPPY "With snappy" ON)
 
 execute_process(
@@ -32,6 +33,7 @@ if (NOT THRIFTNB_LIB)
     set(THRIFTNB_LIB "")
 endif()
 
+if(BRPC)
 find_path(BRPC_INCLUDE_PATH NAMES brpc/server.h)
 if(LINK_SO)
     find_library(BRPC_LIB NAMES brpc)
@@ -68,6 +70,7 @@ include_directories(${SNAPPY_INCLUDE_PATH})
 
 find_package(OpenSSL)
 include_directories(${OPENSSL_INCLUDE_DIR})
+endif()
 
 find_path(RDMA_INCLUDE_PATH NAMES infiniband/verbs.h)
 find_library(RDMA_LIB NAMES ibverbs)
@@ -121,5 +124,8 @@ set(TEST test.cpp)
 add_executable(TEST ${TEST})
 set(TEST2 test2.cpp)
 add_executable(TEST2 ${TEST2})
+set(TEST3 test3.cpp)
+add_executable(TEST3 ${TEST3})
 target_link_libraries(TEST rlib)
 target_link_libraries(TEST2 rlib)
+target_link_libraries(TEST3 rlib)

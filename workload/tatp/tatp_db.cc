@@ -6,60 +6,174 @@
 #include "unistd.h"
 #include "util/json_config.h"
 
+void TATP::LoadIndex(node_id_t node_id, node_id_t num_server, 
+                     MemStoreAllocParam* mem_store_alloc_param,
+                     MemStoreReserveParam* mem_store_reserve_param) {
+  // SUBSCRIBER table index initialization
+  if ((node_id_t)TATPTableType::kSubscriberTable % num_server == node_id) {
+    printf("Hash Index: Initializing SUBSCRIBER table index\n");
+    std::string config_filepath = "../../../workload/tatp/tatp_tables/subscriber.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    subscriber_index = new IndexStore((table_id_t)TATPTableType::kSubscriberTable,
+                                            table_config.get("bkt_num").get_uint64(),
+                                            mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexSubscriberTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(subscriber_index);
+  }
+
+  // SECONDARY SUBSCRIBER table index initialization
+  if ((node_id_t)TATPTableType::kSecSubscriberTable % num_server == node_id) {
+    printf("Hash Index: Initializing SECONDARY SUBSCRIBER table index\n");
+    std::string config_filepath = "../../../workload/tatp/tatp_tables/sec_subscriber.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    sec_subscriber_index = new IndexStore((table_id_t)TATPTableType::kSecSubscriberTable,
+                                                table_config.get("bkt_num").get_uint64(),
+                                                mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexSecondarySubscriberTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(sec_subscriber_index);
+  }
+
+  // ACCESS INFO table index initialization
+  if ((node_id_t)TATPTableType::kAccessInfoTable % num_server == node_id) {
+    printf("Hash Index: Initializing ACCESS INFO table index\n");
+    std::string config_filepath = "../../../workload/tatp/tatp_tables/access_info.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    access_info_index = new IndexStore((table_id_t)TATPTableType::kAccessInfoTable,
+                                             table_config.get("bkt_num").get_uint64(),
+                                             mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexAccessInfoTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(access_info_index);
+  }
+
+  // SPECIAL FACILITY and CALL FORWARDING tables index initialization
+  // ! pay attention to this special case -- two indexes & two tables.
+  if ((node_id_t)TATPTableType::kSpecialFacilityTable % num_server == node_id) {
+    printf("Hash Index: Initializing SPECIAL FACILITY table index\n");
+    std::string config_filepath = "../../../workload/tatp/tatp_tables/special_facility.json";
+    auto json_config = JsonConfig::load_file(config_filepath);
+    auto table_config = json_config.get("index");
+    special_facility_index = new IndexStore((table_id_t)TATPTableType::kSpecialFacilityTable,
+                                                  table_config.get("bkt_num").get_uint64(),
+                                                  mem_store_alloc_param, mem_store_reserve_param);
+
+    printf("Hash Index: Initializing CALL FORWARDING table index\n");
+    config_filepath = "../../../workload/tatp/tatp_tables/call_forwarding.json";
+    auto json_config2 = JsonConfig::load_file(config_filepath);
+    auto table_config2 = json_config2.get("index");
+    call_forwarding_index = new IndexStore((table_id_t)TATPTableType::kCallForwardingTable,
+                                                 table_config.get("bkt_num").get_uint64(),
+                                                 mem_store_alloc_param, mem_store_reserve_param);
+    PopulateIndexSpecialFacilityTable(mem_store_reserve_param);
+    PopulateIndexCallForwardingTable(mem_store_reserve_param);
+    index_store_ptrs.push_back(special_facility_index);
+    index_store_ptrs.push_back(call_forwarding_index);
+  }
+}
+
+void TATP::PopulateIndexSubscriberTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_subscriber_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file %s\n", (bench_name + "_subscriber_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    subscriber_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+}
+
+void TATP::PopulateIndexSecondarySubscriberTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_sec_subscriber_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file " << (bench_name + "_sec_subscriber_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    sec_subscriber_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+}
+
+void TATP::PopulateIndexAccessInfoTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_access_info_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file " << (bench_name + "_access_info_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    access_info_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+}
+
+void TATP::PopulateIndexSpecialFacilityTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_special_facility_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file " << (bench_name + "_special_facility_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    special_facility_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+}
+
+void TATP::PopulateIndexCallForwardingTable(MemStoreReserveParam* mem_store_reserve_param) {
+  itemkey_t item_key;
+  Rid rid;
+  std::ifstream input_file;
+  input_file.open("../../storage_pool/server/" + bench_name + "_call_forwarding_index.txt");
+  if(!input_file.is_open()) {
+    RDMA_LOG(ERROR) << "Error: cannot open file " << (bench_name + "_call_forwarding_index.txt").c_str();
+    assert(false);
+  }
+  while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    call_forwarding_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+  }
+  input_file.close();
+}
+
+
 /* Only initialize here. The worker threads will populate. */
 void TATP::LoadTable(node_id_t node_id, node_id_t num_server) {
   // Initiate + Populate table for primary role
   if ((node_id_t)TATPTableType::kSubscriberTable % num_server == node_id) {
     printf("Primary: Initializing SUBSCRIBER table\n");
-    // std::string config_filepath = "../../../workload/tatp/tatp_tables/subscriber.json";
-    // auto json_config = JsonConfig::load_file(config_filepath);
-    // auto table_config = json_config.get("table");
-    // subscriber_table =
-    //     new HashStore((table_id_t)TATPTableType::kSubscriberTable,
-    //                   table_config.get("bkt_num").get_uint64(),
-    //                   mem_store_alloc_param);
     PopulateSubscriberTable();
     primary_table_ptrs.push_back(subscriber_table);
   }
   if ((node_id_t)TATPTableType::kSecSubscriberTable % num_server == node_id) {
     printf("Primary: Initializing SECONDARY SUBSCRIBER table\n");
-    // auto config_filepath = "../../../workload/tatp/tatp_tables/sec_subscriber.json";
-    // auto json_config = JsonConfig::load_file(config_filepath);
-    // auto table_config = json_config.get("table");
-    // sec_subscriber_table =
-    //     new HashStore((table_id_t)TATPTableType::kSecSubscriberTable,
-    //                   table_config.get("bkt_num").get_uint64(),
-    //                   mem_store_alloc_param);
     PopulateSecondarySubscriberTable();
     primary_table_ptrs.push_back(sec_subscriber_table);
   }
   if ((node_id_t)TATPTableType::kAccessInfoTable % num_server == node_id) {
     printf("Primary: Initializing ACCESS INFO table\n");
-    // std::string config_filepath = "../../../workload/tatp/tatp_tables/access_info.json";
-    // auto json_config = JsonConfig::load_file(config_filepath);
-    // auto table_config = json_config.get("table");
-    // access_info_table =
-    //     new HashStore((table_id_t)TATPTableType::kAccessInfoTable,
-    //                   table_config.get("bkt_num").get_uint64(),
-    //                   mem_store_alloc_param);
     PopulateAccessInfoTable();
     primary_table_ptrs.push_back(access_info_table);
   }
   if ((node_id_t)TATPTableType::kSpecialFacilityTable % num_server == node_id) {
     printf("Primary: Initializing SPECIAL FACILITY table\n");
-    // std::string config_filepath = "../../../workload/tatp/tatp_tables/special_facility.json";
-    // auto json_config1 = JsonConfig::load_file(config_filepath);
-    // auto table_config1 = json_config1.get("table");
-    // special_facility_table = new HashStore((table_id_t)TATPTableType::kSpecialFacilityTable,
-    //                                        table_config1.get("bkt_num").get_uint64(), mem_store_alloc_param);
-    // printf("Primary: Initializing CALL FORWARDING table\n");
-    // config_filepath = "../../../workload/tatp/tatp_tables/call_forwarding.json";
-    // auto json_config2 = JsonConfig::load_file(config_filepath);
-    // auto table_config2 = json_config2.get("table");
-    // call_forwarding_table =
-    //     new HashStore((table_id_t)TATPTableType::kCallForwardingTable,
-    //                   table_config2.get("bkt_num").get_uint64(),
-    //                   mem_store_alloc_param);
     PopulateSpecfacAndCallfwdTable();
     primary_table_ptrs.push_back(special_facility_table);
     primary_table_ptrs.push_back(call_forwarding_table);
@@ -69,64 +183,25 @@ void TATP::LoadTable(node_id_t node_id, node_id_t num_server) {
   if (BACKUP_DEGREE < num_server) {
     for (node_id_t i = 1; i <= BACKUP_DEGREE; i++) {
       if ((node_id_t)TATPTableType::kSubscriberTable % num_server == (node_id - i + num_server) % num_server) {
-        // Meaning: I (current node_id) am the backup-SubscriberTable of my primary. My primary-SubscriberTable
-        // resides on a node, whose id is TATPTableType::kSubscriberTable % num_server
-        // A possible layout: | P (My primary) | B1 (I'm here) | B2 (Or I'm here) |
         printf("Backup: Initializing SUBSCRIBER table\n");
-        // std::string config_filepath = "../../../workload/tatp/tatp_tables/subscriber.json";
-        // auto json_config = JsonConfig::load_file(config_filepath);
-        // auto table_config = json_config.get("table");
-        // subscriber_table =
-        //     new HashStore((table_id_t)TATPTableType::kSubscriberTable,
-        //                   table_config.get("bkt_num").get_uint64(),
-        //                   mem_store_alloc_param);
         PopulateSubscriberTable();
         backup_table_ptrs.push_back(subscriber_table);
       }
 
       if ((node_id_t)TATPTableType::kSecSubscriberTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing SECONDARY SUBSCRIBER table\n");
-        // auto config_filepath = "../../../workload/tatp/tatp_tables/sec_subscriber.json";
-        // auto json_config = JsonConfig::load_file(config_filepath);
-        // auto table_config = json_config.get("table");
-        // sec_subscriber_table =
-        //     new HashStore((table_id_t)TATPTableType::kSecSubscriberTable,
-        //                   table_config.get("bkt_num").get_uint64(),
-        //                   mem_store_alloc_param);
         PopulateSecondarySubscriberTable();
         backup_table_ptrs.push_back(sec_subscriber_table);
       }
 
       if ((node_id_t)TATPTableType::kAccessInfoTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing ACCESS INFO table\n");
-        // std::string config_filepath = "../../../workload/tatp/tatp_tables/access_info.json";
-        // auto json_config = JsonConfig::load_file(config_filepath);
-        // auto table_config = json_config.get("table");
-        // access_info_table =
-        //     new HashStore((table_id_t)TATPTableType::kAccessInfoTable,
-        //                   table_config.get("bkt_num").get_uint64(),
-        //                   mem_store_alloc_param);
         PopulateAccessInfoTable();
         backup_table_ptrs.push_back(access_info_table);
       }
 
       if ((node_id_t)TATPTableType::kSpecialFacilityTable % num_server == (node_id - i + num_server) % num_server) {
         printf("Backup: Initializing SPECIAL FACILITY table\n");
-        // std::string
-        //     config_filepath = "../../../workload/tatp/tatp_tables/special_facility.json";
-        // auto json_config1 = JsonConfig::load_file(config_filepath);
-        // auto table_config1 = json_config1.get("table");
-        // special_facility_table = new HashStore((table_id_t)TATPTableType::kSpecialFacilityTable,
-        //                                        table_config1.get("bkt_num").get_uint64(),
-        //                                        mem_store_alloc_param);
-        // printf("Backup: Initializing CALL FORWARDING table\n");
-        // config_filepath = "../../../workload/tatp/tatp_tables/call_forwarding.json";
-        // auto json_config2 = JsonConfig::load_file(config_filepath);
-        // auto table_config2 = json_config2.get("table");
-        // call_forwarding_table =
-        //     new HashStore((table_id_t)TATPTableType::kCallForwardingTable,
-        //                   table_config2.get("bkt_num").get_uint64(),
-        //                   mem_store_alloc_param);
         PopulateSpecfacAndCallfwdTable();
         backup_table_ptrs.push_back(special_facility_table);
         backup_table_ptrs.push_back(call_forwarding_table);
@@ -137,7 +212,7 @@ void TATP::LoadTable(node_id_t node_id, node_id_t num_server) {
 }
 
 void TATP::PopulateSubscriberTable() {
-  rm_manager->create_file(bench_name + "_subscriber", sizeof(tatp_sub_val_t));
+  rm_manager->create_file(bench_name + "_subscriber", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_subscriber");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_subscriber_index.txt");
@@ -182,7 +257,7 @@ void TATP::PopulateSubscriberTable() {
 }
 
 void TATP::PopulateSecondarySubscriberTable() {
-  rm_manager->create_file(bench_name + "_sec_subscriber", sizeof(tatp_sec_sub_val_t));
+  rm_manager->create_file(bench_name + "_sec_subscriber", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_sec_subscriber");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_sec_subscriber_index.txt");
@@ -212,7 +287,7 @@ void TATP::PopulateSecondarySubscriberTable() {
 }
 
 void TATP::PopulateAccessInfoTable() {
-  rm_manager->create_file(bench_name + "_access_info", sizeof(tatp_accinf_val_t));
+  rm_manager->create_file(bench_name + "_access_info", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> table_file = rm_manager->open_file(bench_name + "_access_info");
   std::ofstream indexfile;
   indexfile.open(bench_name + "_access_info_index.txt");
@@ -254,12 +329,12 @@ void TATP::PopulateAccessInfoTable() {
  * rows get inserted into the SPECIAL FACILITY, so process these two jointly.
  */
 void TATP::PopulateSpecfacAndCallfwdTable() {
-  rm_manager->create_file(bench_name + "_special_facility", sizeof(tatp_specfac_val_t));
+  rm_manager->create_file(bench_name + "_special_facility", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> special_facility_table = rm_manager->open_file(bench_name + "_special_facility");
   std::ofstream indexfile1;
   indexfile1.open(bench_name + "_special_facility_index.txt");
 
-  rm_manager->create_file(bench_name + "_call_forwarding", sizeof(tatp_callfwd_val_t));
+  rm_manager->create_file(bench_name + "_call_forwarding", sizeof(DataItem));
   std::unique_ptr<RmFileHandle> call_forwarding_table = rm_manager->open_file(bench_name + "_call_forwarding");
   std::ofstream indexfile2;
   indexfile2.open(bench_name + "_call_forwarding_index.txt");

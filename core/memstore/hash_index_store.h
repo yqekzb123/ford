@@ -229,7 +229,7 @@ bool IndexStore::LocalInsertKeyRid(itemkey_t key, const Rid& rid, MemStoreReserv
       }
     }
 
-    if (node->next_expand_node_id[0] <= 0) break;
+    if (node->next_expand_node_id[0] < 0) break;
     node = (IndexNode*)(node->next_expand_node_id[0] * sizeof(IndexNode) + expand_region_base_ptr);
   }
 
