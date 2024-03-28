@@ -113,4 +113,5 @@ private:
 public:
     // 记录每个pageid上的log batch的数量
     std::unordered_map<PageId, std::pair<std::mutex, int>> pageid_batch_count_;
+    std::mutex latch3_;             // 用于保护pageid_batch_count_这一共享变量
 };

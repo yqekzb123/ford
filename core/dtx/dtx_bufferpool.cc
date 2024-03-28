@@ -229,6 +229,8 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 char* local_item = page_table_item_localaddr_and_remote_offset[pending_map_all_index[i]].first;
                 NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[pending_map_all_index[i]].second;
                 PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
+                std::cout << "make page valid: pageid "<< pending_read_all_page_ids[i].table_id << 
+                        " page_no: " << pending_read_all_page_ids[i].page_no << std::endl;
                 item->page_valid = true;
                 qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
                 if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){

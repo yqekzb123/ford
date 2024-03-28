@@ -252,7 +252,7 @@ class DTX {
             std::unordered_map<NodeOffset, char*>& cas_bufs);
   std::vector<int> ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, std::vector<char*>& local_hash_nodes, 
             std::vector<char*>& cas_bufs);
-  void ExclusiveUnlockHashNode_NoWrite(NodeOffset node_off, QPType qptype);
+  void ExclusiveUnlockHashNode_NoWrite(coro_yield_t& yield, NodeOffset node_off, QPType qptype);
   void ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_back_data, QPType qptype);
   void ExclusiveUnlockHashNode_WithWriteItems(NodeOffset node_off, char* write_back_item, offset_t item_offset, size_t size, QPType qptype);
   void ExclusiveUnlockHashNode_RemoteWriteItem(node_id_t node_id, offset_t item_offset, char* write_back_item, size_t size, QPType qptype);

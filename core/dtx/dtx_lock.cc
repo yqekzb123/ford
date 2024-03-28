@@ -325,7 +325,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
                     // 在这里释放latch
-                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
+                    ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kLockTable);
                     if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -351,7 +351,7 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
                     auto release_idx = idx;
                     auto release_node_off = total_hash_node_offs_vec[release_idx];
                     while(true){
-                        ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
+                        ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kLockTable);
                         if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                         release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                         release_node_off = total_hash_node_offs_vec[release_idx];
@@ -608,7 +608,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                 auto release_idx = idx;
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
-                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
+                    ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kLockTable);
                     if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -633,7 +633,7 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
                     auto release_idx = idx;
                     auto release_node_off = total_hash_node_offs_vec[release_idx];
                     while(true){
-                        ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kLockTable);
+                        ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kLockTable);
                         // ExclusiveUnlockHashNode_WithWrite(release_node_off, local_hash_nodes_vec[idx], QPType::kLockTable);
                         if(hold_latch_to_previouse_node_off.count(idx) == 0) break;
                         release_idx = hold_latch_to_previouse_node_off.at(release_idx);

@@ -12,7 +12,7 @@ uint64_t commit_times = 0;
 int WARMUP_BATCHCNT = 1000;
 
 __thread size_t ATTEMPTED_NUM;
-bool stop_run = false;
+__thread bool stop_run = false;
 // Performance measurement (thread granularity)
 struct timespec msr_start;
 __thread struct timespec msr_end;

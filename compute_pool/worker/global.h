@@ -23,7 +23,7 @@ extern uint64_t commit_times;
 
 extern int WARMUP_BATCHCNT;
 extern __thread size_t ATTEMPTED_NUM;
-extern bool stop_run;
+extern __thread bool stop_run;
 // Performance measurement (thread granularity)
 extern struct timespec msr_start;
 extern __thread struct timespec msr_end;

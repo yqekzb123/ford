@@ -349,7 +349,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                 auto release_idx = idx;
                 auto release_node_off = total_hash_node_offs_vec[release_idx];
                 while(true){
-                    ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kPageTable);
+                    ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kPageTable);
                     if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                     release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                     release_node_off = total_hash_node_offs_vec[release_idx];
@@ -394,7 +394,7 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
                         auto release_idx = idx;
                         auto release_node_off = total_hash_node_offs_vec[release_idx];
                         while(true){
-                            ExclusiveUnlockHashNode_NoWrite(release_node_off, QPType::kPageTable);
+                            ExclusiveUnlockHashNode_NoWrite(yield, release_node_off, QPType::kPageTable);
                             if(hold_latch_to_previouse_node_off.count(release_idx) == 0) break;
                             release_idx = hold_latch_to_previouse_node_off.at(release_idx);
                             release_node_off = total_hash_node_offs_vec[release_idx];

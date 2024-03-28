@@ -101,6 +101,8 @@ void RecordTpLat(double msr_sec) {
   double percentile_50 = timer[stat_committed_tx_total / 2];
   double percentile_99 = timer[stat_committed_tx_total * 99 / 100];
 
+  std::cout << "RecordTpLat......" << std::endl;
+
   mux.lock();
   tid_vec.push_back(thread_gid);
   attemp_tp_vec.push_back(attemp_tput);
@@ -339,7 +341,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       timer[stat_committed_tx_total++] = tx_usec;
     }
     else{
-      printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
+      // printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
     }
     if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
