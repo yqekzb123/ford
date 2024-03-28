@@ -186,9 +186,9 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
 
     for (int i=0; i<pending_hash_node_latch_idx.size(); ) {
         if (*(lock_t*)cas_bufs[pending_hash_node_latch_idx[i]] == UNLOCKED) {
-            if(qptype == QPType::kPageTable){
-                std::cout << "ExclusiveLockHashNode: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[i]].offset << std::endl;
-            }
+            // if(qptype == QPType::kPageTable){
+            //     std::cout << "ExclusiveLockHashNode: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[i]].offset << std::endl;
+            // }
             success_get_latch_off_idx.push_back(pending_hash_node_latch_idx[i]);
             if(pending_hash_node_latch_idx.size() == 1){
                 pending_hash_node_latch_idx.clear();
@@ -197,12 +197,12 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
                 pending_hash_node_latch_idx.erase(pending_hash_node_latch_idx.begin() + i); // 擦除元素，并将迭代器更新为下一个元素
             }
         } else {
-            if(qptype == QPType::kPageTable){
-                // for debug
-                char* index_node = local_hash_nodes[pending_hash_node_latch_idx[i]];
-                PageTableNode* page_table_node = (PageTableNode*)index_node;
-                int a = 0;
-            }
+            // if(qptype == QPType::kPageTable){
+            //     // for debug
+            //     char* index_node = local_hash_nodes[pending_hash_node_latch_idx[i]];
+            //     PageTableNode* page_table_node = (PageTableNode*)index_node;
+            //     int a = 0;
+            // }
             i++; // 继续遍历下一个元素
         }
     }
@@ -228,23 +228,23 @@ void DTX::ExclusiveUnlockHashNode_NoWrite(coro_yield_t& yield, NodeOffset node_o
 
     char* faa_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
     // release exclusive lock
-    if(qptype == QPType::kPageTable){
-        std::cout << "ExclusiveUnlockHashNode_NoWrite: " << node_off.offset << std::endl;
-    }
-    // if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
-    //     assert(false);
-    // };
-
-    if (!coro_sched->RDMACAS(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_LOCKED, UNLOCKED)){
+    // if(qptype == QPType::kPageTable){
+    //     std::cout << "ExclusiveUnlockHashNode_NoWrite: " << node_off.offset << std::endl;
+    // }
+    if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
         assert(false);
     };
+
+    // if (!coro_sched->RDMACAS(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_LOCKED, UNLOCKED)){
+    //     assert(false);
+    // };
     
-    coro_sched->Yield(yield, coro_id);
+    // coro_sched->Yield(yield, coro_id);
     
-    if((*(lock_t*)faa_buf) != EXCLUSIVE_LOCKED){
-        std::cerr << "Unlcok but there is no lock before" << std::endl;
-        assert(false);
-    }
+    // if((*(lock_t*)faa_buf) != EXCLUSIVE_LOCKED){
+    //     std::cerr << "Unlcok but there is no lock before" << std::endl;
+    //     assert(false);
+    // }
 
     // // check
     // char* check_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));

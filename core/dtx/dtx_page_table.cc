@@ -2,6 +2,8 @@
 // Copyright (c) 2023
 
 #include "dtx/dtx.h"
+#include "exception.h"
+
 #include <chrono>
 #include <future>
 
@@ -278,9 +280,13 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
     std::unordered_map<int, int> hold_latch_to_previouse_node_off; //维护了反向链表<node_off, previouse_node_off>
     std::vector<PageAddress> res(pending_read_all_page_ids.size(), {-1, INVALID_FRAME_ID});
 
+    int try_cnt = 0;
     while (pending_hash_node_latch_idx.size()!=0) {
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kPageTable, local_hash_nodes_vec, cas_bufs_vec);
+        if(++try_cnt >= MAX_TRY_LATCH){
+            throw AbortException(this->tx_id);
+        }
         // init hold_node_off_latch
         // for(auto node_off : succ_node_off ){
         //     hold_node_off_latch.emplace(node_off);

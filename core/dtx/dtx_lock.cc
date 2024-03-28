@@ -2,6 +2,7 @@
 // Copyright (c) 2023
 
 #include "dtx/dtx.h"
+#include "exception.h"
 
 // 这里锁表与哈希索引实现不同的点在于哈希索引要求索引数据全量存放
 // 而锁表只有正在持有的锁是有用的，因此如果出现哈希桶已满的情况
@@ -285,10 +286,13 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
     int last_hold_lock_cnt = shared_lock_item_localaddr_and_remote_offset.size();
     shared_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
+    int cnt = 0;
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
-
+        if(++cnt > MAX_TRY_LATCH){
+            throw AbortException(tx_id);
+        }
         for(auto idx : succ_node_off_idx ){
             // read now
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes_vec[idx]);
@@ -545,10 +549,14 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     int last_hold_lock_cnt = exclusive_lock_item_localaddr_and_remote_offset.size();
     exclusive_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
+    int cnt = 0;
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
-
+        if(++cnt > MAX_TRY_LATCH){
+            throw AbortException(tx_id);
+        }
+        
         for(auto idx : succ_node_off_idx ){
             // read now
             LockNode* lock_node = reinterpret_cast<LockNode*>(local_hash_nodes_vec[idx]);

@@ -34,6 +34,9 @@ static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                 
 #define RDMA_LOG_BUFFER_SIZE 1024 * 1024 * 1024 // 1GB
 #define MAX_PAGE_NUM_PER_RIGION 1024 * 1024 * 10 // 10MB / 10GB 
 
+// !
+#define MAX_TRY_LATCH 20
+
 // Memory region ids for server's hash store buffer and undo log buffer
 // const mr_id_t SERVER_HASH_BUFF_ID = 97;
 // const mr_id_t SERVER_LOG_BUFF_ID = 98;
