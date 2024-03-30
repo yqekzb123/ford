@@ -122,7 +122,7 @@ struct PageTableNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // PageTableNode* next;
-} Aligned2048;
+} AlignedBucketSize;
 
 class PageTableStore {
  public:

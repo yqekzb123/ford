@@ -131,7 +131,7 @@ struct LockNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // LockNode* next;
-} Aligned2048;
+} AlignedBucketSize;
 
 class LockTableStore {
  public:
