@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
   server->InitMem();
 
   // 在这里计算桶数
-  int bucket_num = (mem_size * 0.75 - sizeof(uint64_t) )/ PAGE_SIZE;
+  int bucket_num = (mem_size * 0.75 - sizeof(uint64_t) )/ BUCKET_SIZE;
   server->LoadLockTable(bucket_num);
 
   server->SendMeta(machine_id, compute_node_num);

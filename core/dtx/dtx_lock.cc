@@ -291,6 +291,10 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
         if(++cnt > MAX_TRY_LATCH){
+            if(pending_hash_node_latch_idx.size() == 1){
+                std::cout << "*-* try time out: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[0]].offset << std::endl;
+                ExclusiveUnlockHashNode_NoWrite(yield, total_hash_node_offs_vec[pending_hash_node_latch_idx[0]], QPType::kLockTable);
+            }
             throw AbortException(tx_id);
         }
         for(auto idx : succ_node_off_idx ){
@@ -554,6 +558,10 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
         if(++cnt > MAX_TRY_LATCH){
+            if(pending_hash_node_latch_idx.size() == 1){
+                std::cout << "*-* try time out: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[0]].offset << std::endl;
+                ExclusiveUnlockHashNode_NoWrite(yield, total_hash_node_offs_vec[pending_hash_node_latch_idx[0]], QPType::kLockTable);
+            }
             throw AbortException(tx_id);
         }
         

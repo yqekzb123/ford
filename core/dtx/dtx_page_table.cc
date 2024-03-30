@@ -285,6 +285,10 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kPageTable, local_hash_nodes_vec, cas_bufs_vec);
         if(++try_cnt >= MAX_TRY_LATCH){
+            if(pending_hash_node_latch_idx.size() == 1){
+                std::cout << "*-* try time out: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[0]].offset << std::endl;
+                ExclusiveUnlockHashNode_NoWrite(yield, total_hash_node_offs_vec[pending_hash_node_latch_idx[0]], QPType::kPageTable);
+            }
             throw AbortException(this->tx_id);
         }
         // init hold_node_off_latch

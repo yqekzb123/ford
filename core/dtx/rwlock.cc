@@ -25,7 +25,7 @@ std::vector<int> DTX::ShardLockHashNode(coro_yield_t& yield, QPType qptype, std:
 
         NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
         doorbell.SetFAAReq(faa_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
-        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, BUCKET_SIZE);  // Read a hash index bucket
         
         if (!doorbell.SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
@@ -106,7 +106,7 @@ std::vector<NodeOffset> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType q
     for(auto node_off: pending_hash_node_latch_offs) {
         std::shared_ptr<ExclusiveLock_SharedMutex_Batch> doorbell = std::make_shared<ExclusiveLock_SharedMutex_Batch>();
         doorbell->SetLockReq(cas_bufs[node_off], node_off.offset);
-        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell->SetReadReq(local_hash_nodes[node_off], node_off.offset, BUCKET_SIZE);  // Read a hash index bucket
         
         if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
@@ -158,7 +158,7 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
         
     //     NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
     //     doorbell->SetLockReq(cas_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
-    //     doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+    //     doorbell->SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, BUCKET_SIZE);  // Read a hash index bucket
         
     //     if (!doorbell->SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
     //         std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
@@ -171,7 +171,7 @@ std::vector<int> DTX::ExclusiveLockHashNode(coro_yield_t& yield, QPType qptype, 
         
         NodeOffset node_off = total_hash_node_offs_vec[pending_hash_node_latch_idx[i]];
         doorbell.SetLockReq(cas_bufs[pending_hash_node_latch_idx[i]], node_off.offset);
-        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, PAGE_SIZE);  // Read a hash index bucket
+        doorbell.SetReadReq(local_hash_nodes[pending_hash_node_latch_idx[i]], node_off.offset, BUCKET_SIZE);  // Read a hash index bucket
         
         if (!doorbell.SendReqs(coro_sched, qp_arr[node_off.nodeId], coro_id)) {
             std::cerr << "GetHashIndex get Exclusive mutex sendreqs faild" << std::endl;
@@ -231,13 +231,13 @@ void DTX::ExclusiveUnlockHashNode_NoWrite(coro_yield_t& yield, NodeOffset node_o
     // if(qptype == QPType::kPageTable){
     //     std::cout << "ExclusiveUnlockHashNode_NoWrite: " << node_off.offset << std::endl;
     // }
-    if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
-        assert(false);
-    };
-
-    // if (!coro_sched->RDMACAS(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_LOCKED, UNLOCKED)){
+    // if (!coro_sched->RDMAFAA(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_UNLOCK_TO_BE_ADDED)){
     //     assert(false);
     // };
+
+    if (!coro_sched->RDMACAS(coro_id, qp_arr[node_off.nodeId], faa_buf, node_off.offset, EXCLUSIVE_LOCKED, UNLOCKED)){
+        assert(false);
+    };
     
     // coro_sched->Yield(yield, coro_id);
     
@@ -336,7 +336,7 @@ void DTX::ExclusiveUnlockHashNode_WithWrite(NodeOffset node_off, char* write_bac
     ExclusiveUnlock_SharedMutex_Batch doorbell;
 
     // 不写lock，写入后面所有字节
-    doorbell.SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), PAGE_SIZE-sizeof(lock_t));  // Read a hash index bucket
+    doorbell.SetWriteReq(write_back_data+sizeof(lock_t), node_off.offset+sizeof(lock_t), BUCKET_SIZE-sizeof(lock_t));  // Read a hash index bucket
     // FAA EXCLUSIVE_UNLOCK_TO_BE_ADDED.
     doorbell.SetUnLockReq(faa_buf, node_off.offset);
 

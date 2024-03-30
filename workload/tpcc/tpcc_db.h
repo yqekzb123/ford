@@ -724,19 +724,19 @@ class TPCC {
     bench_name = "TPCC";
     std::string warehouse_config_filepath = "../../../workload/tpcc/tpcc_tables/warehouse.json";
     auto warehouse_json_config = JsonConfig::load_file(warehouse_config_filepath);
-    auto warehouse_table_config = warehouse_json_config.get("index");
+    auto warehouse_table_config = warehouse_json_config.get("table");
     std::string district_config_filepath = "../../../workload/tpcc/tpcc_tables/district.json";
     auto district_json_config = JsonConfig::load_file(district_config_filepath);
-    auto district_table_config = district_json_config.get("index");
+    auto district_table_config = district_json_config.get("table");
     std::string customer_config_filepath = "../../../workload/tpcc/tpcc_tables/customer.json";
     auto customer_json_config = JsonConfig::load_file(customer_config_filepath);
-    auto customer_table_config = customer_json_config.get("index");
+    auto customer_table_config = customer_json_config.get("table");
     std::string item_config_filepath = "../../../workload/tpcc/tpcc_tables/item.json";
     auto item_json_config = JsonConfig::load_file(item_config_filepath);
-    auto item_table_config = item_json_config.get("index");
+    auto item_table_config = item_json_config.get("table");
     std::string stock_config_filepath = "../../../workload/tpcc/tpcc_tables/stock.json";
     auto stock_json_config = JsonConfig::load_file(stock_config_filepath);
-    auto stock_table_config = stock_json_config.get("index");
+    auto stock_table_config = stock_json_config.get("table");
 
     num_warehouse = warehouse_table_config.get("bkt_num").get_uint64();
     num_district_per_warehouse = district_table_config.get("bkt_num").get_uint64();

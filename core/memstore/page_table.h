@@ -108,7 +108,7 @@ struct RingFreeFrameBuffer{
 };
 
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_PAGETABLE_ITEM_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(PageTableItem) );
+const int MAX_PAGETABLE_ITEM_NUM_PER_NODE = (BUCKET_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(PageTableItem) );
 
 // A PageTableNode is a bucket
 // 这里注意：sizeof(PageTableNode)非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
@@ -122,7 +122,7 @@ struct PageTableNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // PageTableNode* next;
-} Aligned4096;
+} Aligned2048;
 
 class PageTableStore {
  public:

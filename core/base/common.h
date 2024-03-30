@@ -27,6 +27,7 @@ using slot_offset_t = size_t; // slot offset type
 using timestamp_t = int32_t;  // timestamp type, used for transaction concurrency
 
 #define PAGE_SIZE 4096
+#define BUCKET_SIZE 2048
 #define BUFFER_POOL_SIZE 65536 // 256MB
 
 #define LOG_FILE_NAME "LOG_FILE"                                
@@ -66,6 +67,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 // Alias
 #define Aligned8 __attribute__((aligned(8)))
 #define Aligned4096 __attribute__((aligned(4096)))
+#define Aligned2048 __attribute__((aligned(2048)))
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define TID (std::this_thread::get_id())
 
