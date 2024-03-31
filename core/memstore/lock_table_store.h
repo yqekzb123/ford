@@ -117,7 +117,7 @@ struct LockTableMeta {
 } Aligned8;
 
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_LOCKS_NUM_PER_NODE = (BUCKET_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(LockItem) );
+const int MAX_LOCKS_NUM_PER_NODE = (BUCKET_SIZE - sizeof(lock_t) - sizeof(lock_t) - sizeof(short) * NEXT_NODE_COUNT) / (sizeof(LockItem) );
 
 // A LockNode is a bucket
 // 这里注意：sizeof(LockNode)是4064而非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，

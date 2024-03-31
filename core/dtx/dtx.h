@@ -25,6 +25,7 @@
 #include "cache/lock_status.h"
 #include "cache/version_status.h"
 #include "cache/index_cache.h"
+#include "cache/page_table_cache.h"
 #include "connection/meta_manager.h"
 #include "connection/qp_manager.h"
 #include "dtx/doorbell.h"
@@ -112,6 +113,7 @@ class DTX {
       LogOffsetAllocator* log_offset_allocator,
       AddrCache* addr_buf,
       IndexCache* index_cache,
+      PageTableCache* page_table_cache,
       std::list<PageAddress>* free_page_list, 
       std::mutex* free_page_list_mutex,
       brpc::Channel* data_channel,
@@ -305,6 +307,7 @@ class DTX {
 
   AddrCache* addr_cache;
   IndexCache* index_cache;
+  PageTableCache* page_table_cache;
 
   // For backup-enabled read. Which backup is selected (the backup index, not the backup's machine id)
   size_t select_backup;

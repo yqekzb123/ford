@@ -27,7 +27,7 @@ using slot_offset_t = size_t; // slot offset type
 using timestamp_t = int32_t;  // timestamp type, used for transaction concurrency
 
 #define PAGE_SIZE 4096
-#define BUCKET_SIZE 2048
+#define BUCKET_SIZE 1024
 #define BUFFER_POOL_SIZE 65536 // 256MB
 
 #define LOG_FILE_NAME "LOG_FILE"                                
@@ -36,7 +36,7 @@ static constexpr int LOG_REPLAY_BUFFER_SIZE = (10 * PAGE_SIZE);                 
 #define MAX_PAGE_NUM_PER_RIGION 1024 * 1024 * 10 // 10MB / 10GB 
 
 // !
-#define MAX_TRY_LATCH 20
+#define MAX_TRY_LATCH 100
 
 // Memory region ids for server's hash store buffer and undo log buffer
 // const mr_id_t SERVER_HASH_BUFF_ID = 97;
@@ -66,7 +66,6 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 
 // Alias
 #define Aligned8 __attribute__((aligned(8)))
-#define Aligned4096 __attribute__((aligned(4096)))
 #define AlignedBucketSize __attribute__((aligned(BUCKET_SIZE)))
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define TID (std::this_thread::get_id())
