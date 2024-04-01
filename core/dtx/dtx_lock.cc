@@ -524,8 +524,8 @@ std::vector<LockDataId> DTX::LockExclusiveBatch(coro_yield_t& yield, std::vector
 std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<LockDataId> lock_data_id, std::vector<NodeOffset> node_offs){
 
     // 计时
-    struct timespec tx_lock_time;
-    clock_gettime(CLOCK_REALTIME, &tx_lock_time);
+    // struct timespec tx_lock_time;
+    // clock_gettime(CLOCK_REALTIME, &tx_lock_time);
     // init
     total_hash_node_offs_vec = node_offs;
     
@@ -1000,6 +1000,7 @@ bool DTX::LockSharedOnRecord(coro_yield_t& yield, std::vector<table_id_t> table_
         batch_lock_data_id.emplace_back(lock_data_id);
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
+    // printf("dtx_lock.cc:1003 batch %ld acquire shared lock %ld key\n", batch_id, batch_lock_data_id.size());
 
     if(LockShared(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;
@@ -1038,6 +1039,7 @@ bool DTX::LockExclusiveOnRecord(coro_yield_t& yield, std::vector<table_id_t> tab
         batch_lock_data_id.emplace_back(lock_data_id);
         batch_node_off.emplace_back(NodeOffset{remote_node_id, node_off});
     }
+    // printf("dtx_lock.cc:1043 batch %ld acquire exclusive lock %ld key\n", batch_id, batch_lock_data_id.size());
 
     if(LockExclusive(yield, std::move(batch_lock_data_id), std::move(batch_node_off)).size() == 0){
         return true;

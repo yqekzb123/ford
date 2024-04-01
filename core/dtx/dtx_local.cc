@@ -5,58 +5,58 @@
 #include "worker/global.h"
 
 //! 本地生成读写集，本地执行并发控制
-// bool DTX::LockLocalRO(coro_yield_t& yield) {
-//   std::vector<DirectRead> pending_direct_ro;
-//   // Issue reads
-//   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read ro";
-//   for (auto& item : read_only_set) {
-//     if (item.is_local_locked) continue;
-//     auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
-//     // !对只读操作加锁
-//     bool success = localdata->LockShared();
-//     if (!success) {
-//       shared_lock_abort_cnt ++;
-//       // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-//       return false;
-//     } else {
-//       // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-//       item.is_local_locked = true;
-//     }
-//   }
-//   return true;
-// }
+bool DTX::LockLocalRO(coro_yield_t& yield) {
+  std::vector<DirectRead> pending_direct_ro;
+  // Issue reads
+  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read ro";
+  for (auto& item : read_only_set) {
+    if (item.is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+    // !对只读操作加锁
+    bool success = localdata->LockShared();
+    if (!success) {
+      shared_lock_abort_cnt ++;
+      // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      item.is_local_locked = true;
+    }
+  }
+  return true;
+}
 
-// bool DTX::LockLocalRW(coro_yield_t& yield) {
-//   for (auto& item : read_only_set) {
-//     if (item.is_local_locked) continue;
-//     auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
-//     // !对只读操作加锁
-//     bool success = localdata->LockShared();
-//     if (!success) {
-//       shared_lock_abort_cnt ++;
-//       // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-//       return false;
-//     } else {
-//       // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-//       item.is_local_locked = true;
-//     }
-//   }
-//   for (size_t i = 0; i < read_write_set.size(); i++) {
-//     if (read_write_set[i].is_local_locked) continue;
-//     auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
-//     // !加锁
-//     bool success = localdata->LockExclusive();
-//     if (!success) {
-//       exlusive_lock_abort_cnt ++;
-//       // printf("txn %ld add exlusive lock on table %ld key %ld failed, the original lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
-//       return false;
-//     } else {
-//       // printf("txn %ld add exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
-//       read_write_set[i].is_local_locked = true;
-//     }
-//   }
-//   return true;
-// }
+bool DTX::LockLocalRW(coro_yield_t& yield) {
+  for (auto& item : read_only_set) {
+    if (item.is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+    // !对只读操作加锁
+    bool success = localdata->LockShared();
+    if (!success) {
+      shared_lock_abort_cnt ++;
+      // printf("txn %ld add shared lock on table %ld key %ld failed, the original lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+      item.is_local_locked = true;
+    }
+  }
+  for (size_t i = 0; i < read_write_set.size(); i++) {
+    if (read_write_set[i].is_local_locked) continue;
+    auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
+    // !加锁
+    bool success = localdata->LockExclusive();
+    if (!success) {
+      exlusive_lock_abort_cnt ++;
+      // printf("txn %ld add exlusive lock on table %ld key %ld failed, the original lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+      return false;
+    } else {
+      // printf("txn %ld add exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+      read_write_set[i].is_local_locked = true;
+    }
+  }
+  return true;
+}
 
 // 这个函数用于读写事务的本地解锁
 bool DTX::UnLockLocalRW() {
@@ -208,7 +208,7 @@ bool DTX::ReExeLocalRO(coro_yield_t& yield) {
     // it = fetched_item->value.get();
     *it = *fetched_item.value;
     // 这里先假设了读取到的是对的
-    printf("dtx_local.cc:156 txn %p tid %ld try to get version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, item.item_ptr.get()->table_id, item.item_ptr.get()->key,localdata,batch_id,item.version_index,fetched_item.value);
+    // printf("dtx_local.cc:211 txn %p tid %ld try to get version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, item.item_ptr.get()->table_id, item.item_ptr.get()->key,localdata,batch_id,item.version_index,fetched_item.value);
   }
   
   return true;
@@ -224,7 +224,7 @@ bool DTX::ReExeLocalRW(coro_yield_t& yield) {
     auto* it = item.item_ptr.get();
     *it = *fetched_item.value;
     // 这里先假设了读取到的是对的
-    printf("dtx_local.cc:173 txn %p tid %ld try to get version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, item.item_ptr.get()->table_id, item.item_ptr.get()->key,localdata,batch_id,0,fetched_item.value);
+    // printf("dtx_local.cc:227 txn %p tid %ld try to get version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, item.item_ptr.get()->table_id, item.item_ptr.get()->key,localdata,batch_id,0,fetched_item.value);
   }
 
   for (size_t i = 0; i < read_write_set.size(); i++) {
@@ -235,7 +235,7 @@ bool DTX::ReExeLocalRW(coro_yield_t& yield) {
     auto* it = read_write_set[i].item_ptr.get();
     assert(fetched_item.value->value[0] != 0);
     *it = *fetched_item.value;
-    printf("dtx_local.cc:187 txn %p tid %ld try to rewrite version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, read_write_set[i].item_ptr.get()->table_id, read_write_set[i].item_ptr.get()->key,localdata,batch_id,0,fetched_item.value);
+    // printf("dtx_local.cc:238 txn %p tid %ld try to rewrite version for table %ld key %ld data %p in batch %ld value index %ld value %s\n", this, tx_id, read_write_set[i].item_ptr.get()->table_id, read_write_set[i].item_ptr.get()->key,localdata,batch_id,0,fetched_item.value);
   }
   return true;
   // !接下来得进行tpcc等负载计算了

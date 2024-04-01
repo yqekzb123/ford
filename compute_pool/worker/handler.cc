@@ -77,6 +77,9 @@ void Handler::GenThreads(std::string bench_name) {
   const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
 
+  WARMUP_BATCHCNT = client_conf.get("batch_warmup").get_int64();
+  LOCAL_BATCH_TXN_SIZE = client_conf.get("batch_size").get_int64();
+
   /* Start working */
   tx_id_generator = 0;  // Initial transaction id == 0
   connected_t_num = 0;  // Sync all threads' RDMA QP connections

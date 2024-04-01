@@ -126,7 +126,7 @@ void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
       RecordTpLat(msr_sec);
-      printf("worker.cc:130, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+      // printf("worker.cc:130, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       break;
     }
   }
@@ -146,7 +146,7 @@ void PollCompletion(coro_yield_t& yield) {
       if (meta_man->txn_system == DTX_SYS::OUR) {
         double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
         RecordTpLat(msr_sec);
-        printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+        // printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       }
       break;
     }

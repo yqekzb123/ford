@@ -391,7 +391,6 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
   }
   // assert(sav_val->magic == smallbank_savings_magic);
   // assert(chk_val->magic == smallbank_checking_magic);
-#endif
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadOnlyTxnCommit();

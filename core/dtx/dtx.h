@@ -131,8 +131,8 @@ class DTX {
   bool WriteRemote(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
   void Unpin(coro_yield_t& yield);  // 基线方法，将写好的数据刷下去
 
-  // bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
-  // bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
+  bool LockLocalRO(coro_yield_t& yield);  // 在本地对只读操作加锁
+  bool LockLocalRW(coro_yield_t& yield);  // 在本地对读写操作加锁
 
   bool ExeLocalRO(coro_yield_t& yield, uint64_t bid);  // 在本地执行只读操作
   bool ExeLocalRW(coro_yield_t& yield, uint64_t bid);  // 在本地执行读写操作
@@ -413,12 +413,6 @@ void DTX::AddToReadOnlySet(DataItemPtr item, LVersionPtr version) {
   DataSetItem data_set_item(item,version);
   // DataSetItem data_set_item{.item_ptr = std::move(item), .version_ptr = std::move(version), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
   read_only_set.emplace_back(data_set_item);
-}
-
-  // auto it = std::find(batch_list.begin(), batch_list.end(), bid);
-  // if (it == batch_list.end()) {
-  //     batch_list.push_back(bid);
-  // }
 }
 
 ALWAYS_INLINE

@@ -5,6 +5,67 @@
 #include "worker/global.h"
 #include "dtx/dtx.h"
 #include "base/page.h"
+bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
+  all_tableid.clear();
+  all_keyid.clear();
+  all_type.clear();
+  readonly_tableid.clear();
+  readonly_keyid.clear();
+  readwrite_tableid.clear();
+  readwrite_keyid.clear();
+
+  std::unordered_map<LocalDataKey,uint64_t,LocalDataHash,LocalDataEqual> all_map; // 去重使用
+  int i = 0;
+  for (int j = 0; j < LOCAL_BATCH_TXN_SIZE; j ++) {
+    BenchDTX* dtx = txn_list[j];
+    i++;
+    if(dtx->dtx->read_only_set.empty()) continue;
+    for (auto& item : dtx->dtx->read_only_set) {
+      auto it = item.item_ptr;
+      LocalDataKey key(it->table_id,it->key);
+      if(all_map.count(key) != 0) continue;
+      else {
+        all_map[key] = all_tableid.size();
+        all_tableid.emplace_back(it->table_id);
+        all_keyid.emplace_back(it->key);
+        all_type.emplace_back(0);
+      }
+    }
+  }
+  i=0;
+  for (int j = 0; j < LOCAL_BATCH_TXN_SIZE; j ++) {
+    BenchDTX* dtx = txn_list[j];
+    i++;
+    if(dtx->dtx->read_write_set.empty()) continue;
+    for (auto& item : dtx->dtx->read_write_set) {
+      auto it = item.item_ptr;
+      LocalDataKey key(it->table_id,it->key);
+      if(all_map.count(key) != 0) {
+        uint64_t index = all_map[key];
+        if (all_type[index] != 1) {
+          all_type[index] = 1;
+        }
+      } else {
+        all_map[key] = all_tableid.size();
+        all_tableid.emplace_back(it->table_id);
+        all_keyid.emplace_back(it->key);
+        all_type.emplace_back(1);
+      }
+    }
+  }
+  
+  for (int j = 0; j < all_tableid.size(); j++) {
+    if (all_type[j] == 0) {
+      readonly_tableid.push_back(all_tableid[j]);
+      readonly_keyid.push_back(all_keyid[j]);
+    } else {
+      readwrite_tableid.push_back(all_tableid[j]);
+      readwrite_keyid.push_back(all_keyid[j]);
+    }
+  }
+  
+  printf("local_batch.cc:51 thread %ld execute batch %ld, has %ld key\n", thread_gid, batch_id, all_keyid.size());
+}
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   if (batch_id == WARMUP_BATCHCNT) {
@@ -14,138 +75,142 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   bool res = true;
   BenchDTX* first_bdtx = txn_list[0];
   DTX* first_dtx = first_bdtx->dtx;
-  // printf("local_batch.cc:14 thread %ld execute batch %ld\n", thread_gid, batch_id);
-  //! 0.统计只读和读写的操作列表
-  std::vector<table_id_t> readonly_tableid;
-  std::vector<itemkey_t> readonly_keyid;
-  int i = 0;
-  for (auto& dtx : txn_list) {
-    i++;
-    if(dtx->dtx->read_only_set.empty()) continue;
-    for (auto& item : dtx->dtx->read_only_set) {
-      auto it = item.item_ptr;
-      readonly_tableid.push_back(it->table_id);
-      readonly_keyid.push_back(it->key);
-      all_tableid.push_back(it->table_id);
-      all_keyid.push_back(it->key);
-    }
-  }
-  std::vector<table_id_t> readwrite_tableid;
-  std::vector<itemkey_t> readwrite_keyid;
-  i=0;
-  for (auto& dtx : txn_list) {
-    i++;
-    if(dtx->dtx->read_write_set.empty()) continue;
-    for (auto& item : dtx->dtx->read_write_set) {
-      auto it = item.item_ptr;
-      readonly_tableid.push_back(it->table_id);
-      readonly_keyid.push_back(it->key);
-      all_tableid.push_back(it->table_id);
-      all_keyid.push_back(it->key);
-    }
-  }
   
+  //! 0.统计只读和读写的操作列表
+  GetReadWriteSet(yield);
+  #if OPEN_TIME
   // 打点计时1
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
+  #endif
 
-  //! 1. 对事务访问的数据项加锁
+  // //! 1. 对事务访问的数据项加锁
   // 只读加锁
   res = first_dtx->LockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
   if (!res) {
     // !失败以后所有操作解锁
+    first_dtx->UnlockShared(yield);
     return res;
   }
   // 读写加锁
   res = first_dtx->LockExclusiveOnRecord(yield, readwrite_tableid, readwrite_keyid);
   if (!res) {
     // !失败以后所有操作解锁
+    first_dtx->UnlockShared(yield);
+    first_dtx->UnlockExclusive(yield);
     return res;
   }
+
+  #if OPEN_TIME
   // 计时2
   struct timespec tx_lock_time;
   clock_gettime(CLOCK_REALTIME, &tx_lock_time);
   double lock_usec = (tx_lock_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  #endif
 
   //! 2. 获取数据项索引
-  // all_rids = first_dtx->GetHashIndex(yield, all_tableid, all_keyid);
-  // assert(!all_rids.empty());
+  all_rids = first_dtx->GetHashIndex(yield, all_tableid, all_keyid);
+  assert(!all_rids.empty());
 
+  #if OPEN_TIME
   // 计时3
   struct timespec tx_index_time;
   clock_gettime(CLOCK_REALTIME, &tx_index_time);
   double index_usec = (tx_index_time.tv_sec - tx_lock_time.tv_sec) * 1000000 + (double)(tx_index_time.tv_nsec - tx_lock_time.tv_nsec) / 1000;
+  #endif
 
-  // //! 3. 读取数据项
-  // auto data_list = ReadData(yield, first_dtx);
-  // // 计时4
-  // struct timespec tx_read_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_read_time);
-  // double read_usec = (tx_read_time.tv_sec - tx_index_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_index_time.tv_nsec) / 1000;
+  //! 3. 读取数据项
+  auto data_list = ReadData(yield, first_dtx);
 
-  // // ! 4. 从页中取出数据，将数据存入local，还没想好存到哪
-  // for (auto item : data_list) {
-  //   LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
-  //   // printf("local_batch.cc:70, set the first value of local data table %ld key %ld ptr %p\n",item->table_id, item->key, data_item);
-  //   data_item->SetFirstVersion(item);
-  // }
+  #if OPEN_TIME
+  // 计时4
+  struct timespec tx_read_time;
+  clock_gettime(CLOCK_REALTIME, &tx_read_time);
+  double read_usec = (tx_read_time.tv_sec - tx_index_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_index_time.tv_nsec) / 1000;
+  #endif
 
-  // //! 5. 根据数据项进行本地计算
-  // for (auto& dtx : txn_list) {
-  //   // !连续的本地计算,这里还需要增加tpcc等负载的运算内容 
-  //   res = dtx->TxReCaculate(yield);
-  // }
+  // ! 4. 从页中取出数据，将数据存入local，还没想好存到哪
+  for (auto item : data_list) {
+    LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
+    // printf("local_batch.cc:70, set the first value of local data table %ld key %ld ptr %p\n",item->table_id, item->key, data_item);
+    data_item->SetFirstVersion(item);
+  }
+
+  //! 5. 根据数据项进行本地计算
+  for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+    BenchDTX* dtx = txn_list[i];
+    res = dtx->TxReCaculate(yield);
+  }
+
+  #if OPEN_TIME
   // 计时5
-  // struct timespec tx_recalculate_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_recalculate_time);
-  // double recalculate_usec = (tx_recalculate_time.tv_sec - tx_read_time.tv_sec) * 1000000 + (double)(tx_recalculate_time.tv_nsec - tx_read_time.tv_nsec) / 1000;
+  struct timespec tx_recalculate_time;
+  clock_gettime(CLOCK_REALTIME, &tx_recalculate_time);
+  double recalculate_usec = (tx_recalculate_time.tv_sec - tx_read_time.tv_sec) * 1000000 + (double)(tx_recalculate_time.tv_nsec - tx_read_time.tv_nsec) / 1000;
+  #endif
 
   // //! 6. 将确定的数据，利用RDMA刷入页中
-  // FlushWrite(yield, first_dtx, data_list);
+  FlushWrite(yield, first_dtx, data_list);
 
   StatCommit();
 
-  // // 计时6
-  // struct timespec tx_flush_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_flush_time);
-  // double flush_usec = (tx_flush_time.tv_sec - tx_recalculate_time.tv_sec) * 1000000 + (double)(tx_flush_time.tv_nsec - tx_recalculate_time.tv_nsec) / 1000;
+  #if OPEN_TIME
+  // 计时6
+  struct timespec tx_flush_time;
+  clock_gettime(CLOCK_REALTIME, &tx_flush_time);
+  double flush_usec = (tx_flush_time.tv_sec - tx_recalculate_time.tv_sec) * 1000000 + (double)(tx_flush_time.tv_nsec - tx_recalculate_time.tv_nsec) / 1000;
+  #endif
 
-  // //! 7. Unpin pages
-  // Unpin(yield, first_dtx);
-  // // 计时7
-  // struct timespec tx_unpin_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
-  // double unpin_usec = (tx_unpin_time.tv_sec - tx_flush_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_flush_time.tv_nsec) / 1000;
+  //! 7. Unpin pages
+  Unpin(yield, first_dtx);
+
+  #if OPEN_TIME
+  // 计时7
+  struct timespec tx_unpin_time;
+  clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
+  double unpin_usec = (tx_unpin_time.tv_sec - tx_flush_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_flush_time.tv_nsec) / 1000;
+  #endif
 
   //! 8. 写日志到存储层
+  #if LOG_RPC_OR_RDMA
   brpc::CallId cid;
   first_dtx->SendLogToStoragePool(batch_id, &cid);
-  // // 计时8
-  // struct timespec tx_log_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_log_time);
-  // double log_usec = (tx_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
+  #else
+  first_dtx->SendLogToStoragePool(batch_id);
+  #endif
+
+  #if OPEN_TIME
+  // 计时8
+  struct timespec tx_log_time;
+  clock_gettime(CLOCK_REALTIME, &tx_log_time);
+  double log_usec = (tx_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
+  #endif
 
   //! 8. 释放锁
   first_dtx->UnlockShared(yield);
   first_dtx->UnlockExclusive(yield);
 
   //!! brpc同步
+  #if LOG_RPC_OR_RDMA
   brpc::Join(cid);
+  #endif
 
-  // // 计时9
-  // struct timespec tx_unlock_time;
-  // clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
-  // double unlock_usec = (tx_unlock_time.tv_sec - tx_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_log_time.tv_nsec) / 1000;
+  #if OPEN_TIME
+  // 计时9
+  struct timespec tx_unlock_time;
+  clock_gettime(CLOCK_REALTIME, &tx_unlock_time);
+  double unlock_usec = (tx_unlock_time.tv_sec - tx_log_time.tv_sec) * 1000000 + (double)(tx_unlock_time.tv_nsec - tx_log_time.tv_nsec) / 1000;
+  #endif
 
   // 记录提交事务
   struct timespec tx_end_time;
   clock_gettime(CLOCK_REALTIME, &tx_end_time);
   
   if (batch_id > WARMUP_BATCHCNT) {
-    for (auto& dtx : txn_list) {
+    for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+      BenchDTX* dtx = txn_list[i];
       double tx_usec = (tx_end_time.tv_sec - dtx->dtx->tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - dtx->dtx->tx_start_time.tv_nsec) / 1000;
       timer[stat_committed_tx_total++] = tx_usec;
-      // !清理事务
     }
     if (stat_committed_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
@@ -153,10 +218,10 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       stop_run = true;
     }
   }
-  for (auto& dtx : txn_list) {
+  for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+    BenchDTX* dtx = txn_list[i];
     delete dtx;
   }
-  
   // 输出计时
   // printf("local_batch.cc:164 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
   printf("local_batch.cc:164 execute batch %ld complete\n", batch_id);

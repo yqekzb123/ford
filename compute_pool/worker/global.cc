@@ -10,6 +10,7 @@ LocalBatchStore **local_batch_store;
 uint64_t commit_times = 0;
 
 int WARMUP_BATCHCNT = 100;
+int LOCAL_BATCH_TXN_SIZE = 50;
 
 __thread size_t ATTEMPTED_NUM;
 __thread bool stop_run = false;

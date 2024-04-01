@@ -9,16 +9,24 @@
 
 #define BATCH_TXN_ID 1
 #define BATCH_CORO_TIMES 1
+
+extern int LOCAL_BATCH_TXN_SIZE;
 class LocalBatch{
 private:
     std::vector<table_id_t> all_tableid;
     std::vector<itemkey_t> all_keyid;
+    std::vector<int> all_type; // 用于标记每一个下标的读写集是读还是写
+
+    std::vector<table_id_t> readonly_tableid;
+    std::vector<itemkey_t> readonly_keyid;
+    std::vector<table_id_t> readwrite_tableid;
+    std::vector<itemkey_t> readwrite_keyid;
+
     std::vector<Rid> all_rids;
 public:
     batch_id_t batch_id;
     pthread_mutex_t latch;
-    // std::vector<BenchDTX*> txn_list; 
-    BenchDTX* txn_list[LOCAL_BATCH_TXN_SIZE];
+    BenchDTX** txn_list;
     int current_txn_cnt;    // 当前batch中已经绑定的事务数量
     int start_commit_txn_cnt;   // 刚刚插入的事务数量
     int finish_commit_txn_cnt;  // 已经在batch的版本链中填入数据的事务
@@ -30,6 +38,7 @@ public:
         start_commit_txn_cnt = 0;
         finish_commit_txn_cnt = 0;
         batch_id = 0;
+        txn_list = (BenchDTX**)malloc(sizeof(BenchDTX*) * LOCAL_BATCH_TXN_SIZE);
         pthread_mutex_init(&latch, nullptr);
     }
     void SetBatchID(batch_id_t id) { 
@@ -73,6 +82,7 @@ public:
     }
 
     bool ExeBatchRW(coro_yield_t& yield);
+    bool GetReadWriteSet(coro_yield_t& yield);
     std::vector<DataItemPtr> ReadData(coro_yield_t& yield, DTX* first_dtx);
     void Unpin(coro_yield_t& yield, DTX* first_dtx);
     bool FlushWrite(coro_yield_t& yield, DTX* first_dtx, std::vector<DataItemPtr>& data_list);
