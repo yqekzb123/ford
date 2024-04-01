@@ -8,7 +8,9 @@
 "txn_system": 5,
     "comment": "0 is farm, 1 is drtmh, 2 is ford",
     "cache_size_GB": 4,
-    "batch_coroutine_num": 1
+    "batch_coroutine_num": 1,
+    "batch_warmup": 25,
+    "batch_size": 400
   },
   "remote_hashindex_node_nodes": {
     "remote_hashindex_node_ips": ["127.0.0.1"],
@@ -32,7 +34,7 @@
   },
   "remote_storage_nodes": {
     "remote_storage_node_ips": ["127.0.0.1"],
-    "remote_storage_node_port": [12344],
-    "remote_storage_node_meta_port": [12349]
+    "remote_storage_node_port": [42344],
+    "remote_storage_node_meta_port": [42349]
   }
 }

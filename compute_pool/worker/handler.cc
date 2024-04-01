@@ -157,6 +157,7 @@ void Handler::GenThreads(std::string bench_name) {
   for (t_id_t i = 0; i < thread_num_per_machine; i++) {
     if (thread_arr[i].joinable()) {
       thread_arr[i].join();
+      std::cout << "thread " << i << " joined" << std::endl;
     }
   }
 

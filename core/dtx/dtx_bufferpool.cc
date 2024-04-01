@@ -7,6 +7,9 @@
 #include "storage/storage_service.pb.h"
 #include "log/record.h"
 #include "worker/worker.h"
+#include "exception.h"
+
+#define MAX_TRY_PAGETABLE 20
 
 static void DataOnRPCDone(storage_service::GetPageResponse* response, brpc::Controller* cntl, DTX* dtx, std::unordered_map<PageId, char*>* pages,
         std::vector<int>* need_fetch_idx, std::vector<PageAddress>* page_addr_vec) {
@@ -121,6 +124,7 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
     brpc::CallId cid = cntl->call_id();
     request.set_require_batch_id(request_batch_id);
 
+    int try_cnt = 0;
     while(true){
         #if OPEN_TIME
         // 计时1
@@ -129,6 +133,23 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         #endif
 
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, is_write, need_fetch_from_disk, now_valid, pending_map_all_index);
+        if(++try_cnt > MAX_TRY_PAGETABLE){
+            for(int i : pending_map_all_index){
+                char* local_item = page_table_item_localaddr_and_remote_offset[i].first;
+                NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[i].second;
+                PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
+                // std::cout << "make page valid: pageid "<< pending_read_all_page_ids[i].table_id << 
+                //         " page_no: " << pending_read_all_page_ids[i].page_no << std::endl;
+                // item->page_valid = true;
+                memset(local_item, 0, sizeof(PageTableItem));
+                auto qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
+                if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
+                    assert(false);
+                };
+            }
+            // now_valid = std::vector<bool>(now_valid.size(), true);
+            throw AbortException(tx_id);
+        }
         // // for debug
         // for(int i=0; i<page_addr_vec.size(); i++){
         //     std::cout << "*-* FetchPage: table_id:" << page_ids[i].table_id << " page_no: " << page_ids[i].page_no 
@@ -229,11 +250,41 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 char* local_item = page_table_item_localaddr_and_remote_offset[pending_map_all_index[i]].first;
                 NodeOffset node_offset = page_table_item_localaddr_and_remote_offset[pending_map_all_index[i]].second;
                 PageTableItem* item = reinterpret_cast<PageTableItem*>(local_item);
+                // std::cout << "make page valid: pageid "<< pending_read_all_page_ids[i].table_id << 
+                //         " page_no: " << pending_read_all_page_ids[i].page_no << std::endl;
                 item->page_valid = true;
                 qp = thread_qp_man->GetRemotePageTableQPWithNodeID(node_offset.nodeId); 
-                if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
-                    assert(false);
-                };
+
+                while(true){
+                    char* cas_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
+                    offset_t lock_offset = (node_offset.offset - 8) / BUCKET_SIZE * BUCKET_SIZE + 8;
+                    if(!coro_sched->RDMACAS(coro_id, qp, cas_buf, lock_offset, UNLOCKED, EXCLUSIVE_LOCKED)){
+                        assert(false);
+                    };
+                    coro_sched->Yield(yield, coro_id);
+                    if(*(lock_t*)cas_buf == UNLOCKED){
+                        if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
+                            assert(false);
+                        };
+                        if(!coro_sched->RDMACAS(coro_id, qp, cas_buf, lock_offset, EXCLUSIVE_LOCKED, UNLOCKED)){
+                            assert(false);
+                        };
+                        break;
+                    }
+                }
+
+                // char* read_buf = thread_rdma_buffer_alloc->Alloc(sizeof(PageTableItem));
+                // if(!coro_sched->RDMARead(coro_id, qp, read_buf, node_offset.offset, sizeof(PageTableItem))){
+                //     assert(false);
+                // };
+                // coro_sched->Yield(yield, coro_id);
+                // PageTableItem* remote_item = reinterpret_cast<PageTableItem*>(read_buf);
+                // if(!(remote_item->page_id == item->page_id)){
+                //     assert(false);
+                // }
+                // if(!coro_sched->RDMAWrite(coro_id, qp, local_item, node_offset.offset, sizeof(PageTableItem))){
+                //     assert(false);
+                // };
             }
             
             #if OPEN_TIME

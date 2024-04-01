@@ -58,7 +58,7 @@ struct IndexMeta {
 
 
 // 计算每个哈希桶节点可以存放多少个rids
-const int MAX_RIDS_NUM_PER_NODE = (PAGE_SIZE - sizeof(page_id_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
+const int MAX_RIDS_NUM_PER_NODE = (BUCKET_SIZE - sizeof(lock_t) - sizeof(lock_t) - sizeof(short*) * NEXT_NODE_COUNT) / (sizeof(IndexItem) );
 
 // A IndexNode is a bucket
 // 这里注意：sizeof(IndexNode)是4080而非4096，这可能可以有效较少RNIC的哈希碰撞，ref sigmod23 guide，
@@ -72,7 +72,7 @@ struct IndexNode {
 
   short next_expand_node_id[NEXT_NODE_COUNT] = {-1};
   // IndexNode* next;
-} Aligned4096;
+} AlignedBucketSize;
 
 class IndexStore {
  public:

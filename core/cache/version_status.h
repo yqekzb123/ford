@@ -35,7 +35,7 @@ struct StatusBucket {
   StatusSlot slots[SLOT_PER_BKT];
 };
 
-constexpr size_t BUCKET_SIZE = sizeof(StatusBucket);
+// constexpr size_t BUCKET_SIZE = sizeof(StatusBucket);
 
 class VersionCache {
  public:

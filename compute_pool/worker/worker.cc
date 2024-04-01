@@ -73,6 +73,7 @@ __thread RDMABufferAllocator* rdma_buffer_allocator;
 __thread LogOffsetAllocator* log_offset_allocator;
 __thread AddrCache* addr_cache;
 __thread IndexCache* index_cache;
+__thread PageTableCache* page_table_cache;
 
 __thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
@@ -101,6 +102,8 @@ void RecordTpLat(double msr_sec) {
   std::sort(timer, timer + stat_committed_tx_total);
   double percentile_50 = timer[stat_committed_tx_total / 2];
   double percentile_99 = timer[stat_committed_tx_total * 99 / 100];
+
+  std::cout << "RecordTpLat......" << std::endl;
 
   mux.lock();
   tid_vec.push_back(thread_gid);
@@ -173,6 +176,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      index_cache,
+                     page_table_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -275,6 +279,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      index_cache,
+                     page_table_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -341,7 +346,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       timer[stat_committed_tx_total++] = tx_usec;
     }
     else{
-      printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
+      // printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
     }
     if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
@@ -377,6 +382,7 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      index_cache,
+                     page_table_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -468,6 +474,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
                      log_offset_allocator,
                      addr_cache,
                      index_cache,
+                     page_table_cache,
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
@@ -751,6 +758,7 @@ void run_thread(thread_params* params,
   auto alloc_rdma_region_range = params->global_rdma_region->GetThreadLocalRegion(thread_local_id);
   addr_cache = new AddrCache();
   index_cache = new IndexCache();
+  page_table_cache = new PageTableCache();
 
   rdma_buffer_allocator = new RDMABufferAllocator(alloc_rdma_region_range.first, alloc_rdma_region_range.second);
   // log_offset_allocator = new LogOffsetAllocator(thread_gid, params->total_thread_num);

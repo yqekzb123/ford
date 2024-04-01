@@ -76,6 +76,7 @@ namespace storage_service{
             //     usleep(10);
             // }
 
+            log_replay->latch3_.lock();
             log_replay->pageid_batch_count_[page_id].first.lock();
             while (log_replay->pageid_batch_count_[page_id].second > 0) {
                 // wait
@@ -84,7 +85,8 @@ namespace storage_service{
                 usleep(10);
             }
             log_replay->pageid_batch_count_[page_id].first.unlock();
-            
+            log_replay->latch3_.unlock();
+
             disk_manager_->read_page(fd, page_no, data, PAGE_SIZE);
             return_data.append(std::string(data, PAGE_SIZE));
         }
