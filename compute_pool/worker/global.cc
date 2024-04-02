@@ -5,16 +5,17 @@
 #include "batch/local_batch.h"
 
 LocalLockStore local_lock_store;
-LocalBatchStore local_batch_store;
+LocalBatchStore **local_batch_store;
 
 uint64_t commit_times = 0;
 
-int WARMUP_BATCHCNT = 1000;
+int WARMUP_BATCHCNT = 100;
+int LOCAL_BATCH_TXN_SIZE = 50;
 
 __thread size_t ATTEMPTED_NUM;
 __thread bool stop_run = false;
 // Performance measurement (thread granularity)
-struct timespec msr_start;
+__thread struct timespec msr_start;
 __thread struct timespec msr_end;
 __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
@@ -29,3 +30,5 @@ __thread uint64_t* thread_local_commit_times;
 // Stat the abort
 uint64_t shared_lock_abort_cnt;
 uint64_t exlusive_lock_abort_cnt;
+
+__thread t_id_t thread_gid;

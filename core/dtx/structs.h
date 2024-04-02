@@ -40,37 +40,30 @@ enum ValStatus : int {
 // Following are stuctures for maintaining coroutine's state, similar to context switch
 class DTX;
 struct LVersion{
-    // VersionType type; 
-    // void* txn; //实际上是DTX结构
+    uint64_t bid; //标记是哪个batch生成的
     DTX *txn; // 标记是哪个事务写的
     tx_id_t tx_id;  //标记事务号
-    LVersion* next;
+    // LVersion* next;
     DataItem* value; // 实际的值，可以是空
     bool has_value;
 
     LVersion() {
-        next = nullptr;
-        value = nullptr;
+        // next = nullptr;
+        value = new DataItem();
         has_value = false;
     }
 
-    void SetVersionDTX(DTX *t, tx_id_t tid) {
+    inline void SetVersionDTX(DTX *t, tx_id_t tid) {
         txn = t;
         tx_id = tid;
     }
 
-    void SetDataItem(DataItemPtr data) {
-        value = new DataItem();
+    inline void SetDataItem(DataItemPtr data) {
+        // value = new DataItem();
+        if (value == nullptr) value = new DataItem();
         memcpy(value, data.get(), sizeof(DataItem));
         has_value = true;
-    }
-
-    void CopyDataItemToNext(){
-        assert(next != nullptr);
-        assert(value != nullptr);
-        // std::shared_ptr<DataItem> p(new DataItem());
-        next->value = new DataItem();
-        memcpy(next->value, value, sizeof(DataItem));
+        printf("structs.h:65 %s %s\n",value->value, data->value);
     }
 };
 using LVersionPtr = std::shared_ptr<LVersion>;
@@ -104,6 +97,8 @@ struct DataSetItem {
  
   // 新内容
   DTX* read_version_dtx;
+  int  version_index;
+  uint64_t bid;
   // void* read_version_dtx; // 对于只读操作来说，需要读取哪个事务写的版本，实际上是DTX结构
 };
 

@@ -6,6 +6,7 @@
 #include <cassert>
 
 #include "util/debug.h"
+#include "batch/local_batch.h"
 
 void CoroutineScheduler::PollRegularCompletion() {
   for (auto it = pending_qps.begin(); it != pending_qps.end();) {
@@ -34,14 +35,6 @@ void CoroutineScheduler::PollRegularCompletion() {
       AppendCoroutine(&coro_array[coro_id]);
     }
     it = pending_qps.erase(it);
-  }
-  if(batch_model_ == true){
-    for (int coro_id = 2; coro_id < _coro_num ; coro_id++) {
-      assert(_coro_num > 1);
-      if (pending_counts[coro_id] == 0)  {
-        AppendCoroutine(&coro_array[coro_id]);
-      }
-    }
   }
 }
 

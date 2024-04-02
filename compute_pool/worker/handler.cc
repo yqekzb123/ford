@@ -72,9 +72,13 @@ void Handler::GenThreads(std::string bench_name) {
   g_thread_cnt = thread_num_per_machine;
   
   const int coro_num = (int)client_conf.get("coroutine_num").get_int64();
-  // //! notice: the local_cache_size
-  // const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
+  const int batch_coro_num = (int)client_conf.get("batch_coroutine_num").get_int64();
+  //! notice: the local_cache_size
+  const int local_cache_size = (int)client_conf.get("cache_size_GB").get_int64();
   assert(machine_id >= 0 && machine_id < machine_num);
+
+  WARMUP_BATCHCNT = client_conf.get("batch_warmup").get_int64();
+  LOCAL_BATCH_TXN_SIZE = client_conf.get("batch_size").get_int64();
 
   /* Start working */
   tx_id_generator = 0;  // Initial transaction id == 0
@@ -118,10 +122,13 @@ void Handler::GenThreads(std::string bench_name) {
   shared_lock_abort_cnt = 0;
   exlusive_lock_abort_cnt = 0;
 
+  local_batch_store = (LocalBatchStore**)malloc(sizeof(LocalBatchStore*)*thread_num_per_machine);
+
   for (t_id_t i = 0; i < thread_num_per_machine; i++) {
     param_arr[i].thread_local_id = i;
     param_arr[i].thread_global_id = (machine_id * thread_num_per_machine) + i;
     param_arr[i].coro_num = coro_num;
+    param_arr[i].batch_coro_num = batch_coro_num;
     param_arr[i].bench_name = bench_name;
     param_arr[i].global_meta_man = global_meta_man;
     param_arr[i].global_status = global_vcache;
