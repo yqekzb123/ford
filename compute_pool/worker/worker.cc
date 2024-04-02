@@ -189,45 +189,143 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
     switch (tx_type) {
       case TATPTxType::kGetSubsciberData: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read only transaction
+        #if SYS_ONE_WRITE
+          if(FastRand(&seed) % (g_machine_num-1) == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kGetNewDestination: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxGetNewDestination(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxGetNewDestination(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxGetNewDestination(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kGetAccessData: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read only transaction
+        #if SYS_ONE_WRITE
+          if(FastRand(&seed) % (g_machine_num-1) == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kUpdateSubscriberData: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxUpdateSubscriberData(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxUpdateSubscriberData(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxUpdateSubscriberData(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kUpdateLocation: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxUpdateLocation(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxUpdateLocation(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxUpdateLocation(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kInsertCallForwarding: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxInsertCallForwarding(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxInsertCallForwarding(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxInsertCallForwarding(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case TATPTxType::kDeleteCallForwarding: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = TxDeleteCallForwarding(tatp_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxDeleteCallForwarding(tatp_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = TxDeleteCallForwarding(tatp_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       default:
@@ -296,39 +394,123 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     // printf("worker.cc:326, start a new txn\n");
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case SmallBankTxType::kBalance: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // !read only transaction
+        #if SYS_ONE_WRITE
+          if(FastRand(&seed) % (g_machine_num-1) == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case SmallBankTxType::kDepositChecking: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case SmallBankTxType::kSendPayment: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case SmallBankTxType::kTransactSaving: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       case SmallBankTxType::kWriteCheck: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        #endif
         break;
       }
       default:
@@ -499,39 +681,109 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
 
     switch (tx_type) {
       case TPCCTxType::kDelivery: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "] [Delivery] thread id: " << thread_gid << " coro id: " << coro_id;
-        tx_committed = TxDelivery(tpcc_client, random_generator, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxDelivery(tpcc_client, random_generator, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "] [Delivery] thread id: " << thread_gid << " coro id: " << coro_id;
+          tx_committed = TxDelivery(tpcc_client, random_generator, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        #endif
       } break;
       case TPCCTxType::kNewOrder: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "] [NewOrder] thread id: " << thread_gid << " coro id: " << coro_id;
-        tx_committed = TxNewOrder(tpcc_client, random_generator, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxNewOrder(tpcc_client, random_generator, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "] [NewOrder] thread id: " << thread_gid << " coro id: " << coro_id;
+          tx_committed = TxNewOrder(tpcc_client, random_generator, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        #endif
       } break;
       case TPCCTxType::kOrderStatus: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "] [OrderStatus] thread id: " << thread_gid << " coro id: " << coro_id;
-        tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        // ! read only transaction
+        #if SYS_ONE_WRITE
+          if(FastRand(&seed) % (g_machine_num-1) == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "] [OrderStatus] thread id: " << thread_gid << " coro id: " << coro_id;
+          tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        #endif
       } break;
       case TPCCTxType::kPayment: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "] [Payment] thread id: " << thread_gid << " coro id: " << coro_id;
-        tx_committed = TxPayment(tpcc_client, random_generator, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        // ! read write transaction
+        #if SYS_ONE_WRITE
+          if(g_machine_id == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxPayment(tpcc_client, random_generator, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "] [Payment] thread id: " << thread_gid << " coro id: " << coro_id;
+          tx_committed = TxPayment(tpcc_client, random_generator, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        #endif
       } break;
       case TPCCTxType::kStockLevel: {
-        thread_local_try_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "] [StockLevel] thread id: " << thread_gid << " coro id: " << coro_id;
-        tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
-        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
-        // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        // ! read only transaction
+        #if SYS_ONE_WRITE
+          if(FastRand(&seed) % (g_machine_num-1) == 0){
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
+            if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+          else{
+            thread_local_try_times[uint64_t(tx_type)]++;
+            tx_committed = true;
+            thread_local_commit_times[uint64_t(tx_type)]++;
+          }
+        #else
+          thread_local_try_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "] [StockLevel] thread id: " << thread_gid << " coro id: " << coro_id;
+          tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
+          if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+          // RDMA_LOG(DBG) << "Tx[" << iter << "]>>>>>>>>>>>>>>>>>>>>>> coro " << coro_id << " commit? " << tx_committed;
+        #endif
       } break;
       default:
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));

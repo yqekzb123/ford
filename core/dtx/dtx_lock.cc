@@ -286,16 +286,23 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
     int last_hold_lock_cnt = shared_lock_item_localaddr_and_remote_offset.size();
     shared_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
-    int cnt = 0;
+    int try_cnt = 0;
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
-        if(++cnt > MAX_TRY_LATCH){
+        if(++try_cnt > MAX_TRY_LATCH){
             if(pending_hash_node_latch_idx.size() == 1){
                 std::cout << "*-* try time out: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[0]].offset << std::endl;
                 ExclusiveUnlockHashNode_NoWrite(yield, total_hash_node_offs_vec[pending_hash_node_latch_idx[0]], QPType::kLockTable);
             }
             throw AbortException(tx_id);
+        }
+        if(try_cnt %5 == 0){
+            // 流量控制
+            // read now
+            char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
+            coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
+            coro_sched->Yield(yield, coro_id);  
         }
         for(auto idx : succ_node_off_idx ){
             // read now
@@ -553,16 +560,23 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
     int last_hold_lock_cnt = exclusive_lock_item_localaddr_and_remote_offset.size();
     exclusive_lock_item_localaddr_and_remote_offset.reserve(last_hold_lock_cnt + lock_data_id.size());
 
-    int cnt = 0;
+    int try_cnt = 0;
     while (pending_hash_node_latch_idx.size()!=0){
         // lock hash node bucket, and remove latch successfully from pending_hash_node_latch_offs
         auto succ_node_off_idx = ExclusiveLockHashNode(yield, QPType::kLockTable, local_hash_nodes_vec, cas_bufs_vec);
-        if(++cnt > MAX_TRY_LATCH){
+        if(++try_cnt > MAX_TRY_LATCH){
             if(pending_hash_node_latch_idx.size() == 1){
                 std::cout << "*-* try time out: " << total_hash_node_offs_vec[pending_hash_node_latch_idx[0]].offset << std::endl;
                 ExclusiveUnlockHashNode_NoWrite(yield, total_hash_node_offs_vec[pending_hash_node_latch_idx[0]], QPType::kLockTable);
             }
             throw AbortException(tx_id);
+        }
+        if(try_cnt %5 == 0){
+            // 流量控制
+            // read now
+            char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
+            coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
+            coro_sched->Yield(yield, coro_id);  
         }
         
         for(auto idx : succ_node_off_idx ){

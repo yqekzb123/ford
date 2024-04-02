@@ -36,7 +36,7 @@ bool DTX::TxReadWriteTxnExe(coro_yield_t& yield, bool fail_abort) {
   #endif  
 
   if (!LockLocalRW(yield)) {
-    TxAbort(yield);
+    TxReadWriteAbort();
     return false;
   } 
 
@@ -47,7 +47,7 @@ bool DTX::TxReadWriteTxnExe(coro_yield_t& yield, bool fail_abort) {
   #endif
 
   if (!ReadRemote(yield)) {
-    TxAbort(yield);
+    TxReadWriteAbort();
     return false;
   }
 
@@ -60,7 +60,7 @@ bool DTX::TxReadWriteTxnExe(coro_yield_t& yield, bool fail_abort) {
 
   return true;
 ABORT:
-  if (fail_abort) TxAbort(yield);
+  if (fail_abort) TxReadWriteAbort();
   return false;
 }
 
@@ -174,10 +174,12 @@ ABORT:
 }
 
 bool DTX::TxReadOnlyTxnCommit() {
+  assert(read_write_set.empty());
   return true;
 }
 
 bool DTX::TxReadOnlyAbort() {
+  assert(read_write_set.empty());
   Abort();
   return true;
 }

@@ -117,7 +117,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
   auto dist_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kDistrictTable, dist_key.item_key);
   dtx->AddToReadWriteSet(dist_obj);
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
   auto* ware_val = (tpcc_warehouse_val_t*)ware_obj->value;
   std::string check(ware_val->w_zip);
@@ -174,7 +178,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
                                              1);
   dtx->AddToReadWriteSet(oidx_obj);
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
   // Respectively assign values
   tpcc_new_order_val_t* norder_val = (tpcc_new_order_val_t*)norder_obj->value;
@@ -210,7 +218,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     auto stock_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kStockTable, stock_key.item_key);
     dtx->AddToReadWriteSet(stock_obj);
 
-    if (!dtx->TxExe(yield)) return false;
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if (!dtx->TxExe(yield)) return false;
+    #endif
 
     tpcc_item_val_t* item_val = (tpcc_item_val_t*)item_obj->value;
     tpcc_stock_val_t* stock_val = (tpcc_stock_val_t*)stock_obj->value;
@@ -243,7 +255,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
                                              1);
     dtx->AddToReadWriteSet(ol_obj);
 
-    if (!dtx->TxExe(yield)) return false;
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if (!dtx->TxExe(yield)) return false;
+    #endif
 
     tpcc_order_line_val_t* order_line_val = (tpcc_order_line_val_t*)ol_obj->value;
 
@@ -273,7 +289,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     auto stock_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kStockTable, stock_key.item_key);
     dtx->AddToReadWriteSet(stock_obj);
 
-    if (!dtx->TxExe(yield)) return false;
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if (!dtx->TxExe(yield)) return false;
+    #endif
 
     tpcc_item_val_t* item_val = (tpcc_item_val_t*)item_obj->value;
     tpcc_stock_val_t* stock_val = (tpcc_stock_val_t*)stock_obj->value;
@@ -305,7 +325,12 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
                                              tx_id,
                                              1);
     dtx->AddToReadWriteSet(ol_obj);
-    if (!dtx->TxExe(yield)) return false;
+
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if (!dtx->TxExe(yield)) return false;
+    #endif
 
     tpcc_order_line_val_t* order_line_val = (tpcc_order_line_val_t*)ol_obj->value;
 
@@ -317,7 +342,11 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     order_line_val->debug_magic = tpcc_add_magic;
   }
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -412,7 +441,11 @@ bool TxPayment(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& yi
                                              1);
   dtx->AddToReadWriteSet(hist_obj);
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
   tpcc_warehouse_val_t* ware_val = (tpcc_warehouse_val_t*)ware_obj->value;
   std::string check(ware_val->w_zip);
@@ -467,7 +500,11 @@ bool TxPayment(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& yi
   strcat(hist_val->h_data, "    ");
   strcat(hist_val->h_data, dist_val->d_name);
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -505,10 +542,17 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     dtx->AddToReadOnlySet(norder_obj);
 
     // Get the new order record with the o_id. Probe if the new order record exists
-    if (!dtx->TxExe(yield, false)) {
-      dtx->RemoveLastROItem();
-      continue;
-    }
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)){
+        dtx->RemoveLastROItem();
+        continue;
+      }
+    #else
+      if (!dtx->TxExe(yield)){
+        dtx->RemoveLastROItem();
+        continue;
+      }
+    #endif
 
     // The new order record exists. Remove the new order obj from read only set
     dtx->RemoveLastROItem();
@@ -523,7 +567,11 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     dtx->AddToReadWriteSet(order_obj);
 
     // The row in the ORDER table with matching O_W_ID (equals W_ ID), O_D_ID (equals D_ID), and O_ID (equals NO_O_ID) is selected
-    if (!dtx->TxExe(yield)) return false;
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if(!dtx->TxExe(yield)) return false;
+    #endif
 
     auto* no_val = (tpcc_new_order_val_t*)norder_obj->value;
     if (no_val->debug_magic != tpcc_add_magic) {
@@ -555,11 +603,17 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
       auto ol_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kOrderLineTable, order_line_key.item_key);
       dtx->AddToReadOnlySet(ol_obj);
 
-      if (!dtx->TxExe(yield, false)) {
-        // Fail not abort
-        dtx->RemoveLastROItem();
-        continue;
-      }
+      #if SYS_ONE_WRITE
+        if(!dtx->TxReadWriteTxnExe(yield)){
+          dtx->RemoveLastROItem();
+          continue;
+        }
+      #else
+        if (!dtx->TxExe(yield)){
+          dtx->RemoveLastROItem();
+          continue;
+        }
+      #endif
       tpcc_order_line_val_t* order_line_val = (tpcc_order_line_val_t*)ol_obj->value;
       if (order_line_val->debug_magic != tpcc_add_magic) {
         RDMA_LOG(FATAL) << "[FATAL] Read order line unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
@@ -574,7 +628,11 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     auto cust_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kCustomerTable, cust_key.item_key);
     dtx->AddToReadWriteSet(cust_obj);
 
-    if (!dtx->TxExe(yield)) return false;
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadWriteTxnExe(yield)) return false;
+    #else
+      if (!dtx->TxExe(yield)) return false;
+    #endif
 
     tpcc_customer_val_t* cust_val = (tpcc_customer_val_t*)cust_obj->value;
     // c_since never be 0
@@ -589,7 +647,11 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     cust_val->c_delivery_cnt += 1;
   }
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -638,7 +700,11 @@ bool TxOrderStatus(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t
   auto order_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kOrderTable, order_key.item_key);
   dtx->AddToReadOnlySet(order_obj);
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
   tpcc_customer_val_t* cust_val = (tpcc_customer_val_t*)cust_obj->value;
   // c_since never be 0
@@ -660,9 +726,17 @@ bool TxOrderStatus(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t
     dtx->AddToReadOnlySet(ol_obj);
   }
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadOnlyTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -691,7 +765,11 @@ bool TxStockLevel(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t&
   auto dist_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kDistrictTable, dist_key.item_key);
   dtx->AddToReadOnlySet(dist_obj);
 
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
 
   tpcc_district_val_t* dist_val = (tpcc_district_val_t*)dist_obj->value;
   std::string check = std::string(dist_val->d_zip);
@@ -714,11 +792,18 @@ bool TxStockLevel(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t&
       auto ol_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kOrderLineTable, order_line_key.item_key);
       dtx->AddToReadOnlySet(ol_obj);
 
-      if (!dtx->TxExe(yield, false)) {
-        // Not found, not abort
-        dtx->RemoveLastROItem();
-        break;
-      }
+      #if SYS_ONE_WRITE
+        if(!dtx->TxReadOnlyTxnExe(yield)){
+          dtx->RemoveLastROItem();
+          break;
+        }
+      #else
+        if (!dtx->TxExe(yield, false)) {
+          // Not found, not abort
+          dtx->RemoveLastROItem();
+          break;
+        }
+      #endif
 
       tpcc_order_line_val_t* ol_val = (tpcc_order_line_val_t*)ol_obj->value;
       if (ol_val->debug_magic != tpcc_add_magic) {
@@ -731,7 +816,11 @@ bool TxStockLevel(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t&
       auto stock_obj = std::make_shared<DataItem>((table_id_t)TPCCTableType::kStockTable, stock_key.item_key);
       dtx->AddToReadOnlySet(stock_obj);
 
-      if (!dtx->TxExe(yield)) return false;
+      #if SYS_ONE_WRITE
+        if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+      #else
+        if (!dtx->TxExe(yield)) return false;
+      #endif
 
       tpcc_stock_val_t* stock_val = (tpcc_stock_val_t*)stock_obj->value;
       if (stock_val->debug_magic != tpcc_add_magic) {
@@ -756,7 +845,11 @@ bool TxStockLevel(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t&
     }
   }
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadOnlyTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 

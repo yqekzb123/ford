@@ -655,7 +655,7 @@ class TPCC {
   std::string bench_name;
   
   // Pre-defined constants, which will be modified for tests
-  uint32_t num_warehouse = 3000;
+  uint32_t num_warehouse = 30;
 
   uint32_t num_district_per_warehouse = 10;
 

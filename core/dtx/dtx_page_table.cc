@@ -294,6 +294,13 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
             }
             throw AbortException(this->tx_id);
         }
+        if(try_cnt %5 == 0){
+            // 流量控制
+            // read now
+            char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
+            coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
+            coro_sched->Yield(yield, coro_id);  
+        }
         // init hold_node_off_latch
         // for(auto node_off : succ_node_off ){
         //     hold_node_off_latch.emplace(node_off);
@@ -438,6 +445,9 @@ std::vector<PageAddress> DTX::GetPageAddrOrAddIntoPageTable(coro_yield_t& yield,
     // 检查
     for(int i=0; i<pending_read_all_page_ids.size(); i++){
         assert(res[i].frame_id != INVALID_FRAME_ID);
+    }
+    if(try_cnt >= 10){
+        std::cout << "try_cnt: " << try_cnt << std::endl;
     }
     return res;
 }

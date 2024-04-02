@@ -5,7 +5,7 @@
     "local_port": 12357,
     "local_meta_port": 12358,
     "mem_size_GB": 1,
-    "workload": "SmallBank" //SmallBank TATP TPCC MICRO
+    "workload": "TPCC" //SmallBank TATP TPCC MICRO
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],
