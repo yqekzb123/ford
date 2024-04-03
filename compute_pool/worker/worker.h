@@ -13,6 +13,7 @@
 #include "smallbank/smallbank_db.h"
 #include "tpcc/tpcc_db.h"
 #include "micro/micro_db.h"
+#include "ycsb/ycsb_db.h"
 
 struct thread_params {
   t_id_t thread_local_id;
@@ -33,4 +34,5 @@ struct thread_params {
 void run_thread(thread_params* params,
                 TATP* tatp_client,
                 SmallBank* smallbank_client,
-                TPCC* tpcc_client);
+                TPCC* tpcc_client,
+                YCSB* ycsb_client);

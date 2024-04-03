@@ -17,6 +17,7 @@
 #include "smallbank/smallbank_db.h"
 #include "tatp/tatp_db.h"
 #include "tpcc/tpcc_db.h"
+#include "ycsb/ycsb_db.h"
 
 using namespace rdmaio;
 
@@ -97,4 +98,6 @@ class HashIndexServer {
   TPCC* tpcc_server = nullptr;
   
   MICRO* micro_server = nullptr;
+
+  YCSB* ycsb_server = nullptr;
 };

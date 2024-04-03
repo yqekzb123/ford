@@ -7,4 +7,6 @@ add_subdirectory(tatp)
 
 add_subdirectory(smallbank)
 
+add_subdirectory(ycsb)
+
 add_subdirectory(micro)

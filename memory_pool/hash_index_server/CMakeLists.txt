@@ -11,7 +11,8 @@ set(INDEX_SERVER_SOURCE hash_index_server.cc
         ../../workload/smallbank/smallbank_db.cc
         ../../workload/micro/micro_db.cc
         ../../workload/tatp/tatp_db.cc
-        ../../workload/tpcc/tpcc_db.cc)
+        ../../workload/tpcc/tpcc_db.cc
+        ../../workload/ycsb/ycsb_db.cc)
 
 add_executable(index_server ${INDEX_SERVER_SOURCE})
 target_link_libraries(index_server rlib)

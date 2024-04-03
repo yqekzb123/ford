@@ -7,7 +7,7 @@
 #include "bench_dtx.h" 
 #include "local_data.h"
 
-#define BATCH_TXN_ID 1
+// #define BATCH_TXN_ID 1
 #define BATCH_CORO_TIMES 1
 
 extern int LOCAL_BATCH_TXN_SIZE;
@@ -25,6 +25,7 @@ private:
     std::vector<Rid> all_rids;
 public:
     batch_id_t batch_id;
+    coro_id_t coro_id;
     pthread_mutex_t latch;
     BenchDTX** txn_list;
     int current_txn_cnt;    // 当前batch中已经绑定的事务数量
@@ -38,11 +39,15 @@ public:
         start_commit_txn_cnt = 0;
         finish_commit_txn_cnt = 0;
         batch_id = 0;
+        coro_id = 0;
         txn_list = (BenchDTX**)malloc(sizeof(BenchDTX*) * LOCAL_BATCH_TXN_SIZE);
         pthread_mutex_init(&latch, nullptr);
     }
     void SetBatchID(batch_id_t id) { 
         batch_id = id;
+    }
+    void SetBatchCoroID(coro_id_t id) {
+        coro_id = id;
     }
     LocalBatch(batch_id_t id) {
         LocalBatch();
@@ -50,7 +55,8 @@ public:
     }
 
     bool InsertTxn(BenchDTX* txn) {
-        txn->dtx->coro_id = BATCH_TXN_ID;
+        txn->dtx->coro_id = coro_id;
+        // printf("local_batch.h:59 txn %p coro id %ld\n", txn->dtx->tx_id, txn->dtx->coro_id);
         pthread_mutex_lock(&latch);
         if (current_txn_cnt < LOCAL_BATCH_TXN_SIZE) {
             txn_list[current_txn_cnt] = txn;
@@ -105,6 +111,7 @@ public:
         for (int i = 0; i < coroutine_cnt; i++) {
             local_store[i] = new LocalBatch();
             local_store[i]->SetBatchID(GenerateBatchID());
+            local_store[i]->SetBatchCoroID(i+1);
         }
     }
 

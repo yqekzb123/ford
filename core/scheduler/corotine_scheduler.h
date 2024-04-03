@@ -274,6 +274,7 @@ void CoroutineScheduler::Yield(coro_yield_t& yield, coro_id_t cid) {
   next->prev_coro = coro->prev_coro;
   if (coro_tail == coro) coro_tail = coro->prev_coro;
   coro->is_wait_poll = true;
+  assert(coro->is_wait_poll == true);
   // printf("thread %ld coro list remove coro %ld (is_wait_poll ? %s)\n",t_id, coro->coro_id, coro->is_wait_poll?"true":"false");
   // 2. Yield to the next ccc
   // RDMA_LOG(DBG) << "coro: " << cid << " yields to coro " << next->coro_id;
@@ -289,6 +290,7 @@ void CoroutineScheduler::LocalTxnYield(coro_yield_t& yield, coro_id_t cid) {
 
   // 2. Yield to the next ccc
   // RDMA_LOG(DBG) << "coro: " << cid << " yields to coro " << next->coro_id;
+  // printf("thread %ld coro %ld complete one generate txn, next %ld\n",t_id, coro->coro_id, next->coro_id);
   RunCoroutine(yield, next);
 }
 
@@ -299,6 +301,7 @@ void CoroutineScheduler::YieldBatch(coro_yield_t& yield, coro_id_t cid) {
   Coroutine* coro = &coro_array[cid];
   assert(coro->is_wait_poll == false);
   Coroutine* next = coro->next_coro;
+  // printf("thread %ld coro %ld complete one batch, next %ld\n",t_id, coro->coro_id, next->coro_id);
   RunCoroutine(yield, next);
 }
 
@@ -307,6 +310,7 @@ ALWAYS_INLINE
 void CoroutineScheduler::RunCoroutine(coro_yield_t& yield, Coroutine* coro) {
   // RDMA_LOG(DBG) << "yield to coro: " << coro->coro_id;
   coro->is_wait_poll = false;
+  assert(coro->is_wait_poll == false);
   // printf("thread %ld coro %ld execute (is_wait_poll ? %s)\n",t_id, coro->coro_id, coro->is_wait_poll?"true":"false");
   yield(coro->func);
 }

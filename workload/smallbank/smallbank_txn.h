@@ -7,7 +7,6 @@
 
 #include "worker/global.h"
 #include "dtx/dtx.h"
-// #include "local_exec/local_data.h"
 #include "bench_dtx.h"
 #include "smallbank/smallbank_db.h"
 

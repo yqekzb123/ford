@@ -64,10 +64,11 @@ bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
     }
   }
   
-  printf("local_batch.cc:51 thread %ld execute batch %ld, has %ld key\n", thread_gid, batch_id, all_keyid.size());
+  // printf("local_batch.cc:51 thread %ld execute batch %ld, has %ld key\n", thread_gid, batch_id, all_keyid.size());
 }
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
+  stat_attempted_tx_total+=LOCAL_BATCH_TXN_SIZE;
   if (batch_id == WARMUP_BATCHCNT) {
     clock_gettime(CLOCK_REALTIME, &msr_start);
   }
@@ -90,6 +91,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   if (!res) {
     // !失败以后所有操作解锁
     first_dtx->UnlockShared(yield);
+    stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
     return res;
   }
   // 读写加锁
@@ -98,6 +100,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     // !失败以后所有操作解锁
     first_dtx->UnlockShared(yield);
     first_dtx->UnlockExclusive(yield);
+    stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
     return res;
   }
 
@@ -212,7 +215,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       double tx_usec = (tx_end_time.tv_sec - dtx->dtx->tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - dtx->dtx->tx_start_time.tv_nsec) / 1000;
       timer[stat_committed_tx_total++] = tx_usec;
     }
-    if (stat_committed_tx_total >= ATTEMPTED_NUM) {
+    if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
       // A coroutine calculate the total execution time and exits
       clock_gettime(CLOCK_REALTIME, &msr_end);
       stop_run = true;
@@ -223,8 +226,8 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     delete dtx;
   }
   // 输出计时
-  // printf("local_batch.cc:164 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
-  printf("local_batch.cc:164 execute batch %ld complete\n", batch_id);
+  // printf("local_batch.cc:226 1. lock %lf, 2. index %lf, 3. read %lf, 4. recalculate %lf, 5. flush %lf, 6. unpin %lf, 7. log %lf, 8. unlock %lf (us)\n", lock_usec, index_usec, read_usec, recalculate_usec, flush_usec, unpin_usec, log_usec, unlock_usec);
+  // printf("local_batch.cc:227 execute batch %ld complete\n", batch_id);
   return res;
 }
 

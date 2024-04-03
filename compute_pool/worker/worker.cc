@@ -20,6 +20,7 @@
 #include "smallbank/smallbank_txn.h"
 #include "tatp/tatp_txn.h"
 #include "tpcc/tpcc_txn.h"
+#include "ycsb/ycsb_txn.h"
 #include "util/latency.h"
 #include "util/zipf.h"
 
@@ -37,6 +38,7 @@ extern std::vector<double> lock_durations;
 extern std::vector<t_id_t> tid_vec;
 extern std::vector<double> attemp_tp_vec;
 extern std::vector<double> tp_vec;
+extern std::vector<double> ab_rate;
 extern std::vector<double> medianlat_vec;
 extern std::vector<double> taillat_vec;
 
@@ -45,7 +47,7 @@ extern std::vector<uint64_t> total_commit_times;
 
 DEFINE_string(protocol, "baidu_std", "Protocol type");
 DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
-DEFINE_string(server, "127.0.0.1:42348", "IP address of server");
+DEFINE_string(server, "127.0.0.1:32348", "IP address of server");
 DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
 DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
 DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
@@ -59,6 +61,7 @@ __thread t_id_t thread_num;
 __thread TATP* tatp_client = nullptr;
 __thread SmallBank* smallbank_client = nullptr;
 __thread TPCC* tpcc_client = nullptr;
+__thread YCSB* ycsb_client = nullptr;
 
 __thread MetaManager* meta_man;
 __thread QPManager* qp_man;
@@ -78,6 +81,7 @@ __thread PageTableCache* page_table_cache;
 __thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
 __thread TPCCTxType* tpcc_workgen_arr;
+__thread YCSBTxType* ycsb_workgen_arr;
 
 __thread coro_id_t coro_num;
 __thread coro_id_t batch_coro_num;
@@ -98,6 +102,7 @@ const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 void RecordTpLat(double msr_sec) {
   double attemp_tput = (double)stat_attempted_tx_total / msr_sec;
   double tx_tput = (double)stat_committed_tx_total / msr_sec;
+  double abort_rate = (double) stat_aborted_tx_total/stat_attempted_tx_total;
 
   std::sort(timer, timer + stat_committed_tx_total);
   double percentile_50 = timer[stat_committed_tx_total / 2];
@@ -111,6 +116,7 @@ void RecordTpLat(double msr_sec) {
   tp_vec.push_back(tx_tput);
   medianlat_vec.push_back(percentile_50);
   taillat_vec.push_back(percentile_99);
+  ab_rate.push_back(abort_rate);
 
   for (size_t i = 0; i < total_try_times.size(); i++) {
     total_try_times[i] += thread_local_try_times[i];
@@ -122,10 +128,8 @@ void RecordTpLat(double msr_sec) {
 
 void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
   while (true) {
-  // while (thread_gid % g_thread_cnt == 0) {
-    // printf("worker.cc:124, thread %ld batch exe\n", thread_gid);
     local_batch_store[thread_gid]->ExeBatch(yield, coro_id);
-    coro_sched->YieldBatch(yield, BATCH_TXN_ID);
+    coro_sched->YieldBatch(yield, coro_id);
     if (stop_run) {
       double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
       RecordTpLat(msr_sec);
@@ -138,18 +142,16 @@ void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
 // Coroutine 0 in each thread does polling
 void PollCompletion(coro_yield_t& yield) {
   while (true) {
-    // printf("worker.cc:108, thread %ld complete a round\n", thread_gid);
     coro_sched->PollCompletion();
     Coroutine* next = coro_sched->coro_head->next_coro;
     if (next->coro_id != POLL_ROUTINE_ID) {
-      // RDMA_LOG(DBG) << "Coro 0 yields to coro " << next->coro_id;
       coro_sched->RunCoroutine(yield, next);
     }
     if (stop_run) {
       if (meta_man->txn_system == DTX_SYS::OUR) {
         double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
         RecordTpLat(msr_sec);
-        // printf("worker.cc:119, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
+        // printf("worker.cc:148, thread %ld try to stop msr_sec %f\n", thread_gid, msr_sec);
       }
       break;
     }
@@ -390,7 +392,7 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
-    stat_attempted_tx_total++;
+    // stat_attempted_tx_total++;
 
     SmallBankDTX* bench_dtx = new SmallBankDTX();
     bench_dtx->dtx = dtx;
@@ -703,10 +705,169 @@ void RunMICRO(coro_yield_t& yield, coro_id_t coro_id) {
   #endif
 }
 
+void RunYCSB(coro_yield_t& yield, coro_id_t coro_id) {
+  // Each coroutine has a dtx: Each coroutine is a coordinator
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
+                     qp_man,
+                     status,
+                     lock_table,
+                     thread_gid,
+                     coro_id,
+                     coro_sched,
+                     rdma_buffer_allocator,
+                     log_offset_allocator,
+                     addr_cache,
+                     index_cache,
+                     page_table_cache,
+                     free_page_list,
+                     free_page_list_mutex,
+                     data_channel,
+                     log_channel);
+
+    YCSBTxType tx_type = ycsb_workgen_arr[FastRand(&seed) % 100];
+    uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
+    stat_attempted_tx_total++;
+
+    YCSBDTX* bench_dtx = new YCSBDTX();
+    bench_dtx->dtx = dtx;
+    // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
+
+    clock_gettime(CLOCK_REALTIME, &tx_start_time);
+    dtx->tx_start_time = tx_start_time;
+    // printf("worker.cc:326, start a new txn\n");
+    switch (tx_type) {
+      case YCSBTxType::kRW: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxRW(ycsb_client, &seed, yield, iter, dtx);
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case YCSBTxType::kScan: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxScan(ycsb_client, &seed, yield, iter, dtx);
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case YCSBTxType::kInsert: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxInsert(ycsb_client, &seed, yield, iter, dtx);
+        if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      default:
+        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
+        abort();
+    }
+    /********************************** Stat begin *****************************************/
+    // Stat after one transaction finishes
+    // printf("try %d transaction commit? %s\n", stat_attempted_tx_total, tx_committed?"true":"false");
+    if (tx_committed) {
+      clock_gettime(CLOCK_REALTIME, &tx_end_time);
+      double tx_usec = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+      timer[stat_committed_tx_total++] = tx_usec;
+    }
+    else{
+      // printf("worker.cc: RunSmallBank, tx %ld not committed\n", iter);
+    }
+    if (stat_attempted_tx_total >= ATTEMPTED_NUM) {
+      // A coroutine calculate the total execution time and exits
+      clock_gettime(CLOCK_REALTIME, &msr_end);
+      // double msr_usec = (msr_end.tv_sec - msr_start.tv_sec) * 1000000 + (double) (msr_end.tv_nsec - msr_start.tv_nsec) / 1000;
+      double msr_sec = (msr_end.tv_sec - msr_start.tv_sec) + (double)(msr_end.tv_nsec - msr_start.tv_nsec) / 1000000000;
+      RecordTpLat(msr_sec);
+      break;
+    }
+    /********************************** Stat end *****************************************/
+    delete dtx;
+  }
+  // delete dtx;
+}
+
+void RunLocalYCSB(coro_yield_t& yield, coro_id_t coro_id) {
+  // Each coroutine has a dtx: Each coroutine is a coordinator
+  struct timespec tx_start_time, tx_end_time;
+  bool tx_committed = false;
+  int execute_cnt = 0;
+  // Running transactions
+  clock_gettime(CLOCK_REALTIME, &msr_start);
+  while (true) {
+    // ! 新的执行逻辑中，每次循环都需要创建一个新的txn
+    DTX* dtx = new DTX(meta_man,
+                     qp_man,
+                     status,
+                     lock_table,
+                     thread_gid,
+                     coro_id,
+                     coro_sched,
+                     rdma_buffer_allocator,
+                     log_offset_allocator,
+                     addr_cache,
+                     index_cache,
+                     page_table_cache,
+                     free_page_list,
+                     free_page_list_mutex,
+                     data_channel,
+                     log_channel);
+
+    YCSBTxType tx_type = ycsb_workgen_arr[FastRand(&seed) % 100];
+    uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
+    // stat_attempted_tx_total++;
+
+    YCSBDTX* bench_dtx = new YCSBDTX();
+    bench_dtx->dtx = dtx;
+    // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
+
+    clock_gettime(CLOCK_REALTIME, &tx_start_time);
+    dtx->tx_start_time = tx_start_time;
+    // printf("worker.cc:326\n");
+    switch (tx_type) {
+      case YCSBTxType::kRW: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        tx_committed = bench_dtx->TxLocalRW(ycsb_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case YCSBTxType::kScan: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        // tx_committed = bench_dtx->TxLocalScan(ycsb_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      case YCSBTxType::kInsert: {
+        thread_local_try_times[uint64_t(tx_type)]++;
+        // tx_committed = bench_dtx->TxLocalInsert(ycsb_client, &seed, yield, iter, dtx);
+        // if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
+        break;
+      }
+      default:
+        printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
+        abort();
+    }
+    if (tx_committed) execute_cnt++;
+    if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
+    else {
+      execute_cnt = 0;
+      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, WORKER_EXE_LOCAL_TXN_CNT);
+      coro_sched->LocalTxnYield(yield, coro_id);
+      continue;
+    }
+    
+    /********************************** Stat end *****************************************/
+  }
+  // delete dtx;
+}
+
 void run_thread(thread_params* params,
                 TATP* tatp_cli,
                 SmallBank* smallbank_cli,
-                TPCC* tpcc_cli) {
+                TPCC* tpcc_cli,
+                YCSB* ycsb_cli) {
   auto bench_name = params->bench_name;
   std::string config_filepath = "../../../config/" + bench_name + "_config.json";
 
@@ -729,6 +890,11 @@ void run_thread(thread_params* params,
     tpcc_workgen_arr = tpcc_client->CreateWorkgenArray();
     thread_local_try_times = new uint64_t[TPCC_TX_TYPES]();
     thread_local_commit_times = new uint64_t[TPCC_TX_TYPES]();
+  } else if (bench_name == "ycsb") {
+    ycsb_client = ycsb_cli;
+    ycsb_workgen_arr = ycsb_client->CreateWorkgenArray();
+    thread_local_try_times = new uint64_t[YCSB_TX_TYPES]();
+    thread_local_commit_times = new uint64_t[YCSB_TX_TYPES]();
   }
 
   stop_run = false;
@@ -746,8 +912,6 @@ void run_thread(thread_params* params,
   batch_coro_num = (coro_id_t) params->batch_coro_num;
   assert(batch_coro_num + 1 < coro_num);
   local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
-
-  printf("worker.cc:889, exec batch\n");
 
   if(meta_man->txn_system == DTX_SYS::OUR) {
     coro_sched = new CoroutineScheduler(thread_gid, coro_num, true);
@@ -799,7 +963,7 @@ void run_thread(thread_params* params,
       } else if (coro_i > POLL_ROUTINE_ID && coro_i <= POLL_ROUTINE_ID + batch_coro_num) {
         // 只有batch的模式会需要batch协程
         coro_sched->coro_array[coro_i].func = coro_call_t(bind(BatchExec, _1, coro_i));
-        // printf("worker.cc:889, exec batch\n");
+        printf("worker.cc:889, thread %ld coro %ld exec batch\n",thread_gid,coro_i);
       } else {
         if (bench_name == "tatp") {
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTATP, _1, coro_i));
@@ -809,6 +973,8 @@ void run_thread(thread_params* params,
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTPCC, _1, coro_i));
         } else if (bench_name == "micro") {
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunMICRO, _1, coro_i));
+        } else if (bench_name == "ycsb") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunLocalYCSB, _1, coro_i));
         }
       }
     } else {
@@ -823,6 +989,8 @@ void run_thread(thread_params* params,
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunTPCC, _1, coro_i));
         } else if (bench_name == "micro") {
           coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunMICRO, _1, coro_i));
+        } else if (bench_name == "ycsb") {
+          coro_sched->coro_array[coro_i].func = coro_call_t(bind(RunYCSB, _1, coro_i));
         }
       }
     }
@@ -875,6 +1043,7 @@ void run_thread(thread_params* params,
   if (tatp_workgen_arr) delete[] tatp_workgen_arr;
   if (smallbank_workgen_arr) delete[] smallbank_workgen_arr;
   if (tpcc_workgen_arr) delete[] tpcc_workgen_arr;
+  if (ycsb_workgen_arr) delete[] ycsb_workgen_arr;
   if (random_generator) delete[] random_generator;
   if (zipf_gen) delete zipf_gen;
   delete coro_sched;

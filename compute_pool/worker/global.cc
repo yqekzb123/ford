@@ -20,6 +20,7 @@ __thread struct timespec msr_end;
 __thread double* timer;
 __thread uint64_t stat_attempted_tx_total = 0;  // Issued transaction number
 __thread uint64_t stat_committed_tx_total = 0;  // Committed transaction number
+__thread uint64_t stat_aborted_tx_total = 0;  // Aborted transaction number
 
 // const coro_id_t BATCH_TXN_ID = 0;
 

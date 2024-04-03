@@ -18,6 +18,7 @@
 #include "smallbank/smallbank_db.h"
 #include "tatp/tatp_db.h"
 #include "tpcc/tpcc_db.h"
+#include "ycsb/ycsb_db.h"
 
 class Server {
 public:

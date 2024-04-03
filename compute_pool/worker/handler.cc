@@ -21,6 +21,7 @@ std::atomic<uint64_t> connected_t_num;
 std::vector<t_id_t> tid_vec;
 std::vector<double> attemp_tp_vec;
 std::vector<double> tp_vec;
+std::vector<double> ab_rate;
 std::vector<double> medianlat_vec;
 std::vector<double> taillat_vec;
 std::vector<double> lock_durations;
@@ -101,6 +102,7 @@ void Handler::GenThreads(std::string bench_name) {
   TATP* tatp_client = nullptr;
   SmallBank* smallbank_client = nullptr;
   TPCC* tpcc_client = nullptr;
+  YCSB* ycsb_client = nullptr;
 
   if (bench_name == "tatp") {
     tatp_client = new TATP(nullptr);
@@ -114,7 +116,11 @@ void Handler::GenThreads(std::string bench_name) {
     tpcc_client = new TPCC(nullptr);
     total_try_times.resize(TPCC_TX_TYPES, 0);
     total_commit_times.resize(TPCC_TX_TYPES, 0);
-  }
+  } else if (bench_name == "ycsb") {
+    ycsb_client = new YCSB(nullptr);
+    total_try_times.resize(TPCC_TX_TYPES, 0);
+    total_commit_times.resize(TPCC_TX_TYPES, 0);
+  } 
 
   RDMA_LOG(INFO) << "Spawn threads to execute...";
 
@@ -142,7 +148,8 @@ void Handler::GenThreads(std::string bench_name) {
                                 &param_arr[i],
                                 tatp_client,
                                 smallbank_client,
-                                tpcc_client);
+                                tpcc_client,
+                                ycsb_client);
 
     /* Pin thread i to hardware thread i */
     cpu_set_t cpuset;
@@ -194,28 +201,32 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
   double total_tp = 0;
   double total_median = 0;
   double total_tail = 0;
+  double total_ab = 0;
 
   for (int i = 0; i < tid_vec.size(); i++) {
-    of_detail << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
-    std::cout << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << std::endl;
+    of_detail << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << " " << ab_rate[i] << std::endl;
+    std::cout << tid_vec[i] << " " << attemp_tp_vec[i] << " " << tp_vec[i] << " " << medianlat_vec[i] << " " << taillat_vec[i] << " " << ab_rate[i] << std::endl;
     total_attemp_tp += attemp_tp_vec[i];
     total_tp += tp_vec[i];
     total_median += medianlat_vec[i];
     total_tail += taillat_vec[i];
+    total_ab += ab_rate[i];
   }
 
   size_t thread_num = tid_vec.size();
 
   double avg_median = total_median / thread_num;
   double avg_tail = total_tail / thread_num;
+  double avg_ab = total_ab / thread_num;
 
   std::sort(medianlat_vec.begin(), medianlat_vec.end());
   std::sort(taillat_vec.begin(), taillat_vec.end());
 
   of_detail << total_attemp_tp << " " << total_tp << " " << medianlat_vec[0] << " " << medianlat_vec[thread_num - 1]
-            << " " << avg_median << " " << taillat_vec[0] << " " << taillat_vec[thread_num - 1] << " " << avg_tail << std::endl;
+            << " " << avg_median << " " << taillat_vec[0] << " " << taillat_vec[thread_num - 1] << " " << avg_tail 
+            << " " << avg_ab << std::endl;
 
-  of << system_name << " " << total_attemp_tp / 1000 << " " << total_tp / 1000 << " " << avg_median << " " << avg_tail << std::endl;
+  of << system_name << " " << total_attemp_tp / 1000 << " " << total_tp / 1000 << " " << avg_median << " " << avg_tail << " " <<  avg_ab << std::endl;
 
   if (bench_name == "tatp") {
     for (int i = 0; i < TATP_TX_TYPES; i++) {
@@ -238,7 +249,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
   of_detail.close();
   of_abort_rate.close();
 
-  std::cerr << system_name << " " << total_attemp_tp / 1000 << " " << total_tp / 1000 << " " << avg_median << " " << avg_tail << std::endl;
+  std::cerr << system_name << " " << total_attemp_tp / 1000 << " " << total_tp / 1000 << " " << avg_median << " " << avg_tail << " " << avg_ab << std::endl;
 
   // Open it when testing the duration
 #if LOCK_WAIT
@@ -326,6 +337,7 @@ void Handler::GenThreadsForMICRO() {
     param_arr[i].bench_name = "micro";
     thread_arr[i] = std::thread(run_thread,
                                 &param_arr[i],
+                                nullptr,
                                 nullptr,
                                 nullptr,
                                 nullptr);

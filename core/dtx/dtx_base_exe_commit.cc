@@ -103,8 +103,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   /*!
     Baseline's commit protocol
     */
-  brpc::CallId cid;
-  SendLogToStoragePool(tx_id, &cid);
   #if OPEN_TIME
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);

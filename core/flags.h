@@ -8,10 +8,11 @@
 // 8: smallbank
 // 40: tatp
 // 664: tpcc
+// 1024:ycsb
 // 40: micro-benchmark
 
 // ! pay attention: need modify this when use different workload
-const size_t MAX_ITEM_SIZE = 664;
+const size_t MAX_ITEM_SIZE = 1024;
 
 /*********************** For FORD **********************/
 // 0: Read rw data without lock

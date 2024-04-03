@@ -76,7 +76,6 @@ bool DTX::UnLockLocalRW() {
   return true;
 }
 
-
 bool DTX::ExeLocalRO(coro_yield_t& yield, uint64_t bid) {
   std::vector<DirectRead> pending_direct_ro;
   auto batch = local_batch_store[bid]->GetBatchByIndex(batch_index,batch_id);

@@ -31,6 +31,7 @@ extern __thread struct timespec msr_end;
 extern __thread double* timer;
 extern __thread uint64_t stat_attempted_tx_total;  // Issued transaction number
 extern __thread uint64_t stat_committed_tx_total;  // Committed transaction number
+extern __thread uint64_t stat_aborted_tx_total;  // Aborted transaction number
 // const coro_id_t BATCH_TXN_ID = 0;
 
 // Stat the commit rate

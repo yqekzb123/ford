@@ -30,7 +30,10 @@ void LoadData(node_id_t machine_id,
   } else if (workload == "MICRO") {
     MICRO* micro_server = new MICRO(rm_manager);
     micro_server->LoadTable(machine_id, machine_num);
-  } else{
+  } else if (workload == "ycsb") {
+    YCSB* ycsb_server = new YCSB(rm_manager);
+    ycsb_server->LoadTable(machine_id, machine_num);
+  }else{
     RDMA_LOG(ERROR) << "Unsupported workload: " << workload;
     assert(false);
   }
