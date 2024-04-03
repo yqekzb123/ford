@@ -5,6 +5,7 @@
 
 /******************** The business logic (Transaction) start ********************/
 
+// ! read only
 // Read 1 SUBSCRIBER row
 bool TxGetSubsciberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   // RDMA_LOG(DBG) << "coro " << dtx->coro_id << " executes TxGetSubsciberData, tx_id=" << tx_id;
@@ -19,7 +20,13 @@ bool TxGetSubsciberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, 
 
   // Add r/w set and execute transaction
   dtx->AddToReadOnlySet(sub_obj);
-  if (!dtx->TxExe(yield)) return false;
+
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
+
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   // Get value
@@ -31,13 +38,18 @@ bool TxGetSubsciberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, 
   }
 
   // Commit transaction
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
 // 1. Read 1 SPECIAL_FACILITY row
 // 2. Read up to 3 CALL_FORWARDING rows
 // 3. Validate up to 4 rows
+// ! read only
 bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   // RDMA_LOG(DBG) << "coro " << dtx->coro_id << " executes TxGetNewDestination";
   dtx->TxBegin(tx_id);
@@ -61,11 +73,20 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
       std::make_shared<DataItem>((table_id_t)TATPTableType::kSpecialFacilityTable, specfac_key.item_key);
 
   dtx->AddToReadOnlySet(specfac_obj);
-  if (!dtx->TxExe(yield)) return false;
+
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   if (specfac_obj->value_size == 0) {
-    dtx->TxAbortReadOnly(yield);
+    #if SYS_ONE_WRITE
+      dtx->TxReadOnlyAbort();
+    #else
+      dtx->TxAbortReadOnly(yield);
+    #endif
     // return false;
     return true;
   }
@@ -77,7 +98,11 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   }
   if (specfac_val->is_active == 0) {
     // is_active is randomly generated at pm node side
-    dtx->TxAbortReadOnly(yield);
+    #if SYS_ONE_WRITE
+      dtx->TxReadOnlyAbort();
+    #else
+      dtx->TxAbortReadOnly(yield);
+    #endif
     // return false;
     return true;
   }
@@ -95,7 +120,11 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
         callfwd_key[i].item_key);
     dtx->AddToReadOnlySet(callfwd_obj[i]);
   }
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   bool callfwd_success = false;
@@ -115,15 +144,24 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   }
 
   if (callfwd_success) {
-    bool commit_status = dtx->TxCommit(yield);
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+    #else
+      bool commit_status = dtx->TxCommit(yield);
+    #endif
     return commit_status;
   } else {
-    dtx->TxAbortReadOnly(yield);
+    #if SYS_ONE_WRITE
+      dtx->TxReadOnlyAbort();
+    #else
+      dtx->TxAbortReadOnly(yield);
+    #endif
     // return false;
     return true;
   }
 }
 
+// ! read only
 // Read 1 ACCESS_INFO row
 bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   // RDMA_LOG(DBG) << "coro " << dtx->coro_id << " executes TxGetAccessData, tx_id=" << tx_id;
@@ -136,7 +174,11 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
   auto acc_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kAccessInfoTable, key.item_key);
 
   dtx->AddToReadOnlySet(acc_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   if (acc_obj->value_size > 0) {
@@ -146,16 +188,25 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
       RDMA_LOG(FATAL) << "[FATAL] Read unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
     }
 
-    bool commit_status = dtx->TxCommit(yield);
+    #if SYS_ONE_WRITE
+      if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+    #else
+      bool commit_status = dtx->TxCommit(yield);
+    #endif
     return commit_status;
   } else {
     /* Key not found */
-    dtx->TxAbortReadOnly(yield);
+    #if SYS_ONE_WRITE
+      dtx->TxReadOnlyAbort();
+    #else
+      dtx->TxAbortReadOnly(yield);
+    #endif
     // return false;
     return true;
   }
 }
 
+// !read write
 // Update 1 SUBSCRIBER row and 1 SPECIAL_FACILTY row
 bool TxUpdateSubscriberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   // RDMA_LOG(DBG) << "coro " << dtx->coro_id << " executes TxUpdateSubscriberData, tx_id=" << tx_id;
@@ -178,7 +229,11 @@ bool TxUpdateSubscriberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   auto specfac_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSpecialFacilityTable, specfac_key.item_key);
   dtx->AddToReadWriteSet(specfac_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   /* If we are here, execution succeeded and we have locks */
@@ -194,7 +249,11 @@ bool TxUpdateSubscriberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   }
   specfac_val->data_a = FastRand(seed); /* Update */
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -215,7 +274,11 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
   auto sec_sub_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSecSubscriberTable, sec_sub_key.item_key);
 
   dtx->AddToReadOnlySet(sec_sub_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   auto* sec_sub_val = (tatp_sec_sub_val_t*)(sec_sub_obj->value);
@@ -232,7 +295,11 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
   auto sub_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSubscriberTable, sub_key.item_key);
 
   dtx->AddToReadWriteSet(sub_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   auto* sub_val = (tatp_sub_val_t*)(sub_obj->value);
@@ -240,8 +307,11 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
     RDMA_LOG(FATAL) << "[FATAL] Read unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
   }
   sub_val->vlr_location = vlr_location; /* Update */
-
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit();
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -264,7 +334,11 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   auto sec_sub_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSecSubscriberTable, sec_sub_key.item_key);
 
   dtx->AddToReadOnlySet(sec_sub_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx.TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   auto* sec_sub_val = (tatp_sec_sub_val_t*)(sec_sub_obj->value);
@@ -283,13 +357,20 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   auto specfac_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSpecialFacilityTable, specfac_key.item_key);
 
   dtx->AddToReadOnlySet(specfac_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   /* The Special Facility record exists only 62.5% of the time */
   if (specfac_obj->value_size == 0) {
-    dtx->TxAbortReadOnly(yield);
-    // return false;
+    #if SYS_ONE_WRITE
+      dtx->TxReadOnlyAbort();
+    #else
+      dtx->TxAbortReadOnly(yield);
+    #endif
     return true;
   }
 
@@ -314,7 +395,11 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   // Handle Insert. Only read the remote offset of callfwd_obj
   dtx->AddToReadWriteSet(callfwd_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   // Fill callfwd_val by user
@@ -322,7 +407,11 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   callfwd_val->numberx[0] = tatp_callfwd_numberx0_magic;
   callfwd_val->end_time = end_time;
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
@@ -341,7 +430,11 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   sec_sub_key.sub_number = tatp_client->FastGetSubscribeNumFromSubscribeID(s_id);
   auto sec_sub_obj = std::make_shared<DataItem>((table_id_t)TATPTableType::kSecSubscriberTable, sec_sub_key.item_key);
   dtx->AddToReadOnlySet(sec_sub_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   auto* sec_sub_val = (tatp_sec_sub_val_t*)(sec_sub_obj->value);
@@ -363,7 +456,11 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
       callfwd_key.item_key);
 
   dtx->AddToReadWriteSet(callfwd_obj);
-  if (!dtx->TxExe(yield)) return false;
+  #if SYS_ONE_WRITE
+    if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #else
+    if (!dtx->TxExe(yield)) return false;
+  #endif
   if(dtx->tx_status == TX_VAL_NOTFOUND) return true;
 
   /*
@@ -376,7 +473,11 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   }
   callfwd_obj->valid = 0;  // 0 to indicate that this callfwd_obj will be deleted
 
-  bool commit_status = dtx->TxCommit(yield);
+  #if SYS_ONE_WRITE
+    bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #else
+    bool commit_status = dtx->TxCommit(yield);
+  #endif
   return commit_status;
 }
 
