@@ -41,11 +41,11 @@ MetaManager::MetaManager(std::string bench_name) {
   } else if (bench_name == "tpcc") {
     table_name_map[0] = "TPCC_warehouse";
     table_name_map[1] = "TPCC_district";
-    table_name_map[2] = "TPCC_customer";
+    table_name_map[2] = "TPCC_customer_table";
     table_name_map[3] = "TPCC_history";
     table_name_map[4] = "TPCC_new_order";
-    table_name_map[5] = "TPCC_order";
-    table_name_map[6] = "TPCC_order_line";
+    table_name_map[5] = "TPCC_order_table";
+    table_name_map[6] = "TPCC_order_line_table";
     table_name_map[7] = "TPCC_item";
     table_name_map[8] = "TPCC_stock";
     table_name_map[9] = "TPCC_customer_index";

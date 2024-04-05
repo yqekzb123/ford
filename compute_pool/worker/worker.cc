@@ -47,7 +47,7 @@ extern std::vector<uint64_t> total_commit_times;
 
 DEFINE_string(protocol, "baidu_std", "Protocol type");
 DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
-DEFINE_string(server, "127.0.0.1:32348", "IP address of server");
+// DEFINE_string(server, "127.0.0.1:12348", "IP address of server");
 DEFINE_int32(timeout_ms, 0x7fffffff, "RPC timeout in milliseconds");
 DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)");
 DEFINE_int32(interval_ms, 10, "Milliseconds between consecutive requests");
@@ -1162,7 +1162,10 @@ void run_thread(thread_params* params,
 
   coro_num = (coro_id_t)params->coro_num;
   batch_coro_num = (coro_id_t) params->batch_coro_num;
-  assert(batch_coro_num + 1 < coro_num);
+  if (meta_man->txn_system == DTX_SYS::OUR) {
+    assert(batch_coro_num + 1 < coro_num);
+    printf("worker.cc:889, exec batch\n");
+  }
   local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
 
   if(meta_man->txn_system == DTX_SYS::OUR) {
@@ -1258,10 +1261,18 @@ void run_thread(thread_params* params,
   options.connection_type = FLAGS_connection_type;
   options.timeout_ms = FLAGS_timeout_ms;
   options.max_retry = FLAGS_max_retry;
-  if(data_channel->Init(FLAGS_server.c_str(), &options) != 0) {
+  
+  std::string storage_config_filepath = "../../../config/compute_node_config.json";
+  auto storage_json_config = JsonConfig::load_file(storage_config_filepath);
+  auto storage_conf = storage_json_config.get("remote_storage_nodes");
+  auto ip = storage_conf.get("remote_storage_node_ips").get(0).get_str();
+  auto port = storage_conf.get("remote_storage_node_rpc_port").get(0).get_int64();
+  
+  std::string storage_node = ip + ":" + std::to_string(port);
+  if(data_channel->Init(storage_node.c_str(), &options) != 0) {
       RDMA_LOG(FATAL) << "Fail to initialize channel";
   }
-  if(log_channel->Init(FLAGS_server.c_str(), &options) != 0) {
+  if(log_channel->Init(storage_node.c_str(), &options) != 0) {
       RDMA_LOG(FATAL) << "Fail to initialize channel";
   }
   

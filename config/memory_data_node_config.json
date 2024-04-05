@@ -2,16 +2,16 @@
   "data_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "local_port": 42352,
-    "local_meta_port": 42353,
+    "local_port": 12352,
+    "local_meta_port": 12353,
     "mem_size_GB": 1
   },
   "remote_page_table_node": {
     "page_table_node_ip": ["127.0.0.1"],
-    "page_table_node_port": [42354]
+    "page_table_node_port": [12354]
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],
-    "compute_node_ports": [42347]
+    "compute_node_ports": [12347]
   }
 }

@@ -2,13 +2,13 @@
   "local_index_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "local_port": 42357,
-    "local_meta_port": 42358,
+    "local_port": 12357,
+    "local_meta_port": 12358,
     "mem_size_GB": 1,
     "workload": "TPCC" //SmallBank TATP TPCC MICRO
   },
   "remote_compute_nodes": {
     "compute_node_ips": ["127.0.0.1"],
-    "compute_node_ports": [42347]
+    "compute_node_ports": [12347]
   }
 }

@@ -45,7 +45,7 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_write = write(fd, offset, num_bytes);  // 这里的offset可以是uint_8*类型，也可以是char*类型
     
-    RDMA_LOG(INFO) << "Write page: fd: " << fd << ", page_no: " << page_no << ", write size: " << bytes_write;
+    // RDMA_LOG(INFO) << "Write page: fd: " << fd << ", page_no: " << page_no << ", write size: " << bytes_write;
 
     if (bytes_write != num_bytes) {
         // throw InternalError("DiskManager::write_page Error");

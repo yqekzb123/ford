@@ -14,100 +14,130 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
-
-PROTOBUF_PRAGMA_INIT_SEG
-
-namespace _pb = ::PROTOBUF_NAMESPACE_ID;
-namespace _pbi = _pb::internal;
-
+extern PROTOBUF_INTERNAL_EXPORT_storage_5fservice_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetPageRequest_PageID_storage_5fservice_2eproto;
+extern PROTOBUF_INTERNAL_EXPORT_storage_5fservice_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto;
 namespace storage_service {
-PROTOBUF_CONSTEXPR LogWriteRequest_PageID::LogWriteRequest_PageID(
-    ::_pbi::ConstantInitialized)
-  : table_name_(&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{})
-  , page_no_(0){}
-struct LogWriteRequest_PageIDDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR LogWriteRequest_PageIDDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~LogWriteRequest_PageIDDefaultTypeInternal() {}
-  union {
-    LogWriteRequest_PageID _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LogWriteRequest_PageIDDefaultTypeInternal _LogWriteRequest_PageID_default_instance_;
-PROTOBUF_CONSTEXPR LogWriteRequest::LogWriteRequest(
-    ::_pbi::ConstantInitialized)
-  : page_id_()
-  , log_(&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}){}
-struct LogWriteRequestDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR LogWriteRequestDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~LogWriteRequestDefaultTypeInternal() {}
-  union {
-    LogWriteRequest _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LogWriteRequestDefaultTypeInternal _LogWriteRequest_default_instance_;
-PROTOBUF_CONSTEXPR LogWriteResponse::LogWriteResponse(
-    ::_pbi::ConstantInitialized){}
-struct LogWriteResponseDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR LogWriteResponseDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~LogWriteResponseDefaultTypeInternal() {}
-  union {
-    LogWriteResponse _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LogWriteResponseDefaultTypeInternal _LogWriteResponse_default_instance_;
-PROTOBUF_CONSTEXPR GetPageRequest_PageID::GetPageRequest_PageID(
-    ::_pbi::ConstantInitialized)
-  : table_name_(&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{})
-  , page_no_(0){}
-struct GetPageRequest_PageIDDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR GetPageRequest_PageIDDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~GetPageRequest_PageIDDefaultTypeInternal() {}
-  union {
-    GetPageRequest_PageID _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetPageRequest_PageIDDefaultTypeInternal _GetPageRequest_PageID_default_instance_;
-PROTOBUF_CONSTEXPR GetPageRequest::GetPageRequest(
-    ::_pbi::ConstantInitialized)
-  : page_id_()
-  , require_batch_id_(uint64_t{0u}){}
-struct GetPageRequestDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR GetPageRequestDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~GetPageRequestDefaultTypeInternal() {}
-  union {
-    GetPageRequest _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetPageRequestDefaultTypeInternal _GetPageRequest_default_instance_;
-PROTOBUF_CONSTEXPR GetPageResponse::GetPageResponse(
-    ::_pbi::ConstantInitialized)
-  : data_(&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}){}
-struct GetPageResponseDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR GetPageResponseDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~GetPageResponseDefaultTypeInternal() {}
-  union {
-    GetPageResponse _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetPageResponseDefaultTypeInternal _GetPageResponse_default_instance_;
+class LogWriteRequest_PageIDDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<LogWriteRequest_PageID> _instance;
+} _LogWriteRequest_PageID_default_instance_;
+class LogWriteRequestDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<LogWriteRequest> _instance;
+} _LogWriteRequest_default_instance_;
+class LogWriteResponseDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<LogWriteResponse> _instance;
+} _LogWriteResponse_default_instance_;
+class GetPageRequest_PageIDDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetPageRequest_PageID> _instance;
+} _GetPageRequest_PageID_default_instance_;
+class GetPageRequestDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetPageRequest> _instance;
+} _GetPageRequest_default_instance_;
+class GetPageResponseDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetPageResponse> _instance;
+} _GetPageResponse_default_instance_;
 }  // namespace storage_service
-static ::_pb::Metadata file_level_metadata_storage_5fservice_2eproto[6];
-static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_storage_5fservice_2eproto = nullptr;
-static const ::_pb::ServiceDescriptor* file_level_service_descriptors_storage_5fservice_2eproto[1];
+static void InitDefaultsscc_info_GetPageRequest_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-const uint32_t TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  {
+    void* ptr = &::storage_service::_GetPageRequest_default_instance_;
+    new (ptr) ::storage_service::GetPageRequest();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::GetPageRequest::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_GetPageRequest_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 1, 0, InitDefaultsscc_info_GetPageRequest_storage_5fservice_2eproto}, {
+      &scc_info_GetPageRequest_PageID_storage_5fservice_2eproto.base,}};
+
+static void InitDefaultsscc_info_GetPageRequest_PageID_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::storage_service::_GetPageRequest_PageID_default_instance_;
+    new (ptr) ::storage_service::GetPageRequest_PageID();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::GetPageRequest_PageID::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetPageRequest_PageID_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_GetPageRequest_PageID_storage_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_GetPageResponse_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::storage_service::_GetPageResponse_default_instance_;
+    new (ptr) ::storage_service::GetPageResponse();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::GetPageResponse::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetPageResponse_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_GetPageResponse_storage_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_LogWriteRequest_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::storage_service::_LogWriteRequest_default_instance_;
+    new (ptr) ::storage_service::LogWriteRequest();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::LogWriteRequest::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_LogWriteRequest_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 1, 0, InitDefaultsscc_info_LogWriteRequest_storage_5fservice_2eproto}, {
+      &scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto.base,}};
+
+static void InitDefaultsscc_info_LogWriteRequest_PageID_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::storage_service::_LogWriteRequest_PageID_default_instance_;
+    new (ptr) ::storage_service::LogWriteRequest_PageID();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::LogWriteRequest_PageID::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_LogWriteRequest_PageID_storage_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_LogWriteResponse_storage_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::storage_service::_LogWriteResponse_default_instance_;
+    new (ptr) ::storage_service::LogWriteResponse();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::storage_service::LogWriteResponse::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_LogWriteResponse_storage_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_LogWriteResponse_storage_5fservice_2eproto}, {}};
+
+static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_storage_5fservice_2eproto[6];
+static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_storage_5fservice_2eproto = nullptr;
+static const ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor* file_level_service_descriptors_storage_5fservice_2eproto[1];
+
+const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::storage_service::LogWriteRequest_PageID, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::storage_service::LogWriteRequest_PageID, table_name_),
   PROTOBUF_FIELD_OFFSET(::storage_service::LogWriteRequest_PageID, page_no_),
   ~0u,  // no _has_bits_
@@ -115,7 +145,6 @@ const uint32_t TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::storage_service::LogWriteRequest, log_),
   PROTOBUF_FIELD_OFFSET(::storage_service::LogWriteRequest, page_id_),
   ~0u,  // no _has_bits_
@@ -123,13 +152,11 @@ const uint32_t TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageRequest_PageID, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageRequest_PageID, table_name_),
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageRequest_PageID, page_no_),
   ~0u,  // no _has_bits_
@@ -137,7 +164,6 @@ const uint32_t TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageRequest, page_id_),
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageRequest, require_batch_id_),
   ~0u,  // no _has_bits_
@@ -145,25 +171,24 @@ const uint32_t TableStruct_storage_5fservice_2eproto::offsets[] PROTOBUF_SECTION
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::storage_service::GetPageResponse, data_),
 };
-static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::storage_service::LogWriteRequest_PageID)},
-  { 8, -1, -1, sizeof(::storage_service::LogWriteRequest)},
-  { 16, -1, -1, sizeof(::storage_service::LogWriteResponse)},
-  { 22, -1, -1, sizeof(::storage_service::GetPageRequest_PageID)},
-  { 30, -1, -1, sizeof(::storage_service::GetPageRequest)},
-  { 38, -1, -1, sizeof(::storage_service::GetPageResponse)},
+static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  { 0, -1, sizeof(::storage_service::LogWriteRequest_PageID)},
+  { 7, -1, sizeof(::storage_service::LogWriteRequest)},
+  { 14, -1, sizeof(::storage_service::LogWriteResponse)},
+  { 19, -1, sizeof(::storage_service::GetPageRequest_PageID)},
+  { 26, -1, sizeof(::storage_service::GetPageRequest)},
+  { 33, -1, sizeof(::storage_service::GetPageResponse)},
 };
 
-static const ::_pb::Message* const file_default_instances[] = {
-  &::storage_service::_LogWriteRequest_PageID_default_instance_._instance,
-  &::storage_service::_LogWriteRequest_default_instance_._instance,
-  &::storage_service::_LogWriteResponse_default_instance_._instance,
-  &::storage_service::_GetPageRequest_PageID_default_instance_._instance,
-  &::storage_service::_GetPageRequest_default_instance_._instance,
-  &::storage_service::_GetPageResponse_default_instance_._instance,
+static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_LogWriteRequest_PageID_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_LogWriteRequest_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_LogWriteResponse_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_GetPageRequest_PageID_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_GetPageRequest_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::storage_service::_GetPageResponse_default_instance_),
 };
 
 const char descriptor_table_protodef_storage_5fservice_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
@@ -183,153 +208,162 @@ const char descriptor_table_protodef_storage_5fservice_2eproto[] PROTOBUF_SECTIO
   "uest\032 .storage_service.GetPageResponseB\003"
   "\200\001\001b\006proto3"
   ;
-static ::_pbi::once_flag descriptor_table_storage_5fservice_2eproto_once;
-const ::_pbi::DescriptorTable descriptor_table_storage_5fservice_2eproto = {
-    false, false, 571, descriptor_table_protodef_storage_5fservice_2eproto,
-    "storage_service.proto",
-    &descriptor_table_storage_5fservice_2eproto_once, nullptr, 0, 6,
-    schemas, file_default_instances, TableStruct_storage_5fservice_2eproto::offsets,
-    file_level_metadata_storage_5fservice_2eproto, file_level_enum_descriptors_storage_5fservice_2eproto,
-    file_level_service_descriptors_storage_5fservice_2eproto,
+static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_storage_5fservice_2eproto_deps[1] = {
 };
-PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_storage_5fservice_2eproto_getter() {
-  return &descriptor_table_storage_5fservice_2eproto;
-}
+static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_storage_5fservice_2eproto_sccs[6] = {
+  &scc_info_GetPageRequest_storage_5fservice_2eproto.base,
+  &scc_info_GetPageRequest_PageID_storage_5fservice_2eproto.base,
+  &scc_info_GetPageResponse_storage_5fservice_2eproto.base,
+  &scc_info_LogWriteRequest_storage_5fservice_2eproto.base,
+  &scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto.base,
+  &scc_info_LogWriteResponse_storage_5fservice_2eproto.base,
+};
+static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_storage_5fservice_2eproto_once;
+const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_storage_5fservice_2eproto = {
+  false, false, descriptor_table_protodef_storage_5fservice_2eproto, "storage_service.proto", 571,
+  &descriptor_table_storage_5fservice_2eproto_once, descriptor_table_storage_5fservice_2eproto_sccs, descriptor_table_storage_5fservice_2eproto_deps, 6, 0,
+  schemas, file_default_instances, TableStruct_storage_5fservice_2eproto::offsets,
+  file_level_metadata_storage_5fservice_2eproto, 6, file_level_enum_descriptors_storage_5fservice_2eproto, file_level_service_descriptors_storage_5fservice_2eproto,
+};
 
 // Force running AddDescriptors() at dynamic initialization time.
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_storage_5fservice_2eproto(&descriptor_table_storage_5fservice_2eproto);
+static bool dynamic_init_dummy_storage_5fservice_2eproto = (static_cast<void>(::PROTOBUF_NAMESPACE_ID::internal::AddDescriptors(&descriptor_table_storage_5fservice_2eproto)), true);
 namespace storage_service {
 
 // ===================================================================
 
+void LogWriteRequest_PageID::InitAsDefaultInstance() {
+}
 class LogWriteRequest_PageID::_Internal {
  public:
 };
 
-LogWriteRequest_PageID::LogWriteRequest_PageID(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+LogWriteRequest_PageID::LogWriteRequest_PageID(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
   SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.LogWriteRequest.PageID)
 }
 LogWriteRequest_PageID::LogWriteRequest_PageID(const LogWriteRequest_PageID& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  table_name_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    table_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  table_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_table_name().empty()) {
-    table_name_.Set(from._internal_table_name(), 
-      GetArenaForAllocation());
+    table_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_table_name(),
+      GetArena());
   }
   page_no_ = from.page_no_;
   // @@protoc_insertion_point(copy_constructor:storage_service.LogWriteRequest.PageID)
 }
 
-inline void LogWriteRequest_PageID::SharedCtor() {
-table_name_.InitDefault();
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  table_name_.Set("", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-page_no_ = 0;
+void LogWriteRequest_PageID::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto.base);
+  table_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  page_no_ = 0;
 }
 
 LogWriteRequest_PageID::~LogWriteRequest_PageID() {
   // @@protoc_insertion_point(destructor:storage_service.LogWriteRequest.PageID)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
   SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-inline void LogWriteRequest_PageID::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  table_name_.Destroy();
+void LogWriteRequest_PageID::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+  table_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
+void LogWriteRequest_PageID::ArenaDtor(void* object) {
+  LogWriteRequest_PageID* _this = reinterpret_cast< LogWriteRequest_PageID* >(object);
+  (void)_this;
+}
+void LogWriteRequest_PageID::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
 void LogWriteRequest_PageID::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
+const LogWriteRequest_PageID& LogWriteRequest_PageID::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_LogWriteRequest_PageID_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
 
 void LogWriteRequest_PageID::Clear() {
 // @@protoc_insertion_point(message_clear_start:storage_service.LogWriteRequest.PageID)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  table_name_.ClearToEmpty();
+  table_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   page_no_ = 0;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* LogWriteRequest_PageID::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* LogWriteRequest_PageID::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
     switch (tag >> 3) {
       // bytes table_name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
           auto str = _internal_mutable_table_name();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
       // sint32 page_no = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
           page_no_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarintZigZag32(&ptr);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
-      default:
-        goto handle_unusual;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
     }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
   }  // while
-message_done:
+success:
   return ptr;
 failure:
   ptr = nullptr;
-  goto message_done;
+  goto success;
 #undef CHK_
 }
 
-uint8_t* LogWriteRequest_PageID::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* LogWriteRequest_PageID::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:storage_service.LogWriteRequest.PageID)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   // bytes table_name = 1;
-  if (!this->_internal_table_name().empty()) {
+  if (this->table_name().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
         1, this->_internal_table_name(), target);
   }
 
   // sint32 page_no = 2;
-  if (this->_internal_page_no() != 0) {
+  if (this->page_no() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteSInt32ToArray(2, this->_internal_page_no(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteSInt32ToArray(2, this->_internal_page_no(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:storage_service.LogWriteRequest.PageID)
@@ -340,51 +374,68 @@ size_t LogWriteRequest_PageID::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:storage_service.LogWriteRequest.PageID)
   size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // bytes table_name = 1;
-  if (!this->_internal_table_name().empty()) {
+  if (this->table_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_table_name());
   }
 
   // sint32 page_no = 2;
-  if (this->_internal_page_no() != 0) {
-    total_size += ::_pbi::WireFormatLite::SInt32SizePlusOne(this->_internal_page_no());
+  if (this->page_no() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SInt32Size(
+        this->_internal_page_no());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData LogWriteRequest_PageID::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
-    LogWriteRequest_PageID::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*LogWriteRequest_PageID::GetClassData() const { return &_class_data_; }
-
-void LogWriteRequest_PageID::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<LogWriteRequest_PageID *>(to)->MergeFrom(
-      static_cast<const LogWriteRequest_PageID &>(from));
+void LogWriteRequest_PageID::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.LogWriteRequest.PageID)
+  GOOGLE_DCHECK_NE(&from, this);
+  const LogWriteRequest_PageID* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<LogWriteRequest_PageID>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.LogWriteRequest.PageID)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.LogWriteRequest.PageID)
+    MergeFrom(*source);
+  }
 }
-
 
 void LogWriteRequest_PageID::MergeFrom(const LogWriteRequest_PageID& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:storage_service.LogWriteRequest.PageID)
   GOOGLE_DCHECK_NE(&from, this);
-  uint32_t cached_has_bits = 0;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_table_name().empty()) {
+  if (from.table_name().size() > 0) {
     _internal_set_table_name(from._internal_table_name());
   }
-  if (from._internal_page_no() != 0) {
+  if (from.page_no() != 0) {
     _internal_set_page_no(from._internal_page_no());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void LogWriteRequest_PageID::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.LogWriteRequest.PageID)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void LogWriteRequest_PageID::CopyFrom(const LogWriteRequest_PageID& from) {
@@ -400,104 +451,104 @@ bool LogWriteRequest_PageID::IsInitialized() const {
 
 void LogWriteRequest_PageID::InternalSwap(LogWriteRequest_PageID* other) {
   using std::swap;
-  auto* lhs_arena = GetArenaForAllocation();
-  auto* rhs_arena = other->GetArenaForAllocation();
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &table_name_, lhs_arena,
-      &other->table_name_, rhs_arena
-  );
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  table_name_.Swap(&other->table_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   swap(page_no_, other->page_no_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata LogWriteRequest_PageID::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[0]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
+void LogWriteRequest::InitAsDefaultInstance() {
+}
 class LogWriteRequest::_Internal {
  public:
 };
 
-LogWriteRequest::LogWriteRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned),
+LogWriteRequest::LogWriteRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena),
   page_id_(arena) {
   SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.LogWriteRequest)
 }
 LogWriteRequest::LogWriteRequest(const LogWriteRequest& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       page_id_(from.page_id_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  log_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    log_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  log_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_log().empty()) {
-    log_.Set(from._internal_log(), 
-      GetArenaForAllocation());
+    log_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_log(),
+      GetArena());
   }
   // @@protoc_insertion_point(copy_constructor:storage_service.LogWriteRequest)
 }
 
-inline void LogWriteRequest::SharedCtor() {
-log_.InitDefault();
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  log_.Set("", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+void LogWriteRequest::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_LogWriteRequest_storage_5fservice_2eproto.base);
+  log_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 LogWriteRequest::~LogWriteRequest() {
   // @@protoc_insertion_point(destructor:storage_service.LogWriteRequest)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
   SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-inline void LogWriteRequest::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  log_.Destroy();
+void LogWriteRequest::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+  log_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
+void LogWriteRequest::ArenaDtor(void* object) {
+  LogWriteRequest* _this = reinterpret_cast< LogWriteRequest* >(object);
+  (void)_this;
+}
+void LogWriteRequest::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
 void LogWriteRequest::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
+const LogWriteRequest& LogWriteRequest::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_LogWriteRequest_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
 
 void LogWriteRequest::Clear() {
 // @@protoc_insertion_point(message_clear_start:storage_service.LogWriteRequest)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   page_id_.Clear();
-  log_.ClearToEmpty();
+  log_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* LogWriteRequest::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* LogWriteRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
     switch (tag >> 3) {
       // bytes log = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
           auto str = _internal_mutable_log();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
       // repeated .storage_service.LogWriteRequest.PageID page_id = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -505,54 +556,52 @@ const char* LogWriteRequest::_InternalParse(const char* ptr, ::_pbi::ParseContex
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<18>(ptr));
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
-      default:
-        goto handle_unusual;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
     }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
   }  // while
-message_done:
+success:
   return ptr;
 failure:
   ptr = nullptr;
-  goto message_done;
+  goto success;
 #undef CHK_
 }
 
-uint8_t* LogWriteRequest::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* LogWriteRequest::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:storage_service.LogWriteRequest)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   // bytes log = 1;
-  if (!this->_internal_log().empty()) {
+  if (this->log().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
         1, this->_internal_log(), target);
   }
 
   // repeated .storage_service.LogWriteRequest.PageID page_id = 2;
-  for (unsigned i = 0,
-      n = static_cast<unsigned>(this->_internal_page_id_size()); i < n; i++) {
-    const auto& repfield = this->_internal_page_id(i);
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->_internal_page_id_size()); i < n; i++) {
+    target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-        InternalWriteMessage(2, repfield, repfield.GetCachedSize(), target, stream);
+      InternalWriteMessage(2, this->_internal_page_id(i), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:storage_service.LogWriteRequest)
@@ -563,7 +612,7 @@ size_t LogWriteRequest::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:storage_service.LogWriteRequest)
   size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -575,39 +624,54 @@ size_t LogWriteRequest::ByteSizeLong() const {
   }
 
   // bytes log = 1;
-  if (!this->_internal_log().empty()) {
+  if (this->log().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_log());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData LogWriteRequest::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
-    LogWriteRequest::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*LogWriteRequest::GetClassData() const { return &_class_data_; }
-
-void LogWriteRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<LogWriteRequest *>(to)->MergeFrom(
-      static_cast<const LogWriteRequest &>(from));
+void LogWriteRequest::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.LogWriteRequest)
+  GOOGLE_DCHECK_NE(&from, this);
+  const LogWriteRequest* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<LogWriteRequest>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.LogWriteRequest)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.LogWriteRequest)
+    MergeFrom(*source);
+  }
 }
-
 
 void LogWriteRequest::MergeFrom(const LogWriteRequest& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:storage_service.LogWriteRequest)
   GOOGLE_DCHECK_NE(&from, this);
-  uint32_t cached_has_bits = 0;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   page_id_.MergeFrom(from.page_id_);
-  if (!from._internal_log().empty()) {
+  if (from.log().size() > 0) {
     _internal_set_log(from._internal_log());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void LogWriteRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.LogWriteRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void LogWriteRequest::CopyFrom(const LogWriteRequest& from) {
@@ -623,191 +687,315 @@ bool LogWriteRequest::IsInitialized() const {
 
 void LogWriteRequest::InternalSwap(LogWriteRequest* other) {
   using std::swap;
-  auto* lhs_arena = GetArenaForAllocation();
-  auto* rhs_arena = other->GetArenaForAllocation();
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   page_id_.InternalSwap(&other->page_id_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &log_, lhs_arena,
-      &other->log_, rhs_arena
-  );
+  log_.Swap(&other->log_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata LogWriteRequest::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[1]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
+void LogWriteResponse::InitAsDefaultInstance() {
+}
 class LogWriteResponse::_Internal {
  public:
 };
 
-LogWriteResponse::LogWriteResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase(arena, is_message_owned) {
+LogWriteResponse::LogWriteResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.LogWriteResponse)
 }
 LogWriteResponse::LogWriteResponse(const LogWriteResponse& from)
-  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase() {
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   // @@protoc_insertion_point(copy_constructor:storage_service.LogWriteResponse)
 }
 
+void LogWriteResponse::SharedCtor() {
+}
+
+LogWriteResponse::~LogWriteResponse() {
+  // @@protoc_insertion_point(destructor:storage_service.LogWriteResponse)
+  SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+void LogWriteResponse::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+}
+
+void LogWriteResponse::ArenaDtor(void* object) {
+  LogWriteResponse* _this = reinterpret_cast< LogWriteResponse* >(object);
+  (void)_this;
+}
+void LogWriteResponse::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void LogWriteResponse::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const LogWriteResponse& LogWriteResponse::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_LogWriteResponse_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
 
 
+void LogWriteResponse::Clear() {
+// @@protoc_insertion_point(message_clear_start:storage_service.LogWriteResponse)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
 
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData LogWriteResponse::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl,
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl,
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*LogWriteResponse::GetClassData() const { return &_class_data_; }
+const char* LogWriteResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+  }  // while
+success:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
+}
 
+::PROTOBUF_NAMESPACE_ID::uint8* LogWriteResponse::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:storage_service.LogWriteResponse)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:storage_service.LogWriteResponse)
+  return target;
+}
 
+size_t LogWriteResponse::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:storage_service.LogWriteResponse)
+  size_t total_size = 0;
 
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
 
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
 
+void LogWriteResponse::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.LogWriteResponse)
+  GOOGLE_DCHECK_NE(&from, this);
+  const LogWriteResponse* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<LogWriteResponse>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.LogWriteResponse)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.LogWriteResponse)
+    MergeFrom(*source);
+  }
+}
+
+void LogWriteResponse::MergeFrom(const LogWriteResponse& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:storage_service.LogWriteResponse)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+}
+
+void LogWriteResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.LogWriteResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void LogWriteResponse::CopyFrom(const LogWriteResponse& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:storage_service.LogWriteResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool LogWriteResponse::IsInitialized() const {
+  return true;
+}
+
+void LogWriteResponse::InternalSwap(LogWriteResponse* other) {
+  using std::swap;
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+}
 
 ::PROTOBUF_NAMESPACE_ID::Metadata LogWriteResponse::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[2]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
+void GetPageRequest_PageID::InitAsDefaultInstance() {
+}
 class GetPageRequest_PageID::_Internal {
  public:
 };
 
-GetPageRequest_PageID::GetPageRequest_PageID(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+GetPageRequest_PageID::GetPageRequest_PageID(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
   SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.GetPageRequest.PageID)
 }
 GetPageRequest_PageID::GetPageRequest_PageID(const GetPageRequest_PageID& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  table_name_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    table_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  table_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_table_name().empty()) {
-    table_name_.Set(from._internal_table_name(), 
-      GetArenaForAllocation());
+    table_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_table_name(),
+      GetArena());
   }
   page_no_ = from.page_no_;
   // @@protoc_insertion_point(copy_constructor:storage_service.GetPageRequest.PageID)
 }
 
-inline void GetPageRequest_PageID::SharedCtor() {
-table_name_.InitDefault();
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  table_name_.Set("", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-page_no_ = 0;
+void GetPageRequest_PageID::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetPageRequest_PageID_storage_5fservice_2eproto.base);
+  table_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  page_no_ = 0;
 }
 
 GetPageRequest_PageID::~GetPageRequest_PageID() {
   // @@protoc_insertion_point(destructor:storage_service.GetPageRequest.PageID)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
   SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-inline void GetPageRequest_PageID::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  table_name_.Destroy();
+void GetPageRequest_PageID::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+  table_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
+void GetPageRequest_PageID::ArenaDtor(void* object) {
+  GetPageRequest_PageID* _this = reinterpret_cast< GetPageRequest_PageID* >(object);
+  (void)_this;
+}
+void GetPageRequest_PageID::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
 void GetPageRequest_PageID::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
+const GetPageRequest_PageID& GetPageRequest_PageID::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetPageRequest_PageID_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
 
 void GetPageRequest_PageID::Clear() {
 // @@protoc_insertion_point(message_clear_start:storage_service.GetPageRequest.PageID)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  table_name_.ClearToEmpty();
+  table_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   page_no_ = 0;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* GetPageRequest_PageID::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* GetPageRequest_PageID::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
     switch (tag >> 3) {
       // bytes table_name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
           auto str = _internal_mutable_table_name();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
       // sint32 page_no = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
           page_no_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarintZigZag32(&ptr);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
-      default:
-        goto handle_unusual;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
     }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
   }  // while
-message_done:
+success:
   return ptr;
 failure:
   ptr = nullptr;
-  goto message_done;
+  goto success;
 #undef CHK_
 }
 
-uint8_t* GetPageRequest_PageID::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* GetPageRequest_PageID::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:storage_service.GetPageRequest.PageID)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   // bytes table_name = 1;
-  if (!this->_internal_table_name().empty()) {
+  if (this->table_name().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
         1, this->_internal_table_name(), target);
   }
 
   // sint32 page_no = 2;
-  if (this->_internal_page_no() != 0) {
+  if (this->page_no() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteSInt32ToArray(2, this->_internal_page_no(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteSInt32ToArray(2, this->_internal_page_no(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:storage_service.GetPageRequest.PageID)
@@ -818,51 +1006,68 @@ size_t GetPageRequest_PageID::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:storage_service.GetPageRequest.PageID)
   size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // bytes table_name = 1;
-  if (!this->_internal_table_name().empty()) {
+  if (this->table_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_table_name());
   }
 
   // sint32 page_no = 2;
-  if (this->_internal_page_no() != 0) {
-    total_size += ::_pbi::WireFormatLite::SInt32SizePlusOne(this->_internal_page_no());
+  if (this->page_no() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SInt32Size(
+        this->_internal_page_no());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData GetPageRequest_PageID::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
-    GetPageRequest_PageID::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetPageRequest_PageID::GetClassData() const { return &_class_data_; }
-
-void GetPageRequest_PageID::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<GetPageRequest_PageID *>(to)->MergeFrom(
-      static_cast<const GetPageRequest_PageID &>(from));
+void GetPageRequest_PageID::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.GetPageRequest.PageID)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetPageRequest_PageID* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetPageRequest_PageID>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.GetPageRequest.PageID)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.GetPageRequest.PageID)
+    MergeFrom(*source);
+  }
 }
-
 
 void GetPageRequest_PageID::MergeFrom(const GetPageRequest_PageID& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:storage_service.GetPageRequest.PageID)
   GOOGLE_DCHECK_NE(&from, this);
-  uint32_t cached_has_bits = 0;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_table_name().empty()) {
+  if (from.table_name().size() > 0) {
     _internal_set_table_name(from._internal_table_name());
   }
-  if (from._internal_page_no() != 0) {
+  if (from.page_no() != 0) {
     _internal_set_page_no(from._internal_page_no());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void GetPageRequest_PageID::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.GetPageRequest.PageID)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void GetPageRequest_PageID::CopyFrom(const GetPageRequest_PageID& from) {
@@ -878,33 +1083,29 @@ bool GetPageRequest_PageID::IsInitialized() const {
 
 void GetPageRequest_PageID::InternalSwap(GetPageRequest_PageID* other) {
   using std::swap;
-  auto* lhs_arena = GetArenaForAllocation();
-  auto* rhs_arena = other->GetArenaForAllocation();
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &table_name_, lhs_arena,
-      &other->table_name_, rhs_arena
-  );
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  table_name_.Swap(&other->table_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   swap(page_no_, other->page_no_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetPageRequest_PageID::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[3]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
+void GetPageRequest::InitAsDefaultInstance() {
+}
 class GetPageRequest::_Internal {
  public:
 };
 
-GetPageRequest::GetPageRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned),
+GetPageRequest::GetPageRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena),
   page_id_(arena) {
   SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.GetPageRequest)
 }
 GetPageRequest::GetPageRequest(const GetPageRequest& from)
@@ -915,47 +1116,58 @@ GetPageRequest::GetPageRequest(const GetPageRequest& from)
   // @@protoc_insertion_point(copy_constructor:storage_service.GetPageRequest)
 }
 
-inline void GetPageRequest::SharedCtor() {
-require_batch_id_ = uint64_t{0u};
+void GetPageRequest::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetPageRequest_storage_5fservice_2eproto.base);
+  require_batch_id_ = PROTOBUF_ULONGLONG(0);
 }
 
 GetPageRequest::~GetPageRequest() {
   // @@protoc_insertion_point(destructor:storage_service.GetPageRequest)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
   SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-inline void GetPageRequest::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+void GetPageRequest::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
 }
 
+void GetPageRequest::ArenaDtor(void* object) {
+  GetPageRequest* _this = reinterpret_cast< GetPageRequest* >(object);
+  (void)_this;
+}
+void GetPageRequest::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
 void GetPageRequest::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
+const GetPageRequest& GetPageRequest::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetPageRequest_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
 
 void GetPageRequest::Clear() {
 // @@protoc_insertion_point(message_clear_start:storage_service.GetPageRequest)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   page_id_.Clear();
-  require_batch_id_ = uint64_t{0u};
+  require_batch_id_ = PROTOBUF_ULONGLONG(0);
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* GetPageRequest::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* GetPageRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
     switch (tag >> 3) {
       // repeated .storage_service.GetPageRequest.PageID page_id = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -963,62 +1175,59 @@ const char* GetPageRequest::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
       // uint64 require_batch_id = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
           require_batch_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
-      default:
-        goto handle_unusual;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
     }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
   }  // while
-message_done:
+success:
   return ptr;
 failure:
   ptr = nullptr;
-  goto message_done;
+  goto success;
 #undef CHK_
 }
 
-uint8_t* GetPageRequest::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* GetPageRequest::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:storage_service.GetPageRequest)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated .storage_service.GetPageRequest.PageID page_id = 1;
-  for (unsigned i = 0,
-      n = static_cast<unsigned>(this->_internal_page_id_size()); i < n; i++) {
-    const auto& repfield = this->_internal_page_id(i);
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->_internal_page_id_size()); i < n; i++) {
+    target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-        InternalWriteMessage(1, repfield, repfield.GetCachedSize(), target, stream);
+      InternalWriteMessage(1, this->_internal_page_id(i), target, stream);
   }
 
   // uint64 require_batch_id = 2;
-  if (this->_internal_require_batch_id() != 0) {
+  if (this->require_batch_id() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(2, this->_internal_require_batch_id(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(2, this->_internal_require_batch_id(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:storage_service.GetPageRequest)
@@ -1029,7 +1238,7 @@ size_t GetPageRequest::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:storage_service.GetPageRequest)
   size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1041,37 +1250,54 @@ size_t GetPageRequest::ByteSizeLong() const {
   }
 
   // uint64 require_batch_id = 2;
-  if (this->_internal_require_batch_id() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_require_batch_id());
+  if (this->require_batch_id() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->_internal_require_batch_id());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData GetPageRequest::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
-    GetPageRequest::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetPageRequest::GetClassData() const { return &_class_data_; }
-
-void GetPageRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<GetPageRequest *>(to)->MergeFrom(
-      static_cast<const GetPageRequest &>(from));
+void GetPageRequest::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.GetPageRequest)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetPageRequest* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetPageRequest>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.GetPageRequest)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.GetPageRequest)
+    MergeFrom(*source);
+  }
 }
-
 
 void GetPageRequest::MergeFrom(const GetPageRequest& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:storage_service.GetPageRequest)
   GOOGLE_DCHECK_NE(&from, this);
-  uint32_t cached_has_bits = 0;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   page_id_.MergeFrom(from.page_id_);
-  if (from._internal_require_batch_id() != 0) {
+  if (from.require_batch_id() != 0) {
     _internal_set_require_batch_id(from._internal_require_batch_id());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void GetPageRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.GetPageRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void GetPageRequest::CopyFrom(const GetPageRequest& from) {
@@ -1087,130 +1313,134 @@ bool GetPageRequest::IsInitialized() const {
 
 void GetPageRequest::InternalSwap(GetPageRequest* other) {
   using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   page_id_.InternalSwap(&other->page_id_);
   swap(require_batch_id_, other->require_batch_id_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetPageRequest::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[4]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
+void GetPageResponse::InitAsDefaultInstance() {
+}
 class GetPageResponse::_Internal {
  public:
 };
 
-GetPageResponse::GetPageResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+GetPageResponse::GetPageResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
   SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:storage_service.GetPageResponse)
 }
 GetPageResponse::GetPageResponse(const GetPageResponse& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  data_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    data_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_data().empty()) {
-    data_.Set(from._internal_data(), 
-      GetArenaForAllocation());
+    data_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_data(),
+      GetArena());
   }
   // @@protoc_insertion_point(copy_constructor:storage_service.GetPageResponse)
 }
 
-inline void GetPageResponse::SharedCtor() {
-data_.InitDefault();
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  data_.Set("", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+void GetPageResponse::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetPageResponse_storage_5fservice_2eproto.base);
+  data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 GetPageResponse::~GetPageResponse() {
   // @@protoc_insertion_point(destructor:storage_service.GetPageResponse)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
   SharedDtor();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-inline void GetPageResponse::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  data_.Destroy();
+void GetPageResponse::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+  data_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
+void GetPageResponse::ArenaDtor(void* object) {
+  GetPageResponse* _this = reinterpret_cast< GetPageResponse* >(object);
+  (void)_this;
+}
+void GetPageResponse::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
 void GetPageResponse::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
+const GetPageResponse& GetPageResponse::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetPageResponse_storage_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
 
 void GetPageResponse::Clear() {
 // @@protoc_insertion_point(message_clear_start:storage_service.GetPageResponse)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  data_.ClearToEmpty();
+  data_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* GetPageResponse::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* GetPageResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
     switch (tag >> 3) {
       // bytes data = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
           auto str = _internal_mutable_data();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
+        } else goto handle_unusual;
         continue;
-      default:
-        goto handle_unusual;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
     }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
   }  // while
-message_done:
+success:
   return ptr;
 failure:
   ptr = nullptr;
-  goto message_done;
+  goto success;
 #undef CHK_
 }
 
-uint8_t* GetPageResponse::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* GetPageResponse::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:storage_service.GetPageResponse)
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
   // bytes data = 1;
-  if (!this->_internal_data().empty()) {
+  if (this->data().size() > 0) {
     target = stream->WriteBytesMaybeAliased(
         1, this->_internal_data(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:storage_service.GetPageResponse)
@@ -1221,43 +1451,58 @@ size_t GetPageResponse::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:storage_service.GetPageResponse)
   size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // bytes data = 1;
-  if (!this->_internal_data().empty()) {
+  if (this->data().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_data());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData GetPageResponse::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
-    GetPageResponse::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetPageResponse::GetClassData() const { return &_class_data_; }
-
-void GetPageResponse::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<GetPageResponse *>(to)->MergeFrom(
-      static_cast<const GetPageResponse &>(from));
+void GetPageResponse::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:storage_service.GetPageResponse)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetPageResponse* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetPageResponse>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:storage_service.GetPageResponse)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:storage_service.GetPageResponse)
+    MergeFrom(*source);
+  }
 }
-
 
 void GetPageResponse::MergeFrom(const GetPageResponse& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:storage_service.GetPageResponse)
   GOOGLE_DCHECK_NE(&from, this);
-  uint32_t cached_has_bits = 0;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_data().empty()) {
+  if (from.data().size() > 0) {
     _internal_set_data(from._internal_data());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void GetPageResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:storage_service.GetPageResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void GetPageResponse::CopyFrom(const GetPageResponse& from) {
@@ -1273,20 +1518,14 @@ bool GetPageResponse::IsInitialized() const {
 
 void GetPageResponse::InternalSwap(GetPageResponse* other) {
   using std::swap;
-  auto* lhs_arena = GetArenaForAllocation();
-  auto* rhs_arena = other->GetArenaForAllocation();
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &data_, lhs_arena,
-      &other->data_, rhs_arena
-  );
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  data_.Swap(&other->data_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetPageResponse::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_storage_5fservice_2eproto_getter, &descriptor_table_storage_5fservice_2eproto_once,
-      file_level_metadata_storage_5fservice_2eproto[5]);
+  return GetMetadataStatic();
 }
+
 
 // ===================================================================
 
@@ -1405,28 +1644,22 @@ void StorageService_Stub::GetPage(::PROTOBUF_NAMESPACE_ID::RpcController* contro
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace storage_service
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::storage_service::LogWriteRequest_PageID*
-Arena::CreateMaybeMessage< ::storage_service::LogWriteRequest_PageID >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::LogWriteRequest_PageID* Arena::CreateMaybeMessage< ::storage_service::LogWriteRequest_PageID >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::LogWriteRequest_PageID >(arena);
 }
-template<> PROTOBUF_NOINLINE ::storage_service::LogWriteRequest*
-Arena::CreateMaybeMessage< ::storage_service::LogWriteRequest >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::LogWriteRequest* Arena::CreateMaybeMessage< ::storage_service::LogWriteRequest >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::LogWriteRequest >(arena);
 }
-template<> PROTOBUF_NOINLINE ::storage_service::LogWriteResponse*
-Arena::CreateMaybeMessage< ::storage_service::LogWriteResponse >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::LogWriteResponse* Arena::CreateMaybeMessage< ::storage_service::LogWriteResponse >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::LogWriteResponse >(arena);
 }
-template<> PROTOBUF_NOINLINE ::storage_service::GetPageRequest_PageID*
-Arena::CreateMaybeMessage< ::storage_service::GetPageRequest_PageID >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::GetPageRequest_PageID* Arena::CreateMaybeMessage< ::storage_service::GetPageRequest_PageID >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::GetPageRequest_PageID >(arena);
 }
-template<> PROTOBUF_NOINLINE ::storage_service::GetPageRequest*
-Arena::CreateMaybeMessage< ::storage_service::GetPageRequest >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::GetPageRequest* Arena::CreateMaybeMessage< ::storage_service::GetPageRequest >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::GetPageRequest >(arena);
 }
-template<> PROTOBUF_NOINLINE ::storage_service::GetPageResponse*
-Arena::CreateMaybeMessage< ::storage_service::GetPageResponse >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::storage_service::GetPageResponse* Arena::CreateMaybeMessage< ::storage_service::GetPageResponse >(Arena* arena) {
   return Arena::CreateMessageInternal< ::storage_service::GetPageResponse >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE

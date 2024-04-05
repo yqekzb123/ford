@@ -42,7 +42,7 @@ enum loglevel {
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 #ifndef RDMA_LOG_LEVEL
-#define RDMA_LOG_LEVEL ::rdmaio::EMPH
+#define RDMA_LOG_LEVEL ::rdmaio::INFO
 #endif
 
 // logging macro definiations

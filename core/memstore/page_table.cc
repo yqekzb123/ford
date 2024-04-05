@@ -309,7 +309,7 @@ void PageTableStore::VictimPageThread(){
       }
       auto free_page = free_list_.front();
       ring_free_frame_buffer_.free_list_buffer_[head] = {free_page.first, free_page.second, true};
-      std::cout << "free page: " << free_page.first << " " << free_page.second << "in head: " << head << std::endl;
+      // std::cout << "free page: " << free_page.first << " " << free_page.second << "in head: " << head << std::endl;
       free_list_.pop_front();
 
       if(free_list_.size() < MAX_FREE_LIST_VICTIM_SIZE){

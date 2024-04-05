@@ -587,6 +587,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
             // find lock item
             bool is_find = false;
             for (int i=0; i<MAX_RIDS_NUM_PER_NODE; i++) {
+                // if(lock_data_id[idx].itemkey_ == 240518168829){
+                //     std::cout << "lock_data_id[idx]" << std::endl;
+                // }
                 if (lock_node->lock_items[i].key == lock_data_id[idx] && lock_node->lock_items[i].valid == true) {
                     // not exclusive lock
                     if(lock_node->lock_items[i].lock == UNLOCKED){
