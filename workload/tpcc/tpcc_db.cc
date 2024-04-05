@@ -866,7 +866,7 @@ void TPCC::PopulateIndexWarehouseTable(MemStoreReserveParam* mem_store_reserve_p
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     warehouse_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -883,7 +883,7 @@ void TPCC::PopulateIndexDistrictTable(MemStoreReserveParam* mem_store_reserve_pa
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -900,8 +900,8 @@ void TPCC::PopulateIndexCustomerTable(MemStoreReserveParam* mem_store_reserve_pa
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    customer_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -917,8 +917,8 @@ void TPCC::PopulateIndexCustomerIndexTable(MemStoreReserveParam* mem_store_reser
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    customer_index_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -934,8 +934,8 @@ void TPCC::PopulateIndexHistoryTable(MemStoreReserveParam* mem_store_reserve_par
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    history_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -951,8 +951,8 @@ void TPCC::PopulateIndexOrderTable(MemStoreReserveParam* mem_store_reserve_param
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    order_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -968,8 +968,8 @@ void TPCC::PopulateIndexOrderIndexTable(MemStoreReserveParam* mem_store_reserve_
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    order_index_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -985,8 +985,8 @@ void TPCC::PopulateIndexNewOrderTable(MemStoreReserveParam* mem_store_reserve_pa
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    new_order_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -1002,8 +1002,8 @@ void TPCC::PopulateIndexOrderLineTable(MemStoreReserveParam* mem_store_reserve_p
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    order_line_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -1019,8 +1019,8 @@ void TPCC::PopulateIndexItemTable(MemStoreReserveParam* mem_store_reserve_param)
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    item_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
@@ -1036,8 +1036,8 @@ void TPCC::PopulateIndexStockTable(MemStoreReserveParam* mem_store_reserve_param
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
-    stock_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
+    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    district_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
   return;
