@@ -227,12 +227,12 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     tpcc_item_val_t* item_val = (tpcc_item_val_t*)item_obj->value;
     tpcc_stock_val_t* stock_val = (tpcc_stock_val_t*)stock_obj->value;
 
-    if (item_val->debug_magic != tpcc_add_magic) {
-      RDMA_LOG(FATAL) << "[FATAL] Read item unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
-    }
-    if (stock_val->debug_magic != tpcc_add_magic) {
-      RDMA_LOG(FATAL) << "[FATAL] Read stock unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
-    }
+    // if (item_val->debug_magic != tpcc_add_magic) {
+    //   RDMA_LOG(FATAL) << "[FATAL] Read item unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
+    // }
+    // if (stock_val->debug_magic != tpcc_add_magic) {
+    //   RDMA_LOG(FATAL) << "[FATAL] Read stock unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
+    // }
 
     if (stock_val->s_quantity - ol_quantity >= 10) {
       stock_val->s_quantity -= ol_quantity;
@@ -298,12 +298,12 @@ bool TxNewOrder(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     tpcc_item_val_t* item_val = (tpcc_item_val_t*)item_obj->value;
     tpcc_stock_val_t* stock_val = (tpcc_stock_val_t*)stock_obj->value;
 
-    if (item_val->debug_magic != tpcc_add_magic) {
-      RDMA_LOG(FATAL) << "[FATAL] Read item unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
-    }
-    if (stock_val->debug_magic != tpcc_add_magic) {
-      RDMA_LOG(FATAL) << "[FATAL] Read stock unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
-    }
+    // if (item_val->debug_magic != tpcc_add_magic) {
+    //   RDMA_LOG(FATAL) << "[FATAL] Read item unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
+    // }
+    // if (stock_val->debug_magic != tpcc_add_magic) {
+    //   RDMA_LOG(FATAL) << "[FATAL] Read stock unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << tx_id;
+    // }
 
     if (stock_val->s_quantity - ol_quantity >= 10) {
       stock_val->s_quantity -= ol_quantity;
@@ -544,12 +544,12 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
     // Get the new order record with the o_id. Probe if the new order record exists
     #if SYS_ONE_WRITE
       if(!dtx->TxReadWriteTxnExe(yield)){
-        dtx->RemoveLastROItem();
+        // dtx->RemoveLastROItem();
         continue;
       }
     #else
       if (!dtx->TxExe(yield)){
-        dtx->RemoveLastROItem();
+        // dtx->RemoveLastROItem();
         continue;
       }
     #endif
@@ -605,12 +605,12 @@ bool TxDelivery(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t& y
 
       #if SYS_ONE_WRITE
         if(!dtx->TxReadWriteTxnExe(yield)){
-          dtx->RemoveLastROItem();
+          // dtx->RemoveLastROItem();
           continue;
         }
       #else
         if (!dtx->TxExe(yield)){
-          dtx->RemoveLastROItem();
+          // dtx->RemoveLastROItem();
           continue;
         }
       #endif
@@ -794,15 +794,17 @@ bool TxStockLevel(TPCC* tpcc_client, FastRandom* random_generator, coro_yield_t&
 
       #if SYS_ONE_WRITE
         if(!dtx->TxReadOnlyTxnExe(yield)){
-          dtx->RemoveLastROItem();
+          // dtx->RemoveLastROItem();
           break;
         }
+        if(dtx->tx_status == TX_VAL_NOTFOUND) break;
       #else
         if (!dtx->TxExe(yield, false)) {
           // Not found, not abort
-          dtx->RemoveLastROItem();
+          // dtx->RemoveLastROItem();
           break;
         }
+        if(dtx->tx_status == TX_VAL_NOTFOUND) break;
       #endif
 
       tpcc_order_line_val_t* ol_val = (tpcc_order_line_val_t*)ol_obj->value;

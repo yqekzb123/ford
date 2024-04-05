@@ -213,6 +213,10 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
   #endif
 
   // 获取数据项
+  // !这里可能要进行一点修改, 把读写集中已经fetch到的数据排除在外
+  for(int i=0; i<read_only_set.size(); i++){
+    
+  }
   std::vector<FetchPageType> fetch_type(all_tableid.size(), FetchPageType::kReadPage);
   std::vector<DataItemPtr> data_list = FetchTuple(yield, all_tableid, all_rids, fetch_type, tx_id);
   
