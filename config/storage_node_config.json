@@ -8,10 +8,10 @@
       "local_meta_port": 12349,
       "log_buf_size_GB": 1,
       "use_rdma": false,
-      "workload": "TPCC"  //SmallBank TATP TPCC MICRO
+      "workload": "SmallBank"  //SmallBank TATP TPCC MICRO
     },
     "remote_compute_nodes": {
-      "compute_node_ips": ["127.0.0.1"],
-      "compute_node_ports": [12345]
+      "compute_node_ips": ["10.77.110.147", "10.77.110.148"],
+      "compute_node_ports": [12347, 12347]
     }
 }

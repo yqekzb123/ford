@@ -1,6 +1,6 @@
 {
   "local_compute_node": {
-    "machine_num": 1,
+    "machine_num": 2,
     "machine_id": 0,
     "thread_num_per_machine": 1,
     "coroutine_num": 2,
@@ -13,27 +13,27 @@
     "batch_size": 400
   },
   "remote_hashindex_node_nodes": {
-    "remote_hashindex_node_ips": ["127.0.0.1"],
+    "remote_hashindex_node_ips": ["10.77.110.147"],
     "remote_hashindex_node_port": [12357],
     "remote_hashindex_node_meta_ports": [12358]
   },
   "remote_locktable_node_nodes": {
-    "remote_locktable_node_ips": ["127.0.0.1"],
+    "remote_locktable_node_ips": ["10.77.110.147"],
     "remote_locktable_node_port": [12350],
     "remote_locktable_node_meta_ports": [12351]
   },
   "remote_data_node_nodes": {
-    "remote_data_node_ips": ["127.0.0.1"],
+    "remote_data_node_ips": ["10.77.110.147"],
     "remote_data_node_port": [12352],
     "remote_data_node_meta_ports": [12353]
   },
   "remote_page_table_nodes": {
-    "remote_page_table_node_ips": ["127.0.0.1"],
+    "remote_page_table_node_ips": ["10.77.110.147"],
     "remote_page_table_node_port": [12354],
     "remote_page_table_node_meta_port": [12356]
   },
   "remote_storage_nodes": {
-    "remote_storage_node_ips": ["127.0.0.1"],
+    "remote_storage_node_ips": ["10.77.110.147"],
     "remote_storage_node_port": [12344],
     "remote_storage_node_rpc_port": [12348],
     "remote_storage_node_meta_port": [12349]

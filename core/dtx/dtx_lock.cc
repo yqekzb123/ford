@@ -300,9 +300,9 @@ std::vector<LockDataId> DTX::LockShared(coro_yield_t& yield, std::vector<LockDat
         if(try_cnt %5 == 0){
             // 流量控制
             // read now
-            char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
-            coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
-            coro_sched->Yield(yield, coro_id);  
+            // char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
+            // coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
+            // coro_sched->Yield(yield, coro_id);  
         }
         for(auto idx : succ_node_off_idx ){
             // read now
@@ -574,9 +574,9 @@ std::vector<LockDataId> DTX::LockExclusive(coro_yield_t& yield, std::vector<Lock
         if(try_cnt %5 == 0){
             // 流量控制
             // read now
-            char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
-            coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
-            coro_sched->Yield(yield, coro_id);  
+            // char* tmp_read_buf = thread_rdma_buffer_alloc->Alloc(8);
+            // coro_sched->RDMARead(coro_id, thread_qp_man->GetIndexQPPtrWithNodeID()[0], tmp_read_buf, 0, 8); 
+            // coro_sched->Yield(yield, coro_id);  
         }
         
         for(auto idx : succ_node_off_idx ){
