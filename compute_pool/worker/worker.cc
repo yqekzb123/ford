@@ -1165,8 +1165,8 @@ void run_thread(thread_params* params,
   if (meta_man->txn_system == DTX_SYS::OUR) {
     assert(batch_coro_num + 1 < coro_num);
     printf("worker.cc:889, exec batch\n");
+    local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
   }
-  local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
 
   if(meta_man->txn_system == DTX_SYS::OUR) {
     coro_sched = new CoroutineScheduler(thread_gid, coro_num, true);
