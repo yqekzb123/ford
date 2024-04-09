@@ -83,7 +83,7 @@ void TATP::PopulateIndexSubscriberTable(MemStoreReserveParam* mem_store_reserve_
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     subscriber_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -99,7 +99,7 @@ void TATP::PopulateIndexSecondarySubscriberTable(MemStoreReserveParam* mem_store
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     sec_subscriber_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -115,7 +115,7 @@ void TATP::PopulateIndexAccessInfoTable(MemStoreReserveParam* mem_store_reserve_
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     access_info_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -131,7 +131,7 @@ void TATP::PopulateIndexSpecialFacilityTable(MemStoreReserveParam* mem_store_res
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     special_facility_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -147,7 +147,7 @@ void TATP::PopulateIndexCallForwardingTable(MemStoreReserveParam* mem_store_rese
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     call_forwarding_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();

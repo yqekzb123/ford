@@ -41,8 +41,17 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
     all_rids = GetHashIndex(yield, all_tableid, all_keyid);
     for(int i=0; i<all_rids.size(); i++){
       if(all_rids[i].page_no_ == INVALID_PAGE_ID){
+        // remove the invalid item
+        all_tableid.erase(all_tableid.begin() + i);
+        all_keyid.erase(all_keyid.begin() + i);
+        all_rids.erase(all_rids.begin() + i);
+        if(i < read_only_set.size())
+          read_only_set.erase(read_only_set.begin() + i);
+        else
+          read_write_set.erase(read_write_set.begin() + (i - read_only_set.size())
+        );
+        i--;
         tx_status = TXStatus::TX_VAL_NOTFOUND;
-        return true;
       }
     }
 

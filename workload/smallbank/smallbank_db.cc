@@ -139,7 +139,7 @@ void SmallBank::PopulateIndexSavingsTable(MemStoreReserveParam* mem_store_reserv
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     savings_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
@@ -157,7 +157,7 @@ void SmallBank::PopulateIndexCheckingTable(MemStoreReserveParam* mem_store_reser
     assert(false);
   }
   while(input_file >> item_key >> rid.page_no_ >> rid.slot_no_) {
-    std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
+    // std::cout << item_key << " " << rid.page_no_ << " " << rid.slot_no_ << std::endl;
     checking_table_index->LocalInsertKeyRid(item_key, rid, mem_store_reserve_param);
   }
   input_file.close();
