@@ -98,7 +98,7 @@ const uint64_t MEM_STORE_META_END = 0xE0FF0E0F;
 #define RM_FILE_HDR_PAGE 0
 #define RM_NO_PAGE -1
 
-#define WORKER_EXE_LOCAL_TXN_CNT 10
+// #define WORKER_EXE_LOCAL_TXN_CNT 10
 
 static constexpr int INVALID_TIMESTAMP = -1;                                  // invalid transaction timestamp
 static constexpr int HEADER_PAGE_ID = 0;                                      // the header page id

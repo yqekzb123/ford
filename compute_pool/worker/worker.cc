@@ -625,10 +625,10 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         abort();
     }
     if (tx_committed) execute_cnt++;
-    if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
+    if (execute_cnt < LOCAL_BATCH_TXN_SIZE) continue;
     else {
       execute_cnt = 0;
-      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, WORKER_EXE_LOCAL_TXN_CNT);
+      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, LOCAL_BATCH_TXN_SIZE);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     }
@@ -1101,11 +1101,11 @@ void RunLocalYCSB(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-    if (tx_committed) execute_cnt++;
-    if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
+    execute_cnt++;
+    if (execute_cnt < LOCAL_BATCH_TXN_SIZE) continue;
     else {
       execute_cnt = 0;
-      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, WORKER_EXE_LOCAL_TXN_CNT);
+      // printf("worker.cc:1108, thread %ld complete %d local txn\n", thread_gid, LOCAL_BATCH_TXN_SIZE);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     }
@@ -1162,11 +1162,11 @@ void run_thread(thread_params* params,
 
   coro_num = (coro_id_t)params->coro_num;
   batch_coro_num = (coro_id_t) params->batch_coro_num;
-  assert(batch_coro_num + 1 < coro_num);
   local_batch_store[thread_gid] = new LocalBatchStore(batch_coro_num * BATCH_CORO_TIMES);
 
   if(meta_man->txn_system == DTX_SYS::OUR) {
     coro_sched = new CoroutineScheduler(thread_gid, coro_num, true);
+    assert(batch_coro_num + 1 < coro_num);
   }else{
     coro_sched = new CoroutineScheduler(thread_gid, coro_num, false);
   }

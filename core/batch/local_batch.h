@@ -78,6 +78,7 @@ public:
     bool CanExec() {
         bool r1 = start_commit_txn_cnt == finish_commit_txn_cnt;
         bool r2 = current_txn_cnt >= LOCAL_BATCH_TXN_SIZE;
+        // printf("local_batch.h:81, r1 %ld---start_commit_txn_cnt:%ld-finish_commit_txn_cnt:%ld, r2 %d---current_txn_cnt:%ld-LOCAL_BATCH_TXN_SIZE:%ld\n",r1,start_commit_txn_cnt,finish_commit_txn_cnt, r2,current_txn_cnt,LOCAL_BATCH_TXN_SIZE);
         return r1 && r2;
     }
     void Clean() {
@@ -134,33 +135,32 @@ public:
         assert(false);
     }
 
-    LocalBatch* InsertTxn(BenchDTX* txn) {
-        LocalBatch *batch = nullptr;
+    bool InsertTxn(BenchDTX* txn, LocalBatch* &batch) {
+        batch = nullptr;
         int index = batch_id_count%max_batch_cnt;
         if (local_store[index]->CanExec() &&
             local_store[index]->batch_id == batch_id_count){
             int new_index = (batch_id_count+1)%max_batch_cnt;
             // 此时新的batch已经满了
             if (local_store[new_index]->CanExec()) {
-                return nullptr;
+                return false;
             } else {
                 batch = local_store[new_index];
             }
         } else {
             batch = local_store[index];
         }
-        batch->InsertTxn(txn);
-        return batch;
+        return batch->InsertTxn(txn);
     }
 
 
     void ExeBatch(coro_yield_t& yield, coro_id_t coro_id) {
         LocalBatch* exec = GetBatch(coro_id);
         if (exec == nullptr) {
-            // printf("local_batch.h:145, no exec\n");
+            // printf("local_batch.h:160, no exec\n");
             return;
         }
-        // printf("local_batch.h:148, exe batch %ld\n", exec->batch_id);
+        printf("local_batch.h:148, exe batch %ld\n", exec->batch_id);
         exec->ExeBatchRW(yield);
         exec->Clean();
         exec->SetBatchID(GenerateBatchID());

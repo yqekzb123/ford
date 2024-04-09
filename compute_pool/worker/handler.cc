@@ -177,6 +177,7 @@ void Handler::GenThreads(std::string bench_name) {
   delete global_lcache;
   if (tatp_client) delete tatp_client;
   if (smallbank_client) delete smallbank_client;
+  if (ycsb_client) delete ycsb_client;
   if (tpcc_client) delete tpcc_client;
 }
 
@@ -235,6 +236,10 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
   } else if (bench_name == "smallbank") {
     for (int i = 0; i < SmallBank_TX_TYPES; i++) {
       of_abort_rate << SmallBank_TX_NAME[i] << " " << total_try_times[i] << " " << total_commit_times[i] << " " << (double)(total_try_times[i] - total_commit_times[i]) / (double)total_try_times[i] << std::endl;
+    }
+  } else if (bench_name == "ycsb") {
+    for (int i = 0; i < YCSB_TX_TYPES; i++) {
+      of_abort_rate << YCSB_TX_NAME[i] << " " << total_try_times[i] << " " << total_commit_times[i] << " " << (double)(total_try_times[i] - total_commit_times[i]) / (double)total_try_times[i] << std::endl;
     }
   } else if (bench_name == "tpcc") {
     for (int i = 0; i < TPCC_TX_TYPES; i++) {

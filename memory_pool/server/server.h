@@ -21,6 +21,7 @@
 #include "smallbank/smallbank_db.h"
 #include "tatp/tatp_db.h"
 #include "tpcc/tpcc_db.h"
+#include "ycsb/ycsb_db.h"
 
 using namespace rdmaio;
 
@@ -57,6 +58,11 @@ class Server {
 
     if (micro_server) {
       delete micro_server;
+      RDMA_LOG(INFO) << "delete micro tables";
+    }
+
+    if (ycsb_server) {
+      delete ycsb_server;
       RDMA_LOG(INFO) << "delete micro tables";
     }
 
@@ -147,4 +153,6 @@ class Server {
   TPCC* tpcc_server = nullptr;
   
   MICRO* micro_server = nullptr;
+
+  YCSB*  ycsb_server = nullptr;
 };

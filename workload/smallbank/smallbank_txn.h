@@ -122,8 +122,10 @@ public:
         default:
             break;
         }
+        return false;
     }
     bool StatCommit() {
         // thread_local_commit_times[uint64_t(type)]++;
+        return true;
     }
 };

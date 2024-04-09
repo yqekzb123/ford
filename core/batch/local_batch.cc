@@ -65,6 +65,7 @@ bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
   }
   
   // printf("local_batch.cc:51 thread %ld execute batch %ld, has %ld key\n", thread_gid, batch_id, all_keyid.size());
+  return true;
 }
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
@@ -76,7 +77,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   bool res = true;
   BenchDTX* first_bdtx = txn_list[0];
   DTX* first_dtx = first_bdtx->dtx;
-  
+  // printf("local_batch.cc:79 start execute batch %ld\n", batch_id);
   //! 0.统计只读和读写的操作列表
   GetReadWriteSet(yield);
   #if OPEN_TIME
@@ -90,6 +91,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   res = first_dtx->LockSharedOnRecord(yield, readonly_tableid, readonly_keyid);
   if (!res) {
     // !失败以后所有操作解锁
+    // printf("local_batch.cc:93 shared lock fail %ld\n", batch_id);
     first_dtx->UnlockShared(yield);
     stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
     return res;
@@ -98,6 +100,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   res = first_dtx->LockExclusiveOnRecord(yield, readwrite_tableid, readwrite_keyid);
   if (!res) {
     // !失败以后所有操作解锁
+    // printf("local_batch.cc:102 exclusive lock fail %ld\n", batch_id);
     first_dtx->UnlockShared(yield);
     first_dtx->UnlockExclusive(yield);
     stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
@@ -132,7 +135,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   double read_usec = (tx_read_time.tv_sec - tx_index_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_index_time.tv_nsec) / 1000;
   #endif
 
-  // ! 4. 从页中取出数据，将数据存入local，还没想好存到哪
+  // ! 4. 从页中取出数据，将数据存入local
   for (auto item : data_list) {
     LocalData* data_item = local_data_store.GetData(item->table_id, item->key);
     // printf("local_batch.cc:70, set the first value of local data table %ld key %ld ptr %p\n",item->table_id, item->key, data_item);
@@ -265,4 +268,5 @@ bool LocalBatch::StatCommit() {
   // for (auto& dtx : txn_list) {
   //   dtx->StatCommit();
   // }
+  return true;
 }

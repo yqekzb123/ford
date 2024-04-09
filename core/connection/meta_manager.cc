@@ -38,6 +38,14 @@ MetaManager::MetaManager(std::string bench_name) {
     table_meta_map[0] = meta;
     table_meta_map[1] = meta;
     
+  } else if (bench_name == "ycsb") {
+    table_name_map[0] = "ycsb_main";
+    TableMeta meta;
+    meta.record_size_ = sizeof(DataItem);
+    meta.num_records_per_page_ = (BITMAP_WIDTH * (PAGE_SIZE - 1 - (int)sizeof(RmFileHdr)) + 1) / (1 + (meta.record_size_ + sizeof(itemkey_t)) * BITMAP_WIDTH);
+    meta.bitmap_size_ = (meta.num_records_per_page_ + BITMAP_WIDTH - 1) / BITMAP_WIDTH;
+    
+    table_meta_map[0] = meta;
   } else if (bench_name == "tpcc") {
     table_name_map[0] = "TPCC_warehouse";
     table_name_map[1] = "TPCC_district";

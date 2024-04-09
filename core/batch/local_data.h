@@ -36,9 +36,11 @@ public:
     // 设置头部version的值，然后事务重新计算
     bool SetFirstVersion(DataItemPtr data) {
         if (versions.value == nullptr) versions.value = new DataItem();
+        assert(data.get()->value[0] != 0);
         memcpy(versions.value, data.get(), sizeof(DataItem));
         versions.has_value = true;
         // printf("local_data.h:66 table %ld key %ld set first value %p %s %s\n",table_id,key,versions.value,versions.value->value,data->value);
+        return true;
     }
 };
 

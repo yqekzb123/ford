@@ -131,7 +131,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         timespec msr_start;
         clock_gettime(CLOCK_REALTIME, &msr_start);
         #endif
-
         page_addr_vec = GetPageAddrOrAddIntoPageTable(yield, is_write, need_fetch_from_disk, now_valid, pending_map_all_index);
         if(++try_cnt > MAX_TRY_PAGETABLE){
             for(int i : pending_map_all_index){
@@ -163,7 +162,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         clock_gettime(CLOCK_REALTIME, &msr_pagetable);
         pagetable_usec += (msr_pagetable.tv_sec - msr_start.tv_sec) * 1000000 + (double)(msr_pagetable.tv_nsec - msr_start.tv_nsec) / 1000;
         #endif
-
         std::vector<PageId> new_page_id;
         std::vector<bool> new_is_write;
         std::vector<int> new_map;
@@ -177,7 +175,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 request.add_page_id();
                 request.mutable_page_id(need_fetch_idx.size())->set_allocated_table_name(table_name);
                 request.mutable_page_id(need_fetch_idx.size())->set_page_no(pending_read_all_page_ids[i].page_no);
-
                 need_fetch_idx.push_back(i);
             }
             else if(now_valid[i] == true){
@@ -189,7 +186,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 // 从共享内存池中读取数据页
                 auto remote_node_id = page_addr_vec[i].node_id;
                 auto frame_id = page_addr_vec[i].frame_id;
-                
                 auto remote_offset = global_meta_man->GetDataOff(remote_node_id);
                 RCQP* qp = thread_qp_man->GetRemoteDataQPWithNodeID(remote_node_id);
                 
@@ -202,7 +198,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
                 pages[pending_map_all_index[i]] = page;
                 // 记录page的地址和远程地址
                 page_data_localaddr_and_remote_offset[pending_map_all_index[i]] = std::make_pair(page, page_addr_vec[i]);
-
                 #if OPEN_TIME
                 timespec msr_end;
                 clock_gettime(CLOCK_REALTIME, &msr_end);
@@ -307,7 +302,6 @@ std::vector<char*> DTX::FetchPage(coro_yield_t &yield, batch_id_t request_batch_
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1ms
     }
-
     DEBUG_TIME("pagetable_usec: %lf, disk_fetch_usec: %lf, mem_fetch_usec: %lf\n", pagetable_usec, disk_fetch_usec, mem_fetch_usec);
     coro_sched->Yield(yield, coro_id);
 
@@ -397,6 +391,7 @@ std::vector<DataItemPtr> DTX::FetchTuple(coro_yield_t &yield, std::vector<table_
     }
 
     // 2. 根据page_id获取对应的page
+    // printf("Txn %ld Fetch page\n", tx_id);
     std::vector<char*> get_pages = FetchPage(yield, request_batch_id);
     assert(get_pages.size() == all_page_ids.size());
     // 3. 根据page_id和rids获取对应的data_item

@@ -12,22 +12,24 @@ bool YCSBDTX::TxLocalRW(YCSB* ycsb_client, uint64_t* seed, coro_yield_t& yield, 
   std::set<uint64_t> key_set;
   for (int i = 0; i < QUERY_CNT; i++) {
     uint64_t key;
+    ycsb_client->get_key(seed,&key);
     // 加一个不能有重复key的代码
-    while (key_set.count(key) != 1) {
+    while (key_set.count(key) == 1) {
       ycsb_client->get_key(seed,&key);
+      assert(key <= ycsb_client->num_accounts_global);
     }
     key_set.insert(key);
     ycsb_key_t ykey;
     ykey.key = key;
     auto obj_0 = std::make_shared<DataItem>((table_id_t)YCSBTableType::kMainTable, ykey.key);
     r1.obj[i] = obj_0;
-
     bool is_read = FastRand(seed) % 100 < ycsb_client->tup_write;
     if (is_read || read_only) {
       dtx->AddToReadOnlySet(obj_0);
     } else {
       dtx->AddToReadWriteSet(obj_0);
     }
+    // printf("ycsb_txn.cc:31 txn %ld %s key %ld, key range %ld\n",tx_id, (is_read || read_only) ? "read":"write", key,ycsb_client->num_accounts_global);
   }
   
   if (!dtx->TxLocalExe(yield)) return false;
@@ -45,9 +47,7 @@ bool YCSBDTX::TxReCaculateRW(coro_yield_t& yield) {
       RDMA_LOG(FATAL) << "[FATAL] Read unmatch, tid-cid-txid: " << dtx->t_id << "-" << dtx->coro_id << "-" << dtx->tx_id;
     }
   }
-
-  bool commit_status = dtx->TxCommit(yield);
-  return commit_status;
+  return true;
 }
 
 /******************** The business logic (Transaction) start ********************/
@@ -60,7 +60,8 @@ bool YCSBDTX::TxRW(YCSB* ycsb_client, uint64_t* seed, coro_yield_t& yield, tx_id
   for (int i = 0; i < QUERY_CNT; i++) {
     uint64_t key;
     // 加一个不能有重复key的代码
-    while (key_set.count(key) != 1) {
+    ycsb_client->get_key(seed,&key);
+    while (key_set.count(key) == 1) {
       ycsb_client->get_key(seed,&key);
     }
     key_set.insert(key);

@@ -7,7 +7,7 @@
 
 // #include ""
 bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
-  try {
+  // try {
     DEBUG_TIME("dtx_base_exe_commit.cc:8, exe a new txn %ld\n", tx_id);
     batch_id = tx_id;
     // Start executing transaction
@@ -51,7 +51,6 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
     clock_gettime(CLOCK_REALTIME, &tx_get_index_time);
     double get_index_usec = (tx_get_index_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_get_index_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
     #endif
-
     if (!LockRemoteRO(yield)) {
       // printf("LockRemoteRO failed\n");
       TxAbort(yield);
@@ -63,7 +62,6 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
     clock_gettime(CLOCK_REALTIME, &tx_lock_ro_time);
     double lock_ro_usec = (tx_lock_ro_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_lock_ro_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
     #endif
-
     if (!LockRemoteRW(yield)) {
       // printf("LockRemoteRW failed\n");
       TxAbort(yield);
@@ -75,8 +73,8 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
     clock_gettime(CLOCK_REALTIME, &tx_lock_rw_time);
     double lock_rw_usec = (tx_lock_rw_time.tv_sec - tx_lock_ro_time.tv_sec) * 1000000 + (double)(tx_lock_rw_time.tv_nsec - tx_lock_ro_time.tv_nsec) / 1000;
     #endif
-
     if (!ReadRemote(yield)) {
+      // printf("Read failed\n");
       TxAbort(yield);
       return false;
     }
@@ -88,11 +86,11 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
     DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, read_index_usec: %lf, \
       lock_ro_usec: %lf, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, get_index_usec, lock_ro_usec, lock_rw_usec, read_usec);
     #endif
-  }
-  catch(const AbortException& e) {
-    TxAbort(yield);
-    return false;
-  }
+  // }
+  // catch(const AbortException& e) {
+  //   TxAbort(yield);
+  //   return false;
+  // }
   return true;
 // ABORT:
   // if (fail_abort) TxAbort(yield);
@@ -107,7 +105,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   struct timespec tx_start_time;
   clock_gettime(CLOCK_REALTIME, &tx_start_time);
   #endif
-
   #if LOG_RPC_OR_RDMA
   brpc::CallId cid;
   SendLogToStoragePool(tx_id, &cid);
@@ -130,7 +127,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_write_time);
   double write_usec = (tx_write_time.tv_sec - tx_send_log_time.tv_sec) * 1000000 + (double)(tx_write_time.tv_nsec - tx_send_log_time.tv_nsec) / 1000;
   #endif
-
   Unpin(yield);
 
   #if OPEN_TIME
@@ -144,7 +140,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
   double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
   #endif
-  
   UnlockShared(yield);
   UnlockExclusive(yield);
 
@@ -159,7 +154,7 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   //!! brpc同步
   brpc::Join(cid);
   #endif
-
+  
   tx_status = TXStatus::TX_COMMIT;
   // printf("txn: %ld, commit\n", tx_id);
   return true;
@@ -245,7 +240,6 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
       }
     }
   }
-
   return true;
 }
 

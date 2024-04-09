@@ -39,11 +39,13 @@ public:
     bool UnlockShared() {
         ATOM_SUB_FETCH(lock,1);
         // printf("try to release shared lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
+        return true;
     }
 
     bool UnlockExclusive() {
         lock = UNLOCKED;
         // printf("try to release exclusive lock on table %ld key %ld, now the lock %ld\n", table_id, key, lock);
+        return true;
     }
 };
 

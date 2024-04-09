@@ -124,8 +124,9 @@ bool DTX::ExeLocalRW(coro_yield_t& yield, uint64_t bid) {
 bool DTX::DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   // todo：形成聚簇
   // 目前先实现成随便扔到一个batch里
-  auto batch = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench);
-  if (batch == nullptr) {
+  LocalBatch* batch = nullptr;
+  bool result = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench,batch);
+  if (result == false) {
     // printf("dtx_local.cc:103, thread %ld insert txn failed\n", thread_gid);
     return false;
   }

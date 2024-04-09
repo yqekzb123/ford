@@ -57,7 +57,7 @@ void HashIndexServer::LoadIndex(node_id_t machine_id,
   } else if (workload == "MICRO") {
     micro_server = new MICRO(nullptr);
     micro_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
-  } else if (workload == "YCSB") {
+  } else if (workload == "ycsb") {
     ycsb_server = new YCSB(nullptr);
     ycsb_server->LoadIndex(machine_id, machine_num, &mem_store_alloc_param, &mem_store_reserve_param);
   }
@@ -118,7 +118,7 @@ void HashIndexServer::PrepareIndexMeta(node_id_t machine_id, std::string& worklo
     all_index_store = tpcc_server->GetAllIndexStore();
   } else if (workload == "MICRO") {
     all_index_store = micro_server->GetAllIndexStore();
-  } else if (workload == "YCSB") {
+  } else if (workload == "ycsb") {
     all_index_store = ycsb_server->GetAllIndexStore();
   }
 

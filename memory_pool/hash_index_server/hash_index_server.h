@@ -51,6 +51,11 @@ class HashIndexServer {
       RDMA_LOG(INFO) << "delete micro tables";
     }
 
+    if (ycsb_server) {
+      delete ycsb_server;
+      RDMA_LOG(INFO) << "delete ycsb tables";
+    }
+
   }
 
   void AllocMem();

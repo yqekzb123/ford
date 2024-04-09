@@ -125,6 +125,7 @@ bool DTX::TxReadWriteTxnCommit(coro_yield_t& yield) {
 bool DTX::TxReadWriteAbort() {
   UnLockLocalRW();
   Abort();
+  return true;
 }
 
 bool DTX::TxReadOnlyTxnExe(coro_yield_t& yield, bool fail_abort) {

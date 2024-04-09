@@ -15,7 +15,7 @@
 #include "math.h"
 #include "record/rm_manager.h"
 #include "record/rm_file_handle.h"
-// Smallbank table keys and values
+// YCSB table keys and values
 // All keys have been sized to 8 bytes
 // All values have been sized to the next multiple of 8 bytes
 
