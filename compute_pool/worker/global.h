@@ -8,7 +8,7 @@
 #define RETURN_BEFORE true
 // true: RPC, false: RDMA
 #define LOG_RPC_OR_RDMA false 
-#define SYS_ONE_WRITE true
+#define SYS_ONE_WRITE false
 
 #define DEBUG_TIME(...) \
   if(OPEN_TIME) { \
