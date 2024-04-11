@@ -137,30 +137,58 @@ class SmallBank {
     if (checking_table_index) delete checking_table_index;
   }
 
-  SmallBankTxType* CreateWorkgenArray() {
+  SmallBankTxType* CreateWorkgenArray(double readonly_txn_rate) {
     SmallBankTxType* workgen_arr = new SmallBankTxType[100];
 
-    int i = 0, j = 0;
+    // int i = 0, j = 0;
 
-    j += FREQUENCY_AMALGAMATE;
-    for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kAmalgamate;
+    // j += FREQUENCY_AMALGAMATE;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kAmalgamate;
 
-    j += FREQUENCY_BALANCE;
+    // j += FREQUENCY_BALANCE;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kBalance;
+
+    // j += FREQUENCY_DEPOSIT_CHECKING;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kDepositChecking;
+
+    // j += FREQUENCY_SEND_PAYMENT;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kSendPayment;
+
+    // j += FREQUENCY_TRANSACT_SAVINGS;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kTransactSaving;
+
+    // j += FREQUENCY_WRITE_CHECK;
+    // for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kWriteCheck;
+
+    // SmallBankTxType为kBalance，是只读事务
+    int rw = 100 - 100 * readonly_txn_rate;
+    int i = 0;
+    int j = 100 * readonly_txn_rate;
     for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kBalance;
+    // printf("j = %d\n", j);
 
-    j += FREQUENCY_DEPOSIT_CHECKING;
+    j = (j + rw * 15 / 85) > 100 ? 100 : (j + rw * 15 / 85);
+    for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kAmalgamate;
+    // printf("j = %d\n", j);
+
+    j = (j + rw * 15 / 85) > 100 ? 100 : (j + rw * 15 / 85);
     for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kDepositChecking;
+    // printf("j = %d\n", j);
 
-    j += FREQUENCY_SEND_PAYMENT;
+    j = (j + rw * 25 / 85) > 100 ? 100 : (j + rw * 25 / 85);
     for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kSendPayment;
+    // printf("j = %d\n", j);
 
-    j += FREQUENCY_TRANSACT_SAVINGS;
+    j = (j + rw * 15 / 85) > 100 ? 100 : (j + rw * 15 / 85);
     for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kTransactSaving;
+    // printf("j = %d\n", j);
 
-    j += FREQUENCY_WRITE_CHECK;
+    j = 100;
     for (; i < j; i++) workgen_arr[i] = SmallBankTxType::kWriteCheck;
+    // printf("j = %d\n", j);
 
     assert(i == 100 && j == 100);
+
     return workgen_arr;
   }
 

@@ -33,3 +33,5 @@ uint64_t shared_lock_abort_cnt;
 uint64_t exlusive_lock_abort_cnt;
 
 __thread t_id_t thread_gid;
+
+DEFINE_double(READONLY_TXN_RATE, 0.2, "The read only txn rate of the system");

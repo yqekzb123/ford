@@ -217,6 +217,7 @@ bool DTX::TxReadOnlyTxnExe(coro_yield_t& yield, bool fail_abort) {
   }
   catch(const AbortException& e) {
     TxReadOnlyAbort(yield);
+    return false;
   }
   return true;
 ABORT:

@@ -337,32 +337,55 @@ class TATP {
 
   /* create workload generation array for benchmarking */
   ALWAYS_INLINE
-  TATPTxType* CreateWorkgenArray() {
+  TATPTxType* CreateWorkgenArray(double readonly_txn_rate) {
     TATPTxType* workgen_arr = new TATPTxType[100];
 
-    int i = 0, j = 0;
+    // int i = 0, j = 0;
 
-    j += FREQUENCY_GET_SUBSCRIBER_DATA;
-    for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetSubsciberData;
+    // j += FREQUENCY_GET_SUBSCRIBER_DATA;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetSubsciberData;
 
-    j += FREQUENCY_GET_ACCESS_DATA;
+    // j += FREQUENCY_GET_ACCESS_DATA;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetAccessData;
+
+    // j += FREQUENCY_GET_NEW_DESTINATION;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetNewDestination;
+
+    // j += FREQUENCY_UPDATE_SUBSCRIBER_DATA;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kUpdateSubscriberData;
+
+    // j += FREQUENCY_UPDATE_LOCATION;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kUpdateLocation;
+
+    // j += FREQUENCY_INSERT_CALL_FORWARDING;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kInsertCallForwarding;
+
+    // j += FREQUENCY_DELETE_CALL_FORWARDING;
+    // for (; i < j; i++) workgen_arr[i] = TATPTxType::kDeleteCallForwarding;
+
+    // TATPTxType为kGetSubsciberData和kGetNewDestination，是只读事务
+    int rw = 100 - 100 * readonly_txn_rate;
+    int i = 0;
+    int j = 100 * readonly_txn_rate;
+
+    for (; i < j / 2; i++) workgen_arr[i] = TATPTxType::kGetSubsciberData;
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetAccessData;
 
-    j += FREQUENCY_GET_NEW_DESTINATION;
+    j = (j + rw * 10 / 30) > 100 ? 100 : (j + rw * 10 / 30);
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kGetNewDestination;
-
-    j += FREQUENCY_UPDATE_SUBSCRIBER_DATA;
+    
+    j = (j + rw * 2 / 30) > 100 ? 100 : (j + rw * 2 / 30);
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kUpdateSubscriberData;
 
-    j += FREQUENCY_UPDATE_LOCATION;
+    j = (j + rw * 14 / 30) > 100 ? 100 : (j + rw * 14 / 30);
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kUpdateLocation;
 
-    j += FREQUENCY_INSERT_CALL_FORWARDING;
+    j = (j + rw * 2 / 30) > 100 ? 100 : (j + rw * 2 / 30);
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kInsertCallForwarding;
 
-    j += FREQUENCY_DELETE_CALL_FORWARDING;
+    j = 100;
     for (; i < j; i++) workgen_arr[i] = TATPTxType::kDeleteCallForwarding;
-
+    
     assert(i == 100 && j == 100);
     return workgen_arr;
   }

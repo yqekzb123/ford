@@ -195,7 +195,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
       case TATPTxType::kGetSubsciberData: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -235,7 +235,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
       case TATPTxType::kGetAccessData: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -401,6 +401,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
+            std::cout << "run amalgamate" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -420,7 +421,8 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       case SmallBankTxType::kBalance: {
         // !read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
+            std::cout << "run Kbalance" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -441,6 +443,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
+            std::cout << "run DepositChecking" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -461,6 +464,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
+            std::cout << "run SendPayment" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -481,6 +485,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
+            std::cout << "run TransactSaving" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -501,6 +506,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
+            std::cout << "run WriteCheck" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -715,7 +721,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
       case TPCCTxType::kOrderStatus: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -757,7 +763,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
       case TPCCTxType::kStockLevel: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -1129,12 +1135,12 @@ void run_thread(thread_params* params,
   
   if (bench_name == "tatp") {
     tatp_client = tatp_cli;
-    tatp_workgen_arr = tatp_client->CreateWorkgenArray();
+    tatp_workgen_arr = tatp_client->CreateWorkgenArray(FLAGS_READONLY_TXN_RATE);
     thread_local_try_times = new uint64_t[TATP_TX_TYPES]();
     thread_local_commit_times = new uint64_t[TATP_TX_TYPES]();
   } else if (bench_name == "smallbank") {
     smallbank_client = smallbank_cli;
-    smallbank_workgen_arr = smallbank_client->CreateWorkgenArray();
+    smallbank_workgen_arr = smallbank_client->CreateWorkgenArray(FLAGS_READONLY_TXN_RATE);
     thread_local_try_times = new uint64_t[SmallBank_TX_TYPES]();
     thread_local_commit_times = new uint64_t[SmallBank_TX_TYPES]();
   } else if (bench_name == "tpcc") {

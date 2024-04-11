@@ -44,3 +44,5 @@ extern uint64_t exlusive_lock_abort_cnt;
 extern __thread t_id_t thread_gid;
 
 // uint64_t GetBid(uint64_t key);
+
+DECLARE_double(READONLY_TXN_RATE);
