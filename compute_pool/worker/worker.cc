@@ -401,7 +401,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
-            std::cout << "run amalgamate" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxAmalgamate(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -422,7 +421,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // !read only transaction
         #if SYS_ONE_WRITE
           if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
-            std::cout << "run Kbalance" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -443,7 +441,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
-            std::cout << "run DepositChecking" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxDepositChecking(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -464,7 +461,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
-            std::cout << "run SendPayment" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxSendPayment(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -485,7 +481,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
-            std::cout << "run TransactSaving" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxTransactSaving(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -506,7 +501,6 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         // ! read write transaction
         #if SYS_ONE_WRITE
           if(g_machine_id == 0){
-            std::cout << "run WriteCheck" << std::endl;
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxWriteCheck(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
