@@ -89,9 +89,9 @@ class DTX {
 
   bool TxReadOnlyTxnCommit(); 
 
-  bool TxReadWriteAbort();
+  bool TxReadWriteAbort(coro_yield_t& yield); //一写多读场景下，回滚写事务方法
 
-  bool TxReadOnlyAbort();
+  bool TxReadOnlyAbort(coro_yield_t& yield); //一写多读场景下，回滚只读事务方法
   /*****************************************************/
 
  public:

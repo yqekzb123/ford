@@ -195,7 +195,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
       case TATPTxType::kGetSubsciberData: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxGetSubsciberData(tatp_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -235,7 +235,7 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
       case TATPTxType::kGetAccessData: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxGetAccessData(tatp_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -420,7 +420,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
       case SmallBankTxType::kBalance: {
         // !read only transaction
         #if SYS_ONE_WRITE
-          if(FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = bench_dtx->TxBalance(smallbank_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -715,7 +715,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
       case TPCCTxType::kOrderStatus: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxOrderStatus(tpcc_client, random_generator, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -757,7 +757,7 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
       case TPCCTxType::kStockLevel: {
         // ! read only transaction
         #if SYS_ONE_WRITE
-          if(FastRand(&seed) % (g_machine_num-1) == 0){
+          if(g_machine_num == 1 || FastRand(&seed) % (g_machine_num-1) == 0){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxStockLevel(tpcc_client, random_generator, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;

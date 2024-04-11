@@ -11,8 +11,8 @@
       "workload": "SmallBank"  //SmallBank TATP TPCC MICRO
     },
     "remote_compute_nodes": {
-      "compute_node_ips": ["10.77.110.147", "10.77.110.148"],
-      "compute_node_ports": [12347, 12347]
+      "compute_node_ips": ["10.77.110.148"],
+      "compute_node_ports": [12347]
       // "compute_node_ips": ["10.77.110.147"],
       // "compute_node_ports": [12347]
     }
