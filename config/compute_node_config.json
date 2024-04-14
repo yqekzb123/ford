@@ -2,15 +2,23 @@
   "local_compute_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "thread_num_per_machine": 1,
-    "coroutine_num": 3,
+    "thread_num_per_machine": 32,
+    "coroutine_num": 2,
     "local_port": 12347,
-"txn_system": 6,
+"txn_system": 7,
     "comment": "0 is farm, 1 is drtmh, 2 is ford, 4 is baseline, 5 is batch, 6 is one_write",
     "cache_size_GB": 4,
     "batch_coroutine_num": 1,
     "batch_warmup": 25,
     "batch_size": 400
+  },
+  "glm_node": {
+    "glm_node_ip": ["10.77.110.148"],
+    "glm_node_port": [12360]
+  },
+  "remote_taurus_nodes": {
+    "taurus_node_ips": ["10.77.110.148"],
+    "taurus_node_ports": [12361]
   },
   "remote_hashindex_node_nodes": {
     "remote_hashindex_node_ips": ["10.77.110.148"],

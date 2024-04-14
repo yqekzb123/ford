@@ -18,7 +18,10 @@ DTX::DTX(MetaManager* meta_man,
          std::list<PageAddress>* _free_page_list, 
          std::mutex* _free_page_list_mutex,
          brpc::Channel* data_channel,
-         brpc::Channel* log_channel) {
+         brpc::Channel* log_channel,
+         brpc::Channel* _glm_channel,
+         MasterBufferPoolManager* _master_buffer_pool_manager) {
+          
   // Transaction setup
   tx_id = 0;
   t_id = tid;
@@ -44,6 +47,8 @@ DTX::DTX(MetaManager* meta_man,
 
   storage_data_channel = data_channel;
   storage_log_channel = log_channel;
+  glm_channel = _glm_channel;
+  master_buffer_pool_manager = _master_buffer_pool_manager;
 }
 
 void DTX::Abort() {

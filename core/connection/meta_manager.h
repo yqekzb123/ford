@@ -334,6 +334,8 @@ class MetaManager {
   std::vector<RemoteNode> remote_hashindex_nodes;
   std::vector<RemoteNode> remote_storage_nodes;
 
+  std::vector<RemoteNode> remote_taurus_master_nodes; // only used by taurus master
+  
   RNicHandler* opened_rnic;
 
   // Below are some parameteres from json file

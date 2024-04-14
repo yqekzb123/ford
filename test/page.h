@@ -7,6 +7,8 @@
 // #include "common/rwlatch.h"
 #include <string>
 #include <cstring>
+#include <shared_mutex>
+#include <mutex> 
 #include "base/common.h"
 
 /**
@@ -15,6 +17,7 @@
  */
 class Page {
     friend class BufferPoolManager;
+    friend class MasterBufferPoolManager;
 
    public:
     
@@ -45,6 +48,6 @@ class Page {
     /** The pin count of this page. */
     int pin_count_ = 0;
 
-    // /** Page latch. */
-    // ReaderWriterLatch rwlatch_;
+    // page latch. used to protect the content
+    std::shared_mutex rwlatch_;
 };

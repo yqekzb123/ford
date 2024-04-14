@@ -23,6 +23,8 @@ bool TxGetSubsciberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, 
 
   #if SYS_ONE_WRITE
     if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -39,7 +41,9 @@ bool TxGetSubsciberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, 
 
   // Commit transaction
   #if SYS_ONE_WRITE
-    if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+    bool commit_status = dtx->TxReadOnlyTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -76,6 +80,8 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
 
   #if SYS_ONE_WRITE
     if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -84,6 +90,8 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   if (specfac_obj->value_size == 0) {
     #if SYS_ONE_WRITE
       dtx->TxReadOnlyAbort();
+    #elif SYS_TAURUS
+      dtx->TxTaurusAbort(yield);
     #else
       dtx->TxAbortReadOnly(yield);
     #endif
@@ -100,6 +108,8 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
     // is_active is randomly generated at pm node side
     #if SYS_ONE_WRITE
       dtx->TxReadOnlyAbort();
+    #elif SYS_TAURUS
+      dtx->TxTaurusAbort(yield);
     #else
       dtx->TxAbortReadOnly(yield);
     #endif
@@ -122,6 +132,8 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   }
   #if SYS_ONE_WRITE
     if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -145,7 +157,9 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
 
   if (callfwd_success) {
     #if SYS_ONE_WRITE
-      if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+      bool commit_status = dtx->TxReadOnlyTxnCommit(yield);
+    #elif SYS_TAURUS
+      bool commit_status = dtx->TxTaurusTxnCommit(yield);
     #else
       bool commit_status = dtx->TxCommit(yield);
     #endif
@@ -153,6 +167,8 @@ bool TxGetNewDestination(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield,
   } else {
     #if SYS_ONE_WRITE
       dtx->TxReadOnlyAbort();
+    #elif SYS_TAURUS
+      dtx->TxTaurusAbort(yield);
     #else
       dtx->TxAbortReadOnly(yield);
     #endif
@@ -176,6 +192,8 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
   dtx->AddToReadOnlySet(acc_obj);
   #if SYS_ONE_WRITE
     if(!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -189,7 +207,9 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
     }
 
     #if SYS_ONE_WRITE
-      if(!dtx->TxReadOnlyTxnCommit(yield)) return false;
+      bool commit_status = dtx->TxReadOnlyTxnCommit(yield);
+    #elif SYS_TAURUS
+      bool commit_status = dtx->TxTaurusTxnCommit(yield);
     #else
       bool commit_status = dtx->TxCommit(yield);
     #endif
@@ -198,6 +218,8 @@ bool TxGetAccessData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx_
     /* Key not found */
     #if SYS_ONE_WRITE
       dtx->TxReadOnlyAbort();
+    #elif SYS_TAURUS
+      dtx->TxTaurusAbort(yield);
     #else
       dtx->TxAbortReadOnly(yield);
     #endif
@@ -231,6 +253,8 @@ bool TxUpdateSubscriberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadWriteSet(specfac_obj);
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -251,6 +275,8 @@ bool TxUpdateSubscriberData(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -276,6 +302,8 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
   dtx->AddToReadOnlySet(sec_sub_obj);
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -297,6 +325,8 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
   dtx->AddToReadWriteSet(sub_obj);
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -309,6 +339,8 @@ bool TxUpdateLocation(TATP* tatp_client, uint64_t* seed, coro_yield_t& yield, tx
   sub_val->vlr_location = vlr_location; /* Update */
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit();
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -336,6 +368,8 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadOnlySet(sec_sub_obj);
   #if SYS_ONE_WRITE
     if(!dtx.TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -359,6 +393,8 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadOnlySet(specfac_obj);
   #if SYS_ONE_WRITE
     if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -368,6 +404,8 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   if (specfac_obj->value_size == 0) {
     #if SYS_ONE_WRITE
       dtx->TxReadOnlyAbort();
+    #elif SYS_TAURUS
+      dtx->TxTaurusAbort(yield);
     #else
       dtx->TxAbortReadOnly(yield);
     #endif
@@ -397,6 +435,8 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadWriteSet(callfwd_obj);
   #if SYS_ONE_WRITE
     if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -409,6 +449,8 @@ bool TxInsertCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -432,6 +474,8 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadOnlySet(sec_sub_obj);
   #if SYS_ONE_WRITE
     if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -458,6 +502,8 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
   dtx->AddToReadWriteSet(callfwd_obj);
   #if SYS_ONE_WRITE
     if(!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -475,6 +521,8 @@ bool TxDeleteCallForwarding(TATP* tatp_client, uint64_t* seed, coro_yield_t& yie
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif

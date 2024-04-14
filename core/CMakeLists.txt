@@ -17,6 +17,7 @@ set(DTX_SRC
         dtx/structs.cc
         dtx/rwlock.cc
         dtx/dtx_log.cc
+        dtx/dtx_taurus_exe_commit.cc
         )
 
 set(SCHEDULER_SRC
@@ -41,6 +42,8 @@ set(LOG_SRC
 set(MEM_SRC
         memstore/page_table.cc)
 
+add_subdirectory(dtx/taurusmm)
+
 add_library(ford STATIC
         ${CONNECTION_SRC}
         ${DTX_SRC}
@@ -53,4 +56,4 @@ add_library(ford STATIC
 
 set_target_properties(ford PROPERTIES LINKER_LANGUAGE CXX)
 
-target_link_libraries(ford ${DYNAMIC_LIB} ${BRPC_LIB} rlib pthread boost_coroutine boost_context boost_system)
+target_link_libraries(ford ${DYNAMIC_LIB} ${BRPC_LIB} glm taurus rlib pthread boost_coroutine boost_context boost_system)

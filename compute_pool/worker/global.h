@@ -9,6 +9,7 @@
 // true: RPC, false: RDMA
 #define LOG_RPC_OR_RDMA false 
 #define SYS_ONE_WRITE false
+#define SYS_TAURUS true
 
 #define DEBUG_TIME(...) \
   if(OPEN_TIME) { \
@@ -46,3 +47,4 @@ extern __thread t_id_t thread_gid;
 // uint64_t GetBid(uint64_t key);
 
 DECLARE_double(READONLY_TXN_RATE);
+DECLARE_int32(TAURUS_PORT);

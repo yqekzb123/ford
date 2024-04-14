@@ -40,6 +40,7 @@
 #include "bench_dtx.h"
 #include "log/log_record.h"
 #include "txn/batch_txn.h"
+#include "taurusmm/master_buffer.h"
 
 // for buffer pool fetch page
 enum class FetchPageType {
@@ -92,6 +93,12 @@ class DTX {
   bool TxReadWriteAbort(coro_yield_t& yield); //一写多读场景下，回滚写事务方法
 
   bool TxReadOnlyAbort(coro_yield_t& yield); //一写多读场景下，回滚只读事务方法
+
+  // ---------taurus------------
+  bool TxTaurusTxnExe(coro_yield_t& yield, bool fail_abort = true);
+  bool TxTaurusTxnCommit(coro_yield_t& yield);
+  void TxTaurusAbort(coro_yield_t& yield);
+
   /*****************************************************/
 
  public:
@@ -117,7 +124,9 @@ class DTX {
       std::list<PageAddress>* free_page_list, 
       std::mutex* free_page_list_mutex,
       brpc::Channel* data_channel,
-      brpc::Channel* log_channel);
+      brpc::Channel* log_channel,
+      brpc::Channel* glm_channel,
+      MasterBufferPoolManager* master_buffer_pool_manager);
   ~DTX() {
     Clean();
   }
@@ -139,6 +148,12 @@ class DTX {
   bool ExeLocalRO(coro_yield_t& yield, uint64_t bid);  // 在本地执行只读操作
   bool ExeLocalRW(coro_yield_t& yield, uint64_t bid);  // 在本地执行读写操作
 
+  bool LockTaurus(coro_yield_t& yield);    // Taurus对操作加锁
+  bool UnlockTaurus(coro_yield_t& yield);  // Taurus对只读操作解锁
+  bool TaurusRead();                         // Taurus方法，读数据
+  void TaurusUnpin();                        // Taurus方法，将数据页Unpin
+  void SendLogToMasters();                   // Taurus方法，将日志发送给Master
+
   bool LocalValidate(coro_yield_t& yield);  //本地验证/加锁之类的
   bool DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench);
   bool LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench);  //本地提交
@@ -155,6 +170,7 @@ class DTX {
   BatchTxnLog batch_txn_log;
   brpc::Channel* storage_data_channel;
   brpc::Channel* storage_log_channel;
+  brpc::Channel* glm_channel;
   
   void SendLogToStoragePool(uint64_t bid, brpc::CallId* cid); // use for rpc
   void SendLogToStoragePool(uint64_t bid); // use for rdma
@@ -365,6 +381,14 @@ class DTX {
   std::vector<std::pair<char*, PageAddress>> page_data_localaddr_and_remote_offset;
   std::vector<LockStatusItem> shared_lock_item_localaddr_and_remote_offset;
   std::vector<LockStatusItem> exclusive_lock_item_localaddr_and_remote_offset;
+
+  // ****************************Taurus MM****************************
+  // use only for taurus
+  std::vector<PageId> glm_hold_sharedlock_page_ids;
+  std::vector<PageId> glm_hold_exclusivelock_page_ids;
+  MasterBufferPoolManager* master_buffer_pool_manager = nullptr;
+  std::vector<Page*> all_pages;
+  // ****************************Taurus MM END****************************
 };
 
 /*************************************************************

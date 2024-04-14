@@ -319,6 +319,8 @@ bool SmallBankDTX::TxAmalgamate(SmallBank* smallbank_client, uint64_t* seed, cor
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -347,6 +349,8 @@ bool SmallBankDTX::TxAmalgamate(SmallBank* smallbank_client, uint64_t* seed, cor
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -376,6 +380,8 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadOnlyTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -394,6 +400,8 @@ bool SmallBankDTX::TxBalance(SmallBank* smallbank_client, uint64_t* seed, coro_y
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadOnlyTxnCommit();
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -419,6 +427,8 @@ bool SmallBankDTX::TxDepositChecking(SmallBank* smallbank_client, uint64_t* seed
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -434,6 +444,8 @@ bool SmallBankDTX::TxDepositChecking(SmallBank* smallbank_client, uint64_t* seed
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -464,6 +476,8 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -490,6 +504,8 @@ bool SmallBankDTX::TxSendPayment(SmallBank* smallbank_client, uint64_t* seed, co
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -515,6 +531,8 @@ bool SmallBankDTX::TxTransactSaving(SmallBank* smallbank_client, uint64_t* seed,
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -530,6 +548,8 @@ bool SmallBankDTX::TxTransactSaving(SmallBank* smallbank_client, uint64_t* seed,
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif
@@ -559,6 +579,8 @@ bool SmallBankDTX::TxWriteCheck(SmallBank* smallbank_client, uint64_t* seed, cor
 
   #if SYS_ONE_WRITE
     if (!dtx->TxReadWriteTxnExe(yield)) return false;
+  #elif SYS_TAURUS
+    if(!dtx->TxTaurusTxnExe(yield)) return false;
   #else
     if (!dtx->TxExe(yield)) return false;
   #endif
@@ -583,6 +605,8 @@ bool SmallBankDTX::TxWriteCheck(SmallBank* smallbank_client, uint64_t* seed, cor
 
   #if SYS_ONE_WRITE
     bool commit_status = dtx->TxReadWriteTxnCommit(yield);
+  #elif SYS_TAURUS
+    bool commit_status = dtx->TxTaurusTxnCommit(yield);
   #else
     bool commit_status = dtx->TxCommit(yield);
   #endif

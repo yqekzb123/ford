@@ -8,6 +8,7 @@
 #include "cache/lock_status.h"
 #include "cache/version_status.h"
 #include "connection/meta_manager.h"
+#include "dtx/taurusmm/master_buffer.h"
 
 #include "tatp/tatp_db.h"
 #include "smallbank/smallbank_db.h"
@@ -29,6 +30,7 @@ struct thread_params {
   std::string bench_name;
   std::list<PageAddress>* free_list;
   std::mutex* free_page_list_mutex;
+  MasterBufferPoolManager* master_buffer_pool = nullptr;
 };
 
 void run_thread(thread_params* params,

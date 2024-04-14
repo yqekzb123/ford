@@ -212,7 +212,7 @@ bool DTX::TxReadOnlyTxnExe(coro_yield_t& yield, bool fail_abort) {
     struct timespec tx_read_time;
     clock_gettime(CLOCK_REALTIME, &tx_read_time);
     double read_usec = (tx_read_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_read_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
-    DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, lock_rw_usec: %lf, read_usec: %lf\n", tx_id, lock_rw_usec, read_usec);
+    DEBUG_TIME("dtx_base_exe_commit.cc:46, exe a new txn %ld, read_usec: %lf\n", tx_id, read_usec);
     #endif
   }
   catch(const AbortException& e) {

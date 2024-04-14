@@ -2,7 +2,7 @@
 // Copyright (c) 2022
 
 #include "connection/qp_manager.h"
-
+#include "worker/global.h"
 
 void QPManager::BuildDataNodeQPConnection(MetaManager* meta_man) {
   for (const auto& remote_node : meta_man->remote_data_nodes) {
@@ -150,9 +150,11 @@ void QPManager::BuildStorageQPConnection(MetaManager* meta_man) {
 }
 
 void QPManager::BuildQPConnection(MetaManager* meta_man) {
+#if !(SYS_TAURUS)
   BuildDataNodeQPConnection(meta_man);
   BuildPageNodeQPConnection(meta_man);
   BuildLockNodeQPConnection(meta_man);
+#endif
   BuildIndexNodeQPConnection(meta_man);
   BuildStorageQPConnection(meta_man);
   return ;

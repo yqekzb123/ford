@@ -2,7 +2,7 @@
 // Copyright (c) 2022
 
 #include "connection/meta_manager.h"
-
+#include "worker/global.h"
 #include "util/json_config.h"
 #include "util/bitmap.h"
 
@@ -92,6 +92,7 @@ MetaManager::MetaManager(std::string bench_name) {
   auto remote_hashindex_ports = hashindex_nodes.get("remote_hashindex_node_port");            // Array Used for RDMA exchanges
   auto remote_hashindex_meta_ports = hashindex_nodes.get("remote_hashindex_node_meta_ports");  // Array Used for transferring datastore metas
 
+#if !(SYS_TAURUS)
   auto locktable_nodes = json_config.get("remote_locktable_node_nodes");
   auto remote_locktable_ips = locktable_nodes.get("remote_locktable_node_ips");                // Array
   auto remote_locktable_ports = locktable_nodes.get("remote_locktable_node_port");            // Array Used for RDMA exchanges
@@ -106,12 +107,6 @@ MetaManager::MetaManager(std::string bench_name) {
   auto remote_pagetable_ips = pagetable_nodes.get("remote_page_table_node_ips");                // Array
   auto remote_pagetable_ports = pagetable_nodes.get("remote_page_table_node_port");            // Array Used for RDMA exchanges
   auto remote_pagetable_meta_ports = pagetable_nodes.get("remote_page_table_node_meta_port");  // Array Used for transferring datastore metas
-
-  auto storage_nodes = json_config.get("remote_storage_nodes");
-  auto remote_storage_ips = storage_nodes.get("remote_storage_node_ips");                // Array
-  auto remote_storage_ports = storage_nodes.get("remote_storage_node_port");            // Array Used for RDMA exchanges
-  auto remote_storage_meta_ports = storage_nodes.get("remote_storage_node_meta_port");  // Array Used for transferring datastore metas
-
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_data_ips.size(); index++) {
     std::string remote_ip = remote_data_ips.get(index).get_str();
@@ -125,21 +120,6 @@ MetaManager::MetaManager(std::string bench_name) {
     remote_data_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
   }
   RDMA_LOG(INFO) << "All data meta received";
-
-  // Get remote machine's memory store meta via TCP
-  for (size_t index = 0; index < remote_hashindex_ips.size(); index++) {
-    std::string remote_ip = remote_hashindex_ips.get(index).get_str();
-    int remote_meta_port = (int)remote_hashindex_meta_ports.get(index).get_int64();
-    // RDMA_LOG(INFO) << "get hash meta from " << remote_ip;
-    node_id_t remote_machine_id = GetRemoteHashIndexStoreMeta(remote_ip, remote_meta_port);
-    if (remote_machine_id == -1) {
-      std::cerr << "Thread " << std::this_thread::get_id() << " GetMemStoreMeta() failed!, remote_machine_id = -1" << std::endl;
-    }
-    int remote_port = (int)remote_hashindex_ports.get(index).get_int64();
-    remote_hashindex_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
-  }
-  RDMA_LOG(INFO) << "All hasindex meta received";
-
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_locktable_ips.size(); index++) {
     std::string remote_ip = remote_locktable_ips.get(index).get_str();
@@ -168,6 +148,26 @@ MetaManager::MetaManager(std::string bench_name) {
     page_table_nodes.push_back(remote_machine_id);
   }
   RDMA_LOG(INFO) << "All page table meta received";
+#endif
+
+  auto storage_nodes = json_config.get("remote_storage_nodes");
+  auto remote_storage_ips = storage_nodes.get("remote_storage_node_ips");                // Array
+  auto remote_storage_ports = storage_nodes.get("remote_storage_node_port");            // Array Used for RDMA exchanges
+  auto remote_storage_meta_ports = storage_nodes.get("remote_storage_node_meta_port");  // Array Used for transferring datastore metas
+
+  // Get remote machine's memory store meta via TCP
+  for (size_t index = 0; index < remote_hashindex_ips.size(); index++) {
+    std::string remote_ip = remote_hashindex_ips.get(index).get_str();
+    int remote_meta_port = (int)remote_hashindex_meta_ports.get(index).get_int64();
+    // RDMA_LOG(INFO) << "get hash meta from " << remote_ip;
+    node_id_t remote_machine_id = GetRemoteHashIndexStoreMeta(remote_ip, remote_meta_port);
+    if (remote_machine_id == -1) {
+      std::cerr << "Thread " << std::this_thread::get_id() << " GetMemStoreMeta() failed!, remote_machine_id = -1" << std::endl;
+    }
+    int remote_port = (int)remote_hashindex_ports.get(index).get_int64();
+    remote_hashindex_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
+  }
+  RDMA_LOG(INFO) << "All hasindex meta received";
 
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_storage_ips.size(); index++) {
@@ -194,11 +194,15 @@ MetaManager::MetaManager(std::string bench_name) {
 
   // Open device
   opened_rnic = global_rdma_ctrl->open_device(idx);
-  for (auto& remote_node : remote_data_nodes) {
-    GetRemoteDataNodeMR(remote_node);
+  for (auto& remote_node : remote_storage_nodes) {
+    GetRemoteStorageNodeMR(remote_node);
   }
   for (auto& remote_node : remote_hashindex_nodes) {
     GetRemoteIndexNodeMR(remote_node);
+  }
+#if !(SYS_TAURUS)
+  for (auto& remote_node : remote_data_nodes) {
+    GetRemoteDataNodeMR(remote_node);
   }
   for (auto& remote_node : remote_locktable_nodes) {
     GetRemoteLockNodeMR(remote_node);
@@ -206,9 +210,17 @@ MetaManager::MetaManager(std::string bench_name) {
   for (auto& remote_node : remote_pagetable_nodes) {
     GetRemotePageNodeMR(remote_node);
   }
-  for (auto& remote_node : remote_storage_nodes) {
-    GetRemoteStorageNodeMR(remote_node);
-  }
+  // **********Taurus master meta setup*************
+  auto compute_nodes = json_config.get("remote_taurus_nodes");
+  auto remote_compute_ips = compute_nodes.get("taurus_node_ips");                // Array
+  auto remote_compute_ports = compute_nodes.get("taurus_node_ports");            // Array Used for RPC exchanges
+  for (size_t index = 0; index < remote_compute_ips.size(); index++) {
+    std::string remote_ip = remote_compute_ips.get(index).get_str();
+    int remote_port = (int)remote_compute_ports.get(index).get_int64();
+    remote_locktable_nodes.push_back(RemoteNode{.node_id = -1, .ip = remote_ip, .port = remote_port});
+  }          
+  // **********Taurus master meta setup end**********
+#endif
   RDMA_LOG(INFO) << "client: All remote mr meta received!";
 }
 

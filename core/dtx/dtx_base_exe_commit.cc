@@ -147,12 +147,6 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   clock_gettime(CLOCK_REALTIME, &tx_unpin_time);
   double unpin_usec = (tx_unpin_time.tv_sec - tx_write_time.tv_sec) * 1000000 + (double)(tx_unpin_time.tv_nsec - tx_write_time.tv_nsec) / 1000;
   #endif
-
-  #if OPEN_TIME
-  struct timespec tx_send_log_time;
-  clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
-  double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
-  #endif
   
   UnlockShared(yield);
   UnlockExclusive(yield);
@@ -219,8 +213,8 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
   #if OPEN_TIME
   struct timespec tx_fetch_time;
   clock_gettime(CLOCK_REALTIME, &tx_fetch_time);
-  double fetch_usec = (tx_fetch_time.tv_sec - tx_get_index_time.tv_sec) * 1000000 + (double)(tx_fetch_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
-  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
+  double fetch_usec = (tx_fetch_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_fetch_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, fetch_usec: %lf\n", tx_id, fetch_usec);
   #endif
   
   if (data_list.empty()) return false;

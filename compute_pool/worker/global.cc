@@ -35,3 +35,4 @@ uint64_t exlusive_lock_abort_cnt;
 __thread t_id_t thread_gid;
 
 DEFINE_double(READONLY_TXN_RATE, 0.2, "The read only txn rate of the system");
+DEFINE_int32(TAURUS_PORT, 12361, "The port of taurus");

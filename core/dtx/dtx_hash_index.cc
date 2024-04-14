@@ -2,7 +2,7 @@
 // Copyright (c) 2023
 
 #include "dtx/dtx.h"
-
+#include "worker/global.h"
 struct index_request_list_item{
     table_id_t table_id;
     itemkey_t item_key;
@@ -154,6 +154,13 @@ std::vector<Rid> DTX::GetHashIndexBatch(coro_yield_t& yield, std::vector<table_i
 // 如果出现初始桶中没有itemkey的情况，似乎无法使用桶尾部的多个指针
 // 并行加多个锁，因为可能会造成死锁, 无法保证按顺序加锁
 std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> table_id, std::vector<itemkey_t> item_key) {
+
+// #if OPEN_TIME
+//     // 计时1
+//     struct timespec tx_start_time;
+//     clock_gettime(CLOCK_REALTIME, &tx_start_time);
+// #endif
+
     assert(pending_hash_node_latch_idx.size() == 0);
 
     total_hash_node_offs_vec.clear();
@@ -213,6 +220,14 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
             }
         } 
     }
+
+// #if OPEN_TIME
+//     // 计时2
+//     struct timespec tx_get_index_cache_time;
+//     clock_gettime(CLOCK_REALTIME, &tx_get_index_cache_time);
+//     double cache_time = (tx_get_index_cache_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_get_index_cache_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+//     DEBUG_TIME("cache_time: %lf\n", cache_time);
+// #endif
 
     if(pending_hash_node_latch_idx.size() == 0){
         return res;
@@ -304,6 +319,14 @@ std::vector<Rid> DTX::GetHashIndex(coro_yield_t& yield, std::vector<table_id_t> 
         }
     }
     assert(pending_hash_node_latch_offs.size() == 0);
+
+// #if OPEN_TIME
+//     // 计时
+//     struct timespec tx_end_time;
+//     clock_gettime(CLOCK_REALTIME, &tx_end_time);
+//     double index_time = (tx_end_time.tv_sec - tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - tx_start_time.tv_nsec) / 1000;
+//     DEBUG_TIME("index_time: %lf\n", index_time);
+// #endif
     // // assert(hold_node_off_latch.size() == 0);
     // // 检查请求的HashIndex是否都被处理了
     // for(int i=0; i<res.size(); i++){

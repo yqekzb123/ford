@@ -1,0 +1,19 @@
+// author: huangchunyue
+// 这里是要写taurus主节点之间广播日志的rpc
+
+syntax="proto3";
+option cc_generic_services = true;
+
+package mslog_service;
+
+message MS2MSLogRequest {
+    uint64 ms_id = 1;
+    uint64 lsn = 2;
+};
+
+message MS2MSLogResponse{}
+
+
+service MSLogService {
+    rpc WriteLSNToMS(MS2MSLogRequest) returns (MS2MSLogResponse);
+};

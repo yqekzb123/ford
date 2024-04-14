@@ -1,0 +1,34 @@
+// author: huangchunyue
+// 这里是glm处理rpc的proto
+
+syntax="proto3";
+option cc_generic_services = true;
+
+package glm_service;
+
+message LockID{
+    uint64 table_id = 1;
+    uint64 page_id = 2;
+}
+
+message LockRequest {
+    repeated LockID shared_lock_id = 1;
+    repeated LockID exclusive_lock_id = 2;
+};
+
+message LockResponse {
+    int64 shared_fail_request_loc = 1;
+    int64 exclusive_fail_request_loc = 2;
+};
+
+message UnLockRequest {
+    repeated LockID shared_unlock_id = 1;
+    repeated LockID exclusive_unlock_id = 2;
+};
+
+message UnLockResponse {};
+
+service GLMService {
+    rpc LockPage(LockRequest) returns (LockResponse);
+    rpc UnLockPage(UnLockRequest) returns (UnLockResponse);
+};

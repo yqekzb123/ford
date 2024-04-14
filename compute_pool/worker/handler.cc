@@ -11,9 +11,12 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <brpc/server.h>
 
 #include "util/json_config.h"
 #include "worker/worker.h"
+#include "dtx/taurusmm/master_buffer.h"
+#include "dtx/taurusmm/master_log_rpc.h"
 
 std::atomic<uint64_t> tx_id_generator;
 std::atomic<uint64_t> connected_t_num;
@@ -55,6 +58,8 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
     txn_system_value = 5;
   } else if (system_name.find("one_write") != std::string::npos) {
     txn_system_value = 6;
+  } else if (system_name.find("taurus") != std::string::npos) {
+    txn_system_value = 7;
   }
   std::string s = "sed -i '8c \"txn_system\": " + std::to_string(txn_system_value) + ",' " + config_file;
   system(s.c_str());
@@ -94,6 +99,25 @@ void Handler::GenThreads(std::string bench_name) {
   auto* global_node_free_list = new std::list<PageAddress>();
   auto* global_node_free_list_mutex = new std::mutex();
 
+#if SYS_TAURUS
+  // hcy add taurus
+  auto* master_buffer = new MasterBufferPoolManager(10240, global_meta_man);
+  auto* node_lsn_map = new std::unordered_map<node_id_t, lsn_t>();
+  brpc::Server taurus_log_server;
+  mslog_service::MSlogImpl mslog_impl(*node_lsn_map);
+  if (taurus_log_server.AddService(&mslog_impl, 
+                          brpc::SERVER_DOESNT_OWN_SERVICE) != 0) {
+      LOG(ERROR) << "Fail to add service";
+  }
+  // 监听[0.0.0.0:local_port]
+  butil::EndPoint point;
+  point = butil::EndPoint(butil::IP_ANY, FLAGS_TAURUS_PORT);
+
+  brpc::ServerOptions options;
+  if (taurus_log_server.Start(point,&options) != 0) {
+      LOG(ERROR) << "Fail to start Server";
+  }
+#endif
   RDMA_LOG(INFO) << "Alloc local memory: " << (size_t)(thread_num_per_machine * PER_THREAD_ALLOC_SIZE) / (1024 * 1024) << " MB. Waiting...";
   auto* global_rdma_region = new RDMARegionAllocator(global_meta_man->GetGlobalRdmaCtrl(), global_meta_man->GetOpenedRnic(), thread_num_per_machine);
 
@@ -144,6 +168,7 @@ void Handler::GenThreads(std::string bench_name) {
     param_arr[i].total_thread_num = thread_num_per_machine * machine_num;
     param_arr[i].free_list = global_node_free_list;
     param_arr[i].free_page_list_mutex = global_node_free_list_mutex;
+    param_arr[i].master_buffer_pool = master_buffer;
     thread_arr[i] = std::thread(run_thread,
                                 &param_arr[i],
                                 tatp_client,

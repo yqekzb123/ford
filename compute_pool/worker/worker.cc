@@ -78,6 +78,8 @@ __thread AddrCache* addr_cache;
 __thread IndexCache* index_cache;
 __thread PageTableCache* page_table_cache;
 
+__thread MasterBufferPoolManager* master_buffer_pool_manager; // only use for taurus
+
 __thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
 __thread TPCCTxType* tpcc_workgen_arr;
@@ -96,6 +98,7 @@ __thread uint64_t write_ratio;
 
 __thread brpc::Channel* data_channel;
 __thread brpc::Channel* log_channel;
+__thread brpc::Channel* glm_channel;
 
 const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 
@@ -182,7 +185,9 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
 
     // Guarantee that each coroutine has a different seed
@@ -213,9 +218,9 @@ void RunTATP(coro_yield_t& yield, coro_id_t coro_id) {
         break;
       }
       case TATPTxType::kGetNewDestination: {
-        // ! read write transaction
+        // ! read only transaction
         #if SYS_ONE_WRITE
-          if(g_machine_id == 0){
+          if(g_machine_num == 1 || (g_machine_id != 0 && FastRand(&seed) % (g_machine_num-1) == 0)){
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = TxGetNewDestination(tatp_client, &seed, yield, iter, dtx);
             if (tx_committed) thread_local_commit_times[uint64_t(tx_type)]++;
@@ -383,7 +388,9 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -576,7 +583,9 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
     SmallBankTxType tx_type = smallbank_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -668,7 +677,9 @@ void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
     // Guarantee that each coroutine has a different seed
     TPCCTxType tx_type = tpcc_workgen_arr[FastRand(&seed) % 100];
@@ -986,7 +997,9 @@ void RunYCSB(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
     YCSBTxType tx_type = ycsb_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -1071,7 +1084,9 @@ void RunLocalYCSB(coro_yield_t& yield, coro_id_t coro_id) {
                      free_page_list,
                      free_page_list_mutex,
                      data_channel,
-                     log_channel);
+                     log_channel,
+                     glm_channel,
+                     master_buffer_pool_manager);
 
     YCSBTxType tx_type = ycsb_workgen_arr[FastRand(&seed) % 100];
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
@@ -1165,6 +1180,8 @@ void run_thread(thread_params* params,
 
   free_page_list = params->free_list; 
   free_page_list_mutex = params->free_page_list_mutex;
+
+  master_buffer_pool_manager = params->master_buffer_pool;
 
   coro_num = (coro_id_t)params->coro_num;
   batch_coro_num = (coro_id_t) params->batch_coro_num;
@@ -1281,7 +1298,19 @@ void run_thread(thread_params* params,
   if(log_channel->Init(storage_node.c_str(), &options) != 0) {
       RDMA_LOG(FATAL) << "Fail to initialize channel";
   }
-  
+
+  if(meta_man->txn_system == DTX_SYS::TAURUS) {
+    glm_channel = new brpc::Channel();
+    auto glm_json_config = JsonConfig::load_file(storage_config_filepath);
+    auto glm_conf = glm_json_config.get("glm_node");
+    auto glm_ip = glm_conf.get("glm_node_ip").get(0).get_str();
+    auto glm_port = glm_conf.get("glm_node_port").get(0).get_int64();
+    std::string glm_node = ip + ":" + std::to_string(glm_port);
+    if(glm_channel->Init(glm_node.c_str(), &options) != 0) {
+      RDMA_LOG(FATAL) << "Fail to initialize channel";
+    }
+  }
+
   // Link all coroutines via pointers in a loop manner
   coro_sched->LoopLinkCoroutine(coro_num);
 
