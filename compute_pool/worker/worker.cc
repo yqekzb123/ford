@@ -409,6 +409,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
@@ -429,6 +430,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
@@ -449,6 +451,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
@@ -469,6 +472,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
@@ -489,6 +493,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
@@ -509,6 +514,7 @@ void RunSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
             thread_local_try_times[uint64_t(tx_type)]++;
             tx_committed = true;
             thread_local_commit_times[uint64_t(tx_type)]++;
+            continue; // ! 这里不需要统计
           }
         #else
           thread_local_try_times[uint64_t(tx_type)]++;
