@@ -4,7 +4,7 @@ build
 .idea
 .vscode
 bench_results
-thirdparty
+# thirdparty
 perf.data
 perf.svg
 perf.data.old

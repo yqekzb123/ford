@@ -78,6 +78,15 @@ if ((NOT RDMA_INCLUDE_PATH) OR (NOT RDMA_LIB))
     message(FATAL_ERROR "Fail to find ibverbs")
 endif()
 
+find_path(TBB_INCLUDE_PATH NAMES tbb/concurrent_unordered_map.h)
+find_library(TBB_LIB NAMES tbb)
+if ((NOT TBB_INCLUDE_PATH))
+    message(FATAL_ERROR "Fail to find tbb include")
+endif()
+if (NOT TBB_LIB)
+    message(FATAL_ERROR "Fail to find tbb lib")
+endif()
+
 set(DYNAMIC_LIB
     ${CMAKE_THREAD_LIBS_INIT}
     ${GFLAGS_LIBRARY}
@@ -130,9 +139,12 @@ set(TEST4 test4.cpp)
 add_executable(TEST4 ${TEST4})
 set(TEST5 test5.cpp)
 add_executable(TEST5 ${TEST5})
+set(TEST6 test6.cpp)
+add_executable(TEST6 ${TEST6})
 
 target_link_libraries(TEST rlib)
 target_link_libraries(TEST2 rlib)
 target_link_libraries(TEST3 rlib)
 target_link_libraries(TEST4 rlib boost_coroutine boost_context boost_system)
 target_link_libraries(TEST5 rlib boost_coroutine boost_context boost_system)
+target_link_libraries(TEST6 tbb)
