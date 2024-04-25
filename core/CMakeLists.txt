@@ -53,4 +53,4 @@ add_library(ford STATIC
 
 set_target_properties(ford PROPERTIES LINKER_LANGUAGE CXX)
 
-target_link_libraries(ford ${DYNAMIC_LIB} ${BRPC_LIB} rlib pthread boost_coroutine boost_context boost_system)
+target_link_libraries(ford ${DYNAMIC_LIB} ${BRPC_LIB} tbb rlib pthread boost_coroutine boost_context boost_system)
