@@ -3,10 +3,8 @@
 #include "oneapi/tbb/parallel_for.h"
 #include <string>
 
-
 using namespace oneapi::tbb;
 using namespace std;
-
 
 // Structure that defines hashing and comparison operations for user's type.
 struct MyHashCompare {
@@ -38,9 +36,7 @@ struct Tally {
     }
 };
 
-
 const size_t N = 1000000;
-
 
 string Data[N];
 

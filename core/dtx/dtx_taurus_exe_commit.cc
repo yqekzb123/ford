@@ -270,7 +270,7 @@ bool DTX::TaurusRead() {
     PageId read_page_id{all_tableid[i], all_rids[i].page_no_};
     Page* page = master_buffer_pool_manager->fetch_page(read_page_id);
     all_pages.push_back(page);
-    master_buffer_pool_manager->RLatch(page);
+    page->RLatch();
     auto data_item = GetDataItemFromPage(all_tableid[i], page->get_data(), all_rids[i]);
     data_list.push_back(data_item);
   }
@@ -323,7 +323,7 @@ bool DTX::TaurusRead() {
 
 void DTX::TaurusUnpin(){
   for(int i=0; i<all_pages.size(); i++){
-    master_buffer_pool_manager->RUnlatch(all_pages[i]);
+    all_pages[i]->RUnlatch();
     master_buffer_pool_manager->unpin_page(all_pages[i]->get_page_id());
   }
 }

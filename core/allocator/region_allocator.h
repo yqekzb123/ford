@@ -11,7 +11,7 @@
 
 using namespace rdmaio;
 
-const uint64_t PER_THREAD_ALLOC_SIZE = (size_t)500 * 1024 * 1024;
+const uint64_t PER_THREAD_ALLOC_SIZE = (size_t)50 * 1024 * 1024;
 
 // This allocator is a global one which manages all the RDMA regions in this machine
 

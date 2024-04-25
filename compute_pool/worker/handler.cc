@@ -101,7 +101,7 @@ void Handler::GenThreads(std::string bench_name) {
 
 #if SYS_TAURUS
   // hcy add taurus
-  auto* master_buffer = new MasterBufferPoolManager(10240, global_meta_man);
+  auto* master_buffer = new MasterBufferPoolManager(2560, 64, global_meta_man);
   auto* node_lsn_map = new std::unordered_map<node_id_t, lsn_t>();
   brpc::Server taurus_log_server;
   mslog_service::MSlogImpl mslog_impl(*node_lsn_map);
@@ -177,13 +177,13 @@ void Handler::GenThreads(std::string bench_name) {
                                 ycsb_client);
 
     /* Pin thread i to hardware thread i */
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(i, &cpuset);
-    int rc = pthread_setaffinity_np(thread_arr[i].native_handle(), sizeof(cpu_set_t), &cpuset);
-    if (rc != 0) {
-      RDMA_LOG(WARNING) << "Error calling pthread_setaffinity_np: " << rc;
-    }
+    // cpu_set_t cpuset;
+    // CPU_ZERO(&cpuset);
+    // CPU_SET(i, &cpuset);
+    // int rc = pthread_setaffinity_np(thread_arr[i].native_handle(), sizeof(cpu_set_t), &cpuset);
+    // if (rc != 0) {
+    //   RDMA_LOG(WARNING) << "Error calling pthread_setaffinity_np: " << rc;
+    // }
   }
 
   for (t_id_t i = 0; i < thread_num_per_machine; i++) {

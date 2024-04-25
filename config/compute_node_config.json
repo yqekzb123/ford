@@ -2,7 +2,7 @@
   "local_compute_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "thread_num_per_machine": 32,
+    "thread_num_per_machine": 128,
     "coroutine_num": 2,
     "local_port": 12347,
 "txn_system": 7,
@@ -13,35 +13,35 @@
     "batch_size": 400
   },
   "glm_node": {
-    "glm_node_ip": ["10.77.110.148"],
+    "glm_node_ip": ["10.77.110.147"],
     "glm_node_port": [12360]
   },
   "remote_taurus_nodes": {
-    "taurus_node_ips": ["10.77.110.148"],
+    "taurus_node_ips": ["10.77.110.147"],
     "taurus_node_ports": [12361]
   },
   "remote_hashindex_node_nodes": {
-    "remote_hashindex_node_ips": ["10.77.110.148"],
+    "remote_hashindex_node_ips": ["10.77.110.147"],
     "remote_hashindex_node_port": [12357],
     "remote_hashindex_node_meta_ports": [12358]
   },
   "remote_locktable_node_nodes": {
-    "remote_locktable_node_ips": ["10.77.110.148"],
+    "remote_locktable_node_ips": ["10.77.110.147"],
     "remote_locktable_node_port": [12350],
     "remote_locktable_node_meta_ports": [12351]
   },
   "remote_data_node_nodes": {
-    "remote_data_node_ips": ["10.77.110.148"],
+    "remote_data_node_ips": ["10.77.110.147"],
     "remote_data_node_port": [12352],
     "remote_data_node_meta_ports": [12353]
   },
   "remote_page_table_nodes": {
-    "remote_page_table_node_ips": ["10.77.110.148"],
+    "remote_page_table_node_ips": ["10.77.110.147"],
     "remote_page_table_node_port": [12354],
     "remote_page_table_node_meta_port": [12356]
   },
   "remote_storage_nodes": {
-    "remote_storage_node_ips": ["10.77.110.148"],
+    "remote_storage_node_ips": ["10.77.110.147"],
     "remote_storage_node_port": [12344],
     "remote_storage_node_rpc_port": [12348],
     "remote_storage_node_meta_port": [12349]

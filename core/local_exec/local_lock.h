@@ -4,6 +4,7 @@
 #pragma once
 #include "dtx/dtx.h" 
 #include "dtx/structs.h"
+#include <tbb/concurrent_hash_map.h>
 
 class LocalLock{
 public:
@@ -47,7 +48,9 @@ public:
     }
 };
 
-using LocalLockTable = std::unordered_map<itemkey_t,LocalLock*>;
+// using LocalLockTable = std::unordered_map<itemkey_t,LocalLock*>;
+using LocalLockTable = tbb::concurrent_hash_map<itemkey_t,LocalLock*>;
+
 class LocalLockStore{ 
 public:  
     LocalLockStore(){
@@ -56,17 +59,29 @@ public:
     
     LocalLock* GetLock(table_id_t table_id, itemkey_t key) {
         LocalLock* lock = nullptr;
-        LocalLockTable table = local_lock[table_id];
-        lock = table[key];
+        LocalLockTable* table = nullptr;
+        tbb::concurrent_hash_map<table_id_t,LocalLockTable*>::accessor accessor;
+        if (local_lock.find(accessor, table_id)) {
+            table = accessor->second;
+            LocalLockTable::accessor accessor2;
+            if (table->find(accessor2, key)) {
+                lock = accessor2->second;
+            }
+        }
+        else{
+            table = new LocalLockTable();
+            local_lock.insert(std::make_pair(table_id,table));
+        }
         if (lock == nullptr) {
             // 如果data不存在，则自动创建一个临时的
             lock = new LocalLock(table_id, key);
-            table.insert(std::make_pair(key,lock));
+            table->insert(std::make_pair(key,lock));
         }
         // printf("local_data.h:122\n");
         return lock;
     }
 
 private:
-    std::unordered_map<table_id_t,LocalLockTable> local_lock;
+    // std::unordered_map<table_id_t,LocalLockTable*> local_lock;
+    tbb::concurrent_hash_map<table_id_t,LocalLockTable*> local_lock;
 };

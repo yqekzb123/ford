@@ -20,4 +20,7 @@ add_library(glm STATIC
 
 add_executable(glm_server glm_server.cc)
 
-target_link_libraries(glm_server glm ${DYNAMIC_LIB} ${BRPC_LIB})
+target_link_libraries(glm_server glm tbb ${DYNAMIC_LIB} ${BRPC_LIB})
+
+add_executable(glm_test glm_performance_test.cc)
+target_link_libraries(glm_test glm tbb)

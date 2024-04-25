@@ -58,6 +58,13 @@ struct hash<PageId> {
 // PageId的自定义哈希算法, 用于构建unordered_map<PageId, frame_id_t, PageIdHash>
 struct PageIdHash {
     size_t operator()(const PageId &x) const { return (x.table_id << 16) | x.page_no; }
+    static size_t hash( const PageId& x ) {
+        return (x.table_id << 16) | x.page_no;
+    }
+    //! True if strings are equal
+    static bool equal( const PageId& x, const PageId& y ) {
+        return x.page_no == y.page_no && x.table_id == y.table_id;
+    }
 };
 
 /**

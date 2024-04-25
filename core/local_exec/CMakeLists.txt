@@ -1,0 +1,2 @@
+add_executable(local_lock_test local_lock_test.cc)
+target_link_libraries(local_lock_test tbb ford)

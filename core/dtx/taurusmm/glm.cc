@@ -7,7 +7,7 @@ int GLM::GLMLockShared(std::vector<glmlock_request> requests) {
     auto localdata = glm_lock_store.GetLock(requests[i].table_id, requests[i].page_id);
     bool success = localdata->LockShared();
     if (!success) {
-      std::cout << "Lock failed: " << requests[i].table_id << requests[i].page_id << std::endl;
+      // std::cout << "Lock failed: " << requests[i].table_id << requests[i].page_id << std::endl;
       return i;
     }
   }
@@ -19,7 +19,7 @@ int GLM::GLMLockExclusive(std::vector<glmlock_request> requests) {
     auto localdata = glm_lock_store.GetLock(requests[i].table_id, requests[i].page_id);
     bool success = localdata->LockExclusive();
     if (!success) {
-      std::cout << "Lock failed: " << requests[i].table_id << requests[i].page_id << std::endl;
+      // std::cout << "Lock failed: " << requests[i].table_id << requests[i].page_id << std::endl;
       return i;
     }
   }

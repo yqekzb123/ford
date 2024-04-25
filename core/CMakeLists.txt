@@ -43,6 +43,7 @@ set(MEM_SRC
         memstore/page_table.cc)
 
 add_subdirectory(dtx/taurusmm)
+add_subdirectory(local_exec)
 
 add_library(ford STATIC
         ${CONNECTION_SRC}

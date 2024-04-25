@@ -9,6 +9,7 @@
 #include <cstring>
 #include <shared_mutex>
 #include <mutex> 
+#include <atomic>
 #include "base/common.h"
 
 /**
@@ -18,6 +19,7 @@
 class Page {
     friend class BufferPoolManager;
     friend class MasterBufferPoolManager;
+    friend class SubBufferPool;
 
    public:
     
@@ -30,6 +32,26 @@ class Page {
     inline char *get_data() { return data_; }
 
     bool is_dirty() const { return is_dirty_; }
+
+    void WLatch() {
+        rwlatch_.lock();
+        return;
+    }
+
+    void RLatch() {
+        rwlatch_.lock_shared();
+        return;
+    }
+
+    void WUnlatch() {
+        rwlatch_.unlock();
+        return;
+    }
+
+    void RUnlatch() {
+        rwlatch_.unlock_shared();
+        return;
+    }
 
    private:
     void reset_memory() { memset(data_, 0, PAGE_SIZE); }  // 将data_的PAGE_SIZE个字节填充为0
@@ -46,8 +68,10 @@ class Page {
     bool is_dirty_ = false;
 
     /** The pin count of this page. */
-    int pin_count_ = 0;
+    std::atomic<int> pin_count_ = 0;
 
+    std::atomic<bool> is_valid_ = false;
+    
     // page latch. used to protect the content
     std::shared_mutex rwlatch_;
 };
