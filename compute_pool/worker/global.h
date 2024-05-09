@@ -42,5 +42,4 @@ extern uint64_t shared_lock_abort_cnt;
 extern uint64_t exlusive_lock_abort_cnt;
 
 extern __thread t_id_t thread_gid;
-
-// uint64_t GetBid(uint64_t key);
+extern __thread t_id_t thread_num;

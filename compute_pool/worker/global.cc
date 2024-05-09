@@ -33,3 +33,4 @@ uint64_t shared_lock_abort_cnt;
 uint64_t exlusive_lock_abort_cnt;
 
 __thread t_id_t thread_gid;
+__thread t_id_t thread_num;

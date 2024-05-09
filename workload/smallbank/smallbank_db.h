@@ -192,6 +192,11 @@ class SmallBank {
     }
   }
 
+  inline void cluster(uint64_t* acct_id_0, uint64_t thread_num, uint64_t thread_gid) const {
+    uint64_t size = num_accounts_global / thread_num;
+    *acct_id_0 = *acct_id_0 % size + size * thread_gid;
+  }
+
   void LoadTable(node_id_t node_id, node_id_t num_server);
 
   // For server-side usage

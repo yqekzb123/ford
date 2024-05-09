@@ -149,9 +149,9 @@ bool DTX::TxCommit(coro_yield_t& yield) {
   #endif
 
   #if OPEN_TIME
-  struct timespec tx_send_log_time;
-  clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
-  double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
+  // struct timespec tx_send_log_time;
+  // clock_gettime(CLOCK_REALTIME, &tx_send_log_time);
+  // double send_log_usec = (tx_send_log_time.tv_sec - tx_unpin_time.tv_sec) * 1000000 + (double)(tx_send_log_time.tv_nsec - tx_unpin_time.tv_nsec) / 1000;
   #endif
   
   UnlockShared(yield);
@@ -217,10 +217,10 @@ bool DTX::ReadRemote(coro_yield_t& yield) {
   std::vector<DataItemPtr> data_list = FetchTuple(yield, all_tableid, all_rids, fetch_type, tx_id);
   
   #if OPEN_TIME
-  struct timespec tx_fetch_time;
-  clock_gettime(CLOCK_REALTIME, &tx_fetch_time);
-  double fetch_usec = (tx_fetch_time.tv_sec - tx_get_index_time.tv_sec) * 1000000 + (double)(tx_fetch_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
-  DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
+  // struct timespec tx_fetch_time;
+  // clock_gettime(CLOCK_REALTIME, &tx_fetch_time);
+  // double fetch_usec = (tx_fetch_time.tv_sec - tx_get_index_time.tv_sec) * 1000000 + (double)(tx_fetch_time.tv_nsec - tx_get_index_time.tv_nsec) / 1000;
+  // DEBUG_TIME("dtx_base_exe_commit.cc:168, exe a new txn %ld, get_index_usec: %lf, fetch_usec: %lf\n", tx_id, get_index_usec, fetch_usec);
   #endif
   
   if (data_list.empty()) return false;

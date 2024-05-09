@@ -5,6 +5,7 @@
 
 /******************** The business logic (Transaction) start ********************/
 
+#define OPEN_CLUSTER true
 bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;
@@ -12,6 +13,12 @@ bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed
   /* Transaction parameters */
   uint64_t acct_id_0, acct_id_1;
   smallbank_client->get_two_accounts(seed, &acct_id_0, &acct_id_1);
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id_0,thread_num,thread_gid);
+  smallbank_client->cluster(&acct_id_1,thread_num,thread_gid);
+  #endif
+  // !
 
   /* Read from savings and checking tables for acct_id_0 */
   smallbank_savings_key_t sav_key_0;
@@ -78,6 +85,11 @@ bool SmallBankDTX::TxLocalBalance(SmallBank* smallbank_client, uint64_t* seed, c
   /* Transaction parameters */
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id,thread_num,thread_gid);
+  #endif
+  // !
 
   /* Read from savings and checking tables */
   smallbank_savings_key_t sav_key;
@@ -120,6 +132,11 @@ bool SmallBankDTX::TxLocalDepositChecking(SmallBank* smallbank_client, uint64_t*
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
   float amount = 1.3;
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id,thread_num,thread_gid);
+  #endif
+  // !
 
   /* Read from checking table */
   smallbank_checking_key_t chk_key;
@@ -157,7 +174,12 @@ bool SmallBankDTX::TxLocalSendPayment(SmallBank* smallbank_client, uint64_t* see
   uint64_t acct_id_0, acct_id_1;
   smallbank_client->get_two_accounts(seed, &acct_id_0, &acct_id_1);
   float amount = 5.0;
-
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id_0,thread_num,thread_gid);
+  smallbank_client->cluster(&acct_id_1,thread_num,thread_gid);
+  #endif
+  // !
   /* Read from checking table */
   smallbank_checking_key_t chk_key_0;
   chk_key_0.acct_id = acct_id_0;
@@ -211,7 +233,11 @@ bool SmallBankDTX::TxLocalTransactSaving(SmallBank* smallbank_client, uint64_t* 
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
   float amount = 20.20;
-
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id,thread_num,thread_gid);
+  #endif
+  // !
   /* Read from saving table */
   smallbank_savings_key_t sav_key;
   sav_key.acct_id = acct_id;
@@ -248,7 +274,11 @@ bool SmallBankDTX::TxLocalWriteCheck(SmallBank* smallbank_client, uint64_t* seed
   uint64_t acct_id;
   smallbank_client->get_account(seed, &acct_id);
   float amount = 5.0;
-
+  // !加一个聚类的代码
+  #if OPEN_CLUSTER
+  smallbank_client->cluster(&acct_id,thread_num,thread_gid);
+  #endif
+  // !
   /* Read from savings. Read checking record for update. */
   smallbank_savings_key_t sav_key;
   sav_key.acct_id = acct_id;

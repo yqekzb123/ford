@@ -61,6 +61,7 @@ public:
         if (current_txn_cnt < LOCAL_BATCH_TXN_SIZE) {
             txn_list[current_txn_cnt] = txn;
             // txn_list[current_batch_cnt] = txn;
+            // printf("local_batch.h:64 insert SmallBankDTX dtx id %ld into %ld\n", txn->dtx->tx_id, current_txn_cnt);
             current_txn_cnt++;
             start_commit_txn_cnt++;
             pthread_mutex_unlock(&latch);
@@ -81,7 +82,13 @@ public:
         return r1 && r2;
     }
     void Clean() {
-        current_txn_cnt = 0;
+        for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+            BenchDTX* dtx = txn_list[i];
+            // printf("local_batch.h:86 free SmallBankDTX dtx id %ld\n", dtx->dtx->tx_id);
+            delete dtx;
+            current_txn_cnt--;
+        }
+        // current_txn_cnt = 0;
         start_commit_txn_cnt = 0;
         finish_commit_txn_cnt = 0;
         batch_id = 0;
@@ -104,14 +111,18 @@ private:
     }
 public:  
     LocalBatchStore(int coroutine_cnt){
+        retry_cnt = (int*) malloc(sizeof(int)*coroutine_cnt);
         batch_id_count = 0;
         pthread_mutex_init(&latch, nullptr);
         local_store = (LocalBatch**)malloc(sizeof(LocalBatch*)*coroutine_cnt);
         max_batch_cnt=coroutine_cnt;
+        // printf("local_batch.h:117 has %ld batch\n",max_batch_cnt);
         for (int i = 0; i < coroutine_cnt; i++) {
             local_store[i] = new LocalBatch();
             local_store[i]->SetBatchID(GenerateBatchID());
             local_store[i]->SetBatchCoroID(i+1);
+
+            retry_cnt[i] = 0;
         }
     }
 
@@ -126,6 +137,7 @@ public:
             int index = GetBatchCoroutineID(coro_id) * i;
             if (local_store[index]->CanExec()) return local_store[index];
         }
+        retry_cnt[coro_id]++;
         return nullptr;
     }
 
@@ -149,8 +161,9 @@ public:
         } else {
             batch = local_store[index];
         }
-        batch->InsertTxn(txn);
-        return batch;
+        bool result = batch->InsertTxn(txn);
+        if (result) return batch;
+        else return nullptr;
     }
 
 
@@ -160,7 +173,8 @@ public:
             // printf("local_batch.h:145, no exec\n");
             return;
         }
-        // printf("local_batch.h:148, exe batch %ld\n", exec->batch_id);
+        printf("local_batch.h:163, exe batch %ld, retry cnt %ld\n", exec->batch_id, retry_cnt[coro_id]);
+        retry_cnt[coro_id] = 0;
         exec->ExeBatchRW(yield);
         exec->Clean();
         exec->SetBatchID(GenerateBatchID());
@@ -168,6 +182,8 @@ public:
 private:
     pthread_mutex_t latch;
     LocalBatch** local_store;
+
+    int* retry_cnt;
 public:
     int max_batch_cnt;
 private:

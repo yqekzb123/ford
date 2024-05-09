@@ -56,7 +56,6 @@ __thread uint64_t seed;                        // Thread-global random seed
 __thread FastRandom* random_generator = NULL;  // Per coroutine random generator
 
 __thread t_id_t thread_local_id;
-__thread t_id_t thread_num;
 
 __thread TATP* tatp_client = nullptr;
 __thread SmallBank* smallbank_client = nullptr;
@@ -551,6 +550,8 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
   struct timespec tx_start_time, tx_end_time;
   bool tx_committed = false;
   int execute_cnt = 0;
+  int generate_cnt = LOCAL_BATCH_TXN_SIZE /  (coro_num - batch_coro_num - 1);
+  generate_cnt = generate_cnt / WORKER_EXE_LOCAL_TXN_CNT;
   // Running transactions
   clock_gettime(CLOCK_REALTIME, &msr_start);
   while (true) {
@@ -576,13 +577,12 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     uint64_t iter = ++tx_id_generator;  // Global atomic transaction id
     // stat_attempted_tx_total++;
 
-    SmallBankDTX* bench_dtx = new SmallBankDTX();
-    bench_dtx->dtx = dtx;
+    SmallBankDTX* bench_dtx = new SmallBankDTX(dtx);
     // TLOG(INFO, thread_gid) << "tx: " << iter << " coroutine: " << coro_id << " tx_type: " << (int)tx_type;
 
     clock_gettime(CLOCK_REALTIME, &tx_start_time);
     dtx->tx_start_time = tx_start_time;
-    // printf("worker.cc:326\n");
+    
     switch (tx_type) {
       case SmallBankTxType::kAmalgamate: {
         thread_local_try_times[uint64_t(tx_type)]++;
@@ -624,18 +624,29 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         printf("Unexpected transaction type %d\n", static_cast<int>(tx_type));
         abort();
     }
-    if (tx_committed) execute_cnt++;
-    if (execute_cnt < WORKER_EXE_LOCAL_TXN_CNT) continue;
-    else {
-      execute_cnt = 0;
-      // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, WORKER_EXE_LOCAL_TXN_CNT);
+    // printf("worker.cc:585 alloc SmallBankDTX dtx id %ld\n", dtx->tx_id);
+
+    if (!tx_committed) {
+      // printf("worker.cc:629 free SmallBankDTX dtx id %ld\n", bench_dtx->dtx->tx_id);
+      delete bench_dtx;
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
-    }
-    
+    } else continue;
+
+    // execute_cnt++;
+    // if (!tx_committed) {
+    //   // printf("worker.cc:629 free SmallBankDTX dtx id %ld\n", bench_dtx->dtx->tx_id);
+    //   delete bench_dtx;
+    // }
+    // if (execute_cnt < generate_cnt) continue;
+    // else {
+    //   execute_cnt = 0;
+    //   // printf("worker.cc:499, thread %ld complete %d local txn\n", thread_gid, generate_cnt);
+    //   coro_sched->LocalTxnYield(yield, coro_id);
+    //   continue;
+    // }
     /********************************** Stat end *****************************************/
   }
-  // delete dtx;
 }
 
 void RunTPCC(coro_yield_t& yield, coro_id_t coro_id) {

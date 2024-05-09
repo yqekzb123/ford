@@ -55,6 +55,8 @@ enum SmallBankTxnType {
 
 class SmallBankDTX : public BenchDTX {
 public:
+    SmallBankDTX() {}
+    SmallBankDTX(DTX *d) {dtx = d;}
     // !本地执行部分：这个函数中只生成事务，并在本地执行
     bool TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx);
     /* Calculate the sum of saving and checking kBalance */
@@ -125,5 +127,37 @@ public:
     }
     bool StatCommit() {
         // thread_local_commit_times[uint64_t(type)]++;
+    }
+    ~SmallBankDTX() {
+        delete dtx;
+        switch (type)
+        {
+        case TypeAmalgamate:
+            a1.sav_obj_0.reset();
+            a1.chk_obj_0.reset();
+            a1.chk_obj_1.reset();
+            break;
+        case TypeBalance:
+            b1.sav_obj.reset();
+            b1.chk_obj.reset();
+            break;
+        case TypeDepositChecking:
+            b1.sav_obj.reset();
+            b1.chk_obj.reset();
+            break;
+        case TypeSendPayment:
+            d1.chk_obj.reset();
+            break;
+        case TypeTransactSaving:
+            s1.chk_obj_0.reset();
+            s1.chk_obj_1.reset();
+            break;
+        case TypeWriteCheck:
+            w1.chk_obj.reset();
+            w1.sav_obj.reset();
+            break;
+        default:
+            break;
+        }
     }
 };

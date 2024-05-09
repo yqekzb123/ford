@@ -126,7 +126,7 @@ bool DTX::DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   // 目前先实现成随便扔到一个batch里
   auto batch = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench);
   if (batch == nullptr) {
-    // printf("dtx_local.cc:103, thread %ld insert txn failed\n", thread_gid);
+    // printf("dtx_local.cc:103, thread %ld insert txn %ld failed\n", thread_gid, dtx_with_bench->dtx->tx_id);
     return false;
   }
   batch_id = batch->batch_id;
@@ -164,34 +164,34 @@ bool DTX::LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   if (!result) return result;
   // printf("dtx_local.cc:77 insert dtx %ld into batch %ld \n", tx_id, batch_id);
   //! 2.本地释放锁
-  for (auto& item : read_only_set) {
-    if (!item.is_local_locked) continue;
-    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
-    localdata->UnlockShared();
-    // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-  }
-  for (size_t i = 0; i < read_write_set.size(); i++) {
-    if (!read_write_set[i].is_local_locked) continue;
-    auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
-    localdata->UnlockExclusive();
-    // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
-  }
+  // for (auto& item : read_only_set) {
+  //   if (!item.is_local_locked) continue;
+  //   auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+  //   localdata->UnlockShared();
+  //   // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+  // }
+  // for (size_t i = 0; i < read_write_set.size(); i++) {
+  //   if (!read_write_set[i].is_local_locked) continue;
+  //   auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
+  //   localdata->UnlockExclusive();
+  //   // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+  // }
   return res;
 }
 
 bool DTX::LocalAbort(coro_yield_t& yield) {
-  for (auto& item : read_only_set) {
-    if (!item.is_local_locked) continue;
-    auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
-    localdata->UnlockShared();
-    // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
-  }
-  for (size_t i = 0; i < read_write_set.size(); i++) {
-    if (!read_write_set[i].is_local_locked) continue;
-    auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
-    localdata->UnlockExclusive();
-    // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
-  }
+  // for (auto& item : read_only_set) {
+  //   if (!item.is_local_locked) continue;
+  //   auto localdata = local_lock_store.GetLock(item.item_ptr.get()->table_id,item.item_ptr.get()->key);
+  //   localdata->UnlockShared();
+  //   // printf("txn %ld release shared lock on table %ld key %ld success, now the lock %ld\n", tx_id, item.item_ptr.get()->table_id,item.item_ptr.get()->key, localdata->lock);
+  // }
+  // for (size_t i = 0; i < read_write_set.size(); i++) {
+  //   if (!read_write_set[i].is_local_locked) continue;
+  //   auto localdata = local_lock_store.GetLock(read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key);
+  //   localdata->UnlockExclusive();
+  //   // printf("txn %ld release exclusive lock on table %ld key %ld success, now the lock %ld\n", tx_id, read_write_set[i].item_ptr.get()->table_id,read_write_set[i].item_ptr.get()->key, localdata->lock);
+  // }
   Abort();
   return true;
 }
