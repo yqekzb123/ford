@@ -2,14 +2,12 @@
   "local_lock_table_node": {
     "machine_num": 1,
     "machine_id": 0,
-    "local_port": 12350,
-    "local_meta_port": 12351,
+    "local_port": 32350,
+    "local_meta_port": 32351,
     "mem_size_GB": 1
   },
   "remote_compute_nodes": {
-    "compute_node_ips": ["10.77.110.147", "10.77.110.148"],
-    "compute_node_ports": [12347, 12347]
-    // "compute_node_ips": ["10.77.110.147"],
-    // "compute_node_ports": [12347]
+    "compute_node_ips": ["127.0.0.1"],
+    "compute_node_ports": [32347]
   }
 }
