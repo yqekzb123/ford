@@ -17,7 +17,7 @@ bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
 
   std::unordered_map<LocalDataKey,uint64_t,LocalDataHash,LocalDataEqual> all_map; // 去重使用
   int i = 0;
-  for (int j = 0; j < LOCAL_BATCH_TXN_SIZE; j ++) {
+  for (int j = 0; j < current_txn_cnt; j ++) {
     BenchDTX* dtx = txn_list[j];
     i++;
     if(dtx->dtx->read_only_set.empty()) continue;
@@ -34,7 +34,7 @@ bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
     }
   }
   i=0;
-  for (int j = 0; j < LOCAL_BATCH_TXN_SIZE; j ++) {
+  for (int j = 0; j < current_txn_cnt; j ++) {
     BenchDTX* dtx = txn_list[j];
     i++;
     if(dtx->dtx->read_write_set.empty()) continue;
@@ -69,7 +69,7 @@ bool LocalBatch::GetReadWriteSet(coro_yield_t& yield){
 }
 
 bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
-  stat_attempted_tx_total+=LOCAL_BATCH_TXN_SIZE;
+  stat_attempted_tx_total+=current_txn_cnt;
   if (batch_id == WARMUP_BATCHCNT) {
     clock_gettime(CLOCK_REALTIME, &msr_start);
   }
@@ -104,7 +104,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
     if (!res) {
       // !失败以后所有操作解锁
       first_dtx->UnlockShared(yield);
-      stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
+      stat_aborted_tx_total+=current_txn_cnt;
       goto FINISH;
       // return res;
     }
@@ -115,7 +115,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
       // printf("local_batch.cc:102 exclusive lock fail %ld\n", batch_id);
       first_dtx->UnlockShared(yield);
       first_dtx->UnlockExclusive(yield);
-      stat_aborted_tx_total+=LOCAL_BATCH_TXN_SIZE;
+      stat_aborted_tx_total+=current_txn_cnt;
       goto FINISH;
       // return res;
     }
@@ -159,7 +159,7 @@ bool LocalBatch::ExeBatchRW(coro_yield_t& yield) {
   }
 
   //! 5. 根据数据项进行本地计算
-  for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+  for (int i = 0; i < current_txn_cnt; i ++) {
     BenchDTX* dtx = txn_list[i];
     res = dtx->TxReCaculate(yield);
   }
@@ -225,10 +225,10 @@ FINISH:
   clock_gettime(CLOCK_REALTIME, &tx_end_time);
 
 
-  // printf("local_batch.cc:218 %ld process data item count %ld %s\n", batch_id, all_keyid.size(), res?"success":"failed");
+  printf("local_batch.cc:218 %ld process data item count %ld %s\n", batch_id, all_keyid.size(), res?"success":"failed");
   if (batch_id > WARMUP_BATCHCNT) {
     if (res) {
-      for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+      for (int i = 0; i < current_txn_cnt; i ++) {
         BenchDTX* dtx = txn_list[i];
         double tx_usec = (tx_end_time.tv_sec - dtx->dtx->tx_start_time.tv_sec) * 1000000 + (double)(tx_end_time.tv_nsec - dtx->dtx->tx_start_time.tv_nsec) / 1000;
         timer[stat_committed_tx_total++] = tx_usec;

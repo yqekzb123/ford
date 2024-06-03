@@ -5,7 +5,7 @@
 
 /******************** The business logic (Transaction) start ********************/
 
-#define OPEN_CLUSTER true
+#define OPEN_CLUSTER false
 bool SmallBankDTX::TxLocalAmalgamate(SmallBank* smallbank_client, uint64_t* seed, coro_yield_t& yield, tx_id_t tx_id, DTX* dtx) {
   dtx->TxBegin(tx_id);
   this->dtx = dtx;

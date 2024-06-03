@@ -126,6 +126,7 @@ void RecordTpLat(double msr_sec) {
 }
 
 void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
+  local_batch_store[thread_gid]->thread_gid = thread_gid;
   while (true) {
     local_batch_store[thread_gid]->ExeBatch(yield, coro_id);
     coro_sched->YieldBatch(yield, coro_id);
@@ -625,10 +626,16 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         abort();
     }
     // printf("worker.cc:585 alloc SmallBankDTX dtx id %ld\n", dtx->tx_id);
-
+    execute_cnt++;
     if (!tx_committed) {
       // printf("worker.cc:629 free SmallBankDTX dtx id %ld\n", bench_dtx->dtx->tx_id);
       delete bench_dtx;
+      printf("worker.cc:633 thread %ld yield to batch\n",thread_gid);
+      coro_sched->LocalTxnYield(yield, coro_id);
+      continue;
+    } else if (execute_cnt > 200) {
+      execute_cnt = 0;
+      printf("worker.cc:638 thread %ld yield to batch\n",thread_gid);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     } else continue;

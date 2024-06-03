@@ -3,6 +3,8 @@
 #pragma once 
 #include "local_exec/local_lock.h"
 #include "batch/local_batch.h"
+#include "local_exec/local_cluster.h"
+#include "define.h"
 
 #define OPEN_TIME false
 #define RETURN_BEFORE true
@@ -18,6 +20,7 @@
 
 extern LocalLockStore local_lock_store;
 extern LocalBatchStore **local_batch_store;
+
 
 // Stat the commit rate
 extern uint64_t commit_times;
