@@ -84,7 +84,6 @@ __thread YCSBTxType* ycsb_workgen_arr;
 
 __thread coro_id_t coro_num;
 __thread coro_id_t batch_coro_num;
-__thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler
 
 // For MICRO benchmark
 __thread ZipfGen* zipf_gen = nullptr;
@@ -630,12 +629,12 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
     if (!tx_committed) {
       // printf("worker.cc:629 free SmallBankDTX dtx id %ld\n", bench_dtx->dtx->tx_id);
       delete bench_dtx;
-      printf("worker.cc:633 thread %ld yield to batch\n",thread_gid);
+      // printf("worker.cc:633 thread %ld yield to batch\n",thread_gid);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     } else if (execute_cnt > 200) {
       execute_cnt = 0;
-      printf("worker.cc:638 thread %ld yield to batch\n",thread_gid);
+      // printf("worker.cc:638 thread %ld yield to batch\n",thread_gid);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     } else continue;

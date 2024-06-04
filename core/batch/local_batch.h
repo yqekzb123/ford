@@ -171,6 +171,7 @@ public:
                     txn = cluster->GetTxn();
                     if (txn == nullptr || target_size <= 0) break;
                     txn->dtx->batch_id = local_store[index]->batch_id;
+                    txn->dtx->coro_sched = coro_sched;
                     txn->dtx->batch_index = local_store[index]->batch_id % max_batch_cnt;
                     local_store[index]->BatchInsertTxn(txn);
                     target_size--;

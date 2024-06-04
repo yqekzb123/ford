@@ -8,3 +8,5 @@
 extern MinHashStore min_hash_store;
 
 extern int LOCAL_BATCH_TXN_SIZE;
+
+extern __thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler

@@ -769,8 +769,8 @@ bool DTX::UnlockExclusive(coro_yield_t& yield) {
 
         char* faa_cnt = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
         // !hcy 这里存疑，可能存在问题
-        if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->lock) - (offset_t)item, EXCLUSIVE_UNLOCK_TO_BE_ADDED));
-            // assert(false);
+        if(!coro_sched->RDMAFAA(coro_id, qp, faa_cnt, node_offset.offset + (offset_t)&(item->lock) - (offset_t)item, EXCLUSIVE_UNLOCK_TO_BE_ADDED))
+            assert(false);
     }
 }
 

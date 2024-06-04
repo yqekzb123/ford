@@ -225,7 +225,7 @@ FINISH:
   clock_gettime(CLOCK_REALTIME, &tx_end_time);
 
 
-  printf("local_batch.cc:218 %ld process data item count %ld %s\n", batch_id, all_keyid.size(), res?"success":"failed");
+  printf("local_batch.cc:218 %ld process txn %ld and data item count %ld %s\n", batch_id, current_txn_cnt, all_keyid.size(), res?"success":"failed");
   if (batch_id > WARMUP_BATCHCNT) {
     if (res) {
       for (int i = 0; i < current_txn_cnt; i ++) {

@@ -35,3 +35,5 @@ uint64_t exlusive_lock_abort_cnt;
 
 __thread t_id_t thread_gid;
 __thread t_id_t thread_num;
+
+__thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler
