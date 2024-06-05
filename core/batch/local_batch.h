@@ -185,8 +185,8 @@ public:
                 do {
                     txn = cluster->GetTxn();
                     if (txn == nullptr || target_size <= 0) break;
-                    txn->dtx->batch_id = local_store[index]->batch_id;
-                    txn->dtx->batch_index = local_store[index]->batch_id % max_batch_cnt;
+                    txn->dtx->ReInitParams(meta_man,qp_man,status,lock_table,thread_gid,coro_sched,rdma_buffer_allocator,log_offset_allocator,addr_cache,index_cache,page_table_cache,free_page_list,free_page_list_mutex,data_channel,log_channel);
+                    txn->dtx->InitBatchParams(local_store[index]->batch_id,local_store[index]->batch_id % max_batch_cnt);
                     local_store[index]->BatchInsertTxn(txn);
                     target_size--;
                 } while (target_size > 0);

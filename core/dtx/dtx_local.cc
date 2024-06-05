@@ -128,15 +128,15 @@ bool DTX::DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   // ! 将事务往簇里放
 
   // 目前先实现成随便扔到一个batch里
-  auto batch = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench);
-  if (batch == nullptr) {
-    // printf("dtx_local.cc:103, thread %ld insert txn %ld failed\n", thread_gid, dtx_with_bench->dtx->tx_id);
-    return false;
-  }
-  batch_id = batch->batch_id;
-  batch_index = batch_id % local_batch_store[thread_gid]->max_batch_cnt;
-  batch->EndInsertTxn();
-  return true;
+  // auto batch = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench);
+  // if (batch == nullptr) {
+  //   // printf("dtx_local.cc:103, thread %ld insert txn %ld failed\n", thread_gid, dtx_with_bench->dtx->tx_id);
+  //   return false;
+  // }
+  // batch_id = batch->batch_id;
+  // batch_index = batch_id % local_batch_store[thread_gid]->max_batch_cnt;
+  // batch->EndInsertTxn();
+  // return true;
 }
 
 bool DTX::LocalCommit(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
