@@ -6,11 +6,9 @@
 #include "dtx/dtx.h" 
 #include "bench_dtx.h" 
 #include "local_data.h"
+#include "worker/define.h"
+#include "local_exec/local_cluster.h"
 
-// #define BATCH_TXN_ID 1
-#define BATCH_CORO_TIMES 1
-
-extern int LOCAL_BATCH_TXN_SIZE;
 class LocalBatch{
 private:
     std::vector<table_id_t> all_tableid;
@@ -54,6 +52,20 @@ public:
         SetBatchID(id);
     }
 
+    bool BatchInsertTxn(BenchDTX* txn) {
+        txn->dtx->coro_id = coro_id;
+        if (current_txn_cnt < LOCAL_BATCH_TXN_SIZE) {
+            txn_list[current_txn_cnt] = txn;
+            // printf("local_batch.h:64 insert SmallBankDTX dtx id %ld into %ld\n", txn->dtx->tx_id, current_txn_cnt);
+            current_txn_cnt++;
+            start_commit_txn_cnt++;
+            finish_commit_txn_cnt++;
+            return true;
+        } else {
+            assert(false);
+        }
+    }
+
     bool InsertTxn(BenchDTX* txn) {
         txn->dtx->coro_id = coro_id;
         // printf("local_batch.h:59 txn %p coro id %ld\n", txn->dtx->tx_id, txn->dtx->coro_id);
@@ -82,12 +94,13 @@ public:
         return r1 && r2;
     }
     void Clean() {
-        for (int i = 0; i < LOCAL_BATCH_TXN_SIZE; i ++) {
+        for (int i = 0; i < current_txn_cnt; i ++) {
             BenchDTX* dtx = txn_list[i];
             // printf("local_batch.h:86 free SmallBankDTX dtx id %ld\n", dtx->dtx->tx_id);
             delete dtx;
-            current_txn_cnt--;
+            
         }
+        current_txn_cnt = 0;
         // current_txn_cnt = 0;
         start_commit_txn_cnt = 0;
         finish_commit_txn_cnt = 0;
@@ -104,6 +117,14 @@ public:
 
 };
 
+class ClusterSet {
+public: 
+    std::unordered_set<TxnCluster*> clusters;
+    ClusterSet() {
+        clusters.clear();
+    }
+};
+
 class LocalBatchStore{ 
 private:
     inline int GetBatchCoroutineID(coro_id_t coro_id) {
@@ -117,10 +138,14 @@ public:
         local_store = (LocalBatch**)malloc(sizeof(LocalBatch*)*coroutine_cnt);
         max_batch_cnt=coroutine_cnt;
         // printf("local_batch.h:117 has %ld batch\n",max_batch_cnt);
+        cluster_sets.resize(coroutine_cnt,nullptr);
         for (int i = 0; i < coroutine_cnt; i++) {
             local_store[i] = new LocalBatch();
             local_store[i]->SetBatchID(GenerateBatchID());
             local_store[i]->SetBatchCoroID(i+1);
+            // assert(set.empty());
+            ClusterSet* set = new ClusterSet();
+            cluster_sets[i] = set;
 
             retry_cnt[i] = 0;
         }
@@ -132,13 +157,60 @@ public:
         return id;
     }
 
-    LocalBatch* GetBatch(coro_id_t coro_id) {
-        for (int i = 1; i <= BATCH_CORO_TIMES; i++) {
-            int index = GetBatchCoroutineID(coro_id) * i;
-            if (local_store[index]->CanExec()) return local_store[index];
+    LocalBatch* FillBatchFromCluster(coro_id_t coro_id) {
+        assert(BATCH_CORO_TIMES == 1);
+        int index = GetBatchCoroutineID(coro_id);
+        int target_size = LOCAL_BATCH_TXN_SIZE;
+        ClusterSet* set = cluster_sets[index];
+        if (!set->clusters.empty()) {
+            for (auto elem : set->clusters) {
+                TxnCluster* cluster = elem;
+                size_t size;
+                BenchDTX* txn = nullptr;
+                do {
+                    txn = cluster->GetTxn();
+                    if (txn == nullptr || target_size <= 0) break;
+                    txn->dtx->ReInitParams(meta_man,qp_man,status,lock_table,thread_gid,coro_sched,rdma_buffer_allocator,log_offset_allocator,addr_cache,index_cache,page_table_cache,free_page_list,free_page_list_mutex,data_channel,log_channel);
+                    txn->dtx->InitBatchParams(local_store[index]->batch_id,local_store[index]->batch_id % max_batch_cnt);
+                    local_store[index]->BatchInsertTxn(txn);
+                    target_size--;
+                } while (target_size > 0);
+            }
         }
-        retry_cnt[coro_id]++;
-        return nullptr;
+        while (target_size > 0) {
+            TxnCluster* cluster = min_hash_store.GetNewTxnCluster(thread_gid);
+            if (cluster != nullptr) {
+                set->clusters.insert(cluster);
+                BenchDTX* txn = nullptr;
+                do {
+                    txn = cluster->GetTxn();
+                    if (txn == nullptr || target_size <= 0) break;
+                    txn->dtx->batch_id = local_store[index]->batch_id;
+                    txn->dtx->batch_index = local_store[index]->batch_id % max_batch_cnt;
+                    local_store[index]->BatchInsertTxn(txn);
+                    target_size--;
+                } while (target_size > 0);
+            } else break;
+        }
+        return local_store[index];
+    }
+    
+    // LocalBatch* GetBatch(coro_id_t coro_id) {
+    //     for (int i = 1; i <= BATCH_CORO_TIMES; i++) {
+    //         int index = GetBatchCoroutineID(coro_id) * i;
+    //         if (local_store[index]->CanExec()) return local_store[index];
+    //     }
+    //     retry_cnt[coro_id]++;
+    //     return nullptr;
+    // }
+
+    LocalBatch* GetBatch(coro_id_t coro_id) {
+        LocalBatch* batch = FillBatchFromCluster(coro_id);
+        if (batch->current_txn_cnt > 0) return batch;
+        else {
+            retry_cnt[coro_id]++;
+            return nullptr;
+        }   
     }
 
     LocalBatch* GetBatchByIndex(int index, batch_id_t id) {
@@ -166,14 +238,13 @@ public:
         else return nullptr;
     }
 
-
     void ExeBatch(coro_yield_t& yield, coro_id_t coro_id) {
         LocalBatch* exec = GetBatch(coro_id);
         if (exec == nullptr) {
             // printf("local_batch.h:145, no exec\n");
             return;
         }
-        printf("local_batch.h:163, exe batch %ld, retry cnt %ld\n", exec->batch_id, retry_cnt[coro_id]);
+        printf("local_batch.h:238, thread %ld exe batch %ld, retry cnt %ld\n", thread_gid, exec->batch_id, retry_cnt[coro_id]);
         retry_cnt[coro_id] = 0;
         exec->ExeBatchRW(yield);
         exec->Clean();
@@ -182,11 +253,13 @@ public:
 private:
     pthread_mutex_t latch;
     LocalBatch** local_store;
+    std::vector<ClusterSet*> cluster_sets;
+    // std::vector<ClusterSet> cluster_sets;
 
     int* retry_cnt;
 public:
     int max_batch_cnt;
+    t_id_t thread_gid;
 private:
-    // std::vector<LocalBatch*> local_store;
     batch_id_t batch_id_count;
 };

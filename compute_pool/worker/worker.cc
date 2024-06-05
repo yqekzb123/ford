@@ -62,21 +62,6 @@ __thread SmallBank* smallbank_client = nullptr;
 __thread TPCC* tpcc_client = nullptr;
 __thread YCSB* ycsb_client = nullptr;
 
-__thread MetaManager* meta_man;
-__thread QPManager* qp_man;
-
-__thread VersionCache* status;
-__thread LockCache* lock_table;
-
-__thread std::list<PageAddress>* free_page_list;
-__thread std::mutex* free_page_list_mutex;
-
-__thread RDMABufferAllocator* rdma_buffer_allocator;
-__thread LogOffsetAllocator* log_offset_allocator;
-__thread AddrCache* addr_cache;
-__thread IndexCache* index_cache;
-__thread PageTableCache* page_table_cache;
-
 __thread TATPTxType* tatp_workgen_arr;
 __thread SmallBankTxType* smallbank_workgen_arr;
 __thread TPCCTxType* tpcc_workgen_arr;
@@ -84,7 +69,6 @@ __thread YCSBTxType* ycsb_workgen_arr;
 
 __thread coro_id_t coro_num;
 __thread coro_id_t batch_coro_num;
-__thread CoroutineScheduler* coro_sched;  // Each transaction thread has a coroutine scheduler
 
 // For MICRO benchmark
 __thread ZipfGen* zipf_gen = nullptr;
@@ -93,8 +77,6 @@ __thread uint64_t data_set_size;
 __thread uint64_t num_keys_global;
 __thread uint64_t write_ratio;
 
-__thread brpc::Channel* data_channel;
-__thread brpc::Channel* log_channel;
 
 const coro_id_t POLL_ROUTINE_ID = 0;            // The poll coroutine ID
 
@@ -126,6 +108,7 @@ void RecordTpLat(double msr_sec) {
 }
 
 void BatchExec(coro_yield_t& yield, coro_id_t coro_id) {
+  local_batch_store[thread_gid]->thread_gid = thread_gid;
   while (true) {
     local_batch_store[thread_gid]->ExeBatch(yield, coro_id);
     coro_sched->YieldBatch(yield, coro_id);
@@ -625,10 +608,16 @@ void RunLocalSmallBank(coro_yield_t& yield, coro_id_t coro_id) {
         abort();
     }
     // printf("worker.cc:585 alloc SmallBankDTX dtx id %ld\n", dtx->tx_id);
-
+    execute_cnt++;
     if (!tx_committed) {
       // printf("worker.cc:629 free SmallBankDTX dtx id %ld\n", bench_dtx->dtx->tx_id);
       delete bench_dtx;
+      // printf("worker.cc:633 thread %ld yield to batch\n",thread_gid);
+      coro_sched->LocalTxnYield(yield, coro_id);
+      continue;
+    } else if (execute_cnt > 200) {
+      execute_cnt = 0;
+      // printf("worker.cc:638 thread %ld yield to batch\n",thread_gid);
       coro_sched->LocalTxnYield(yield, coro_id);
       continue;
     } else continue;

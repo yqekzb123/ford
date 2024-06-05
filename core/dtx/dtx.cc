@@ -46,6 +46,40 @@ DTX::DTX(MetaManager* meta_man,
   storage_log_channel = log_channel;
 }
 
+void DTX::ReInitParams(MetaManager* meta_man,
+         QPManager* qp_man,
+         VersionCache* status,
+         LockCache* lock_table,
+         t_id_t tid,
+         CoroutineScheduler* sched,
+         RDMABufferAllocator* rdma_buffer_allocator,
+         LogOffsetAllocator* remote_log_offset_allocator,
+         AddrCache* addr_buf,
+         IndexCache* _index_cache,
+         PageTableCache* _page_table_cache,
+         std::list<PageAddress>* _free_page_list, 
+         std::mutex* _free_page_list_mutex,
+         brpc::Channel* data_channel,
+         brpc::Channel* log_channel) {
+  t_id = tid;
+  coro_sched = sched;
+  global_meta_man = meta_man;
+  thread_qp_man = qp_man;
+  global_vcache = status;
+  global_lcache = lock_table;
+  thread_rdma_buffer_alloc = rdma_buffer_allocator;
+
+  free_page_list = _free_page_list;
+  free_page_list_mutex = _free_page_list_mutex;
+
+  addr_cache = addr_buf;
+  index_cache = _index_cache;
+  page_table_cache = _page_table_cache;
+
+  storage_data_channel = data_channel;
+  storage_log_channel = log_channel;
+}
+
 void DTX::Abort() {
   // When failures occur, transactions need to be aborted.
   // In general, the transaction will not abort during committing replicas if no hardware failure occurs

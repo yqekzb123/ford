@@ -123,6 +123,10 @@ bool DTX::ExeLocalRW(coro_yield_t& yield, uint64_t bid) {
 
 bool DTX::DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   // todo：形成聚簇
+  // ! 将事务往簇里放
+  return min_hash_store.InsertTxn(dtx_with_bench);
+  // ! 将事务往簇里放
+
   // 目前先实现成随便扔到一个batch里
   auto batch = local_batch_store[thread_gid]->InsertTxn(dtx_with_bench);
   if (batch == nullptr) {
@@ -131,28 +135,7 @@ bool DTX::DividIntoBatch(coro_yield_t& yield, BenchDTX* dtx_with_bench) {
   }
   batch_id = batch->batch_id;
   batch_index = batch_id % local_batch_store[thread_gid]->max_batch_cnt;
-  // if (read_write_set.empty()) {
-  //   ExeLocalRO(yield,thread_gid);
-  // } else {
-  //   ExeLocalRW(yield,thread_gid);
-  // }
   batch->EndInsertTxn();
-  
-  // for (auto& bid : batch_list) { 
-  //   auto batch = local_batch_store[bid]->InsertTxn(dtx_with_bench);
-  //   if (batch == nullptr) {
-  //     // printf("dtx_local.cc:103, thread %ld insert txn failed\n", thread_gid);
-  //     return false;
-  //   }
-  //   batch_id = batch->batch_id;
-  //   batch_index = batch_id % local_batch_store[thread_gid]->max_batch_cnt;
-  //   if (read_write_set.empty()) {
-  //     ExeLocalRO(yield,bid);
-  //   } else {
-  //     ExeLocalRW(yield,bid);
-  //   }
-  //   batch->EndInsertTxn();
-  // }
   return true;
 }
 

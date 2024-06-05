@@ -118,6 +118,26 @@ class DTX {
       std::mutex* free_page_list_mutex,
       brpc::Channel* data_channel,
       brpc::Channel* log_channel);
+  void ReInitParams(MetaManager* meta_man,
+      QPManager* qp_man,
+      VersionCache* status,
+      LockCache* lock_table,
+      t_id_t tid,
+      CoroutineScheduler* sched,
+      RDMABufferAllocator* rdma_buffer_allocator,
+      LogOffsetAllocator* log_offset_allocator,
+      AddrCache* addr_buf,
+      IndexCache* index_cache,
+      PageTableCache* page_table_cache,
+      std::list<PageAddress>* free_page_list, 
+      std::mutex* free_page_list_mutex,
+      brpc::Channel* data_channel,
+      brpc::Channel* log_channel);
+  void InitBatchParams(batch_id_t b_id,
+      int b_index) {
+    batch_id = b_id;
+    batch_index = b_index;
+  }
   ~DTX() {
     Clean();
   }
